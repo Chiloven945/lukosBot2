@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout
+                    pattern="[%d{HH:mm:ss.SSS}] [%t/%logger/%highlight{%level}]: %msg%n"
+                    disableAnsi="false" noConsoleNoAnsi="false"/>
+        </Console>
+
+        <RollingFile name="RollingFile"
+                     fileName="logs/latest.log"
+                     filePattern="logs/%d{yyyy-MM-dd}-%i.log.gz"
+                     append="true">
+            <PatternLayout
+                    pattern="[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%t/%logger/%highlight{%level}]: %msg%n"/>
+            <Filters>
+                <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY"/>
+            </Filters>
+            <Policies>
+                <OnStartupTriggeringPolicy minSize="0"/>
+            </Policies>
+        </RollingFile>
+
+        <File name="TraceFile" fileName="logs/trace.log" append="false">
+            <PatternLayout pattern="[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%t/%logger/%level]: %msg%n"/>
+            <Filters>
+                <ThresholdFilter level="trace" onMatch="ACCEPT" onMismatch="DENY"/>
+            </Filters>
+        </File>
+    </Appenders>
+
+    <Loggers>
+        <Root level="trace">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="RollingFile"/>
+            <AppenderRef ref="TraceFile"/>
+        </Root>
+    </Loggers>
+</Configuration>

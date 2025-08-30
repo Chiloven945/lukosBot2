@@ -1,0 +1,24 @@
+package chiloven.lukosbot2.config;
+
+public class Config {
+    public String prefix = "/";
+    public Telegram telegram = new Telegram();
+    public OneBot onebot = new OneBot();
+    public GitHub github = new GitHub();
+
+    public static class GitHub {
+        public String token = null;       // 可为空
+    }
+
+    public static class Telegram {
+        public boolean enabled = false;
+        public String botToken = "";
+        public String botUsername = "";
+    }
+
+    public static class OneBot {
+        public boolean enabled = false;
+        public String wsUrl = "ws://127.0.0.1:6700";
+        public String accessToken = null;
+    }
+}
