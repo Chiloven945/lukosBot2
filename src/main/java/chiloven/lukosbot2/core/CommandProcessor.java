@@ -40,9 +40,9 @@ public class CommandProcessor implements Processor {
         try {
             dispatcher.execute(cmdLine, src);
         } catch (CommandSyntaxException e) {
-            outs.add(MessageOut.replyTo(in, "命令错误: " + e.getRawMessage().getString()));
+            outs.add(MessageOut.text(in.addr(), "命令错误: " + e.getRawMessage().getString()));
         } catch (Exception e) {
-            outs.add(MessageOut.replyTo(in, "命令执行异常: " + e.getClass().getSimpleName()));
+            outs.add(MessageOut.text(in.addr(), "命令执行异常: " + e.getClass().getSimpleName()));
         }
         return outs;
     }
