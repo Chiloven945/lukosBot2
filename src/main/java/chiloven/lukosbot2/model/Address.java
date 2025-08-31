@@ -1,5 +1,7 @@
 package chiloven.lukosbot2.model;
 
+import chiloven.lukosbot2.platforms.ChatPlatform;
+
 /**
  * Address of a chat (user or group)
  *

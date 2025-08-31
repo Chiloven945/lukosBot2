@@ -6,7 +6,7 @@ import chiloven.lukosbot2.model.MessageOut;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Pipeline implements Processor {
+public class PipelineProcessor implements Processor {
     private final List<Processor> chain = new ArrayList<>();
 
     /**
@@ -15,7 +15,7 @@ public class Pipeline implements Processor {
      * @param p the processor to add
      * @return this pipeline for chaining
      */
-    public Pipeline add(Processor p) {
+    public PipelineProcessor add(Processor p) {
         chain.add(p);
         return this;
     }

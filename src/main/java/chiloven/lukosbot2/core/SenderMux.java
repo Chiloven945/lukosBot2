@@ -1,7 +1,7 @@
 package chiloven.lukosbot2.core;
 
-import chiloven.lukosbot2.model.ChatPlatform;
 import chiloven.lukosbot2.model.MessageOut;
+import chiloven.lukosbot2.platforms.ChatPlatform;
 import chiloven.lukosbot2.spi.Sender;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

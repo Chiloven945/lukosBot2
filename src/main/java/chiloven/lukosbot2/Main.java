@@ -5,7 +5,7 @@ import chiloven.lukosbot2.bootstrap.BootStepError;
 import chiloven.lukosbot2.bootstrap.Lifecycle;
 import chiloven.lukosbot2.config.Config;
 import chiloven.lukosbot2.core.CommandRegistry;
-import chiloven.lukosbot2.core.Pipeline;
+import chiloven.lukosbot2.core.PipelineProcessor;
 import chiloven.lukosbot2.core.Router;
 import chiloven.lukosbot2.core.SenderMux;
 import org.apache.logging.log4j.LogManager;
@@ -29,7 +29,7 @@ public class Main {
             CommandRegistry registry = Boot.buildCommandsOrThrow(cfg);
             log.info("Commands registered: {}", registry.listCommands());
 
-            Pipeline pipeline = Boot.buildPipelineOrThrow(cfg, registry);
+            PipelineProcessor pipeline = Boot.buildPipelineOrThrow(cfg, registry);
             log.info("Message processing pipeline built.");
 
             // 3) SenderMux & Router

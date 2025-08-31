@@ -1,9 +1,9 @@
 package chiloven.lukosbot2.platforms.telegram;
 
 import chiloven.lukosbot2.model.Address;
-import chiloven.lukosbot2.model.ChatPlatform;
 import chiloven.lukosbot2.model.MessageIn;
 import chiloven.lukosbot2.model.MessageOut;
+import chiloven.lukosbot2.platforms.ChatPlatform;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;

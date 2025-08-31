@@ -1,7 +1,7 @@
 package chiloven.lukosbot2.spi;
 
-import chiloven.lukosbot2.model.ChatPlatform;
 import chiloven.lukosbot2.model.MessageIn;
+import chiloven.lukosbot2.platforms.ChatPlatform;
 
 import java.util.function.Consumer;
 
