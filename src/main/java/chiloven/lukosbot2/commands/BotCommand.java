@@ -8,17 +8,26 @@ import com.mojang.brigadier.CommandDispatcher;
  */
 public interface BotCommand {
     /**
-     * Main command name (used in registration and help list)
+     * Main name of the command
+     * @return Main name of the command
      */
     String name();
 
     /**
-     * Brief description of the command (used in help list)
+     * Brief description of the command
+     * @return Brief description of the command
      */
     String description();
 
     /**
-     * Register itself to the dispatcher (including subcommands and arguments)
+     * Detailed usage of the command
+     * @return Detailed usage of the command
+     */
+    String usage();
+
+    /**
+     * Register this command to the dispatcher
+     * @param dispatcher The command dispatcher
      */
     void register(CommandDispatcher<CommandSource> dispatcher);
 }

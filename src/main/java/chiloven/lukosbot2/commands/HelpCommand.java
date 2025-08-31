@@ -25,6 +25,14 @@ public class HelpCommand implements BotCommand {
     }
 
     @Override
+    public String usage() {
+        return """
+                用法：
+                /help
+                """;
+    }
+
+    @Override
     public void register(CommandDispatcher<CommandSource> dispatcher) {
         dispatcher.register(
                 LiteralArgumentBuilder.<CommandSource>literal(name())

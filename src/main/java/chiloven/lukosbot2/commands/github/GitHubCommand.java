@@ -12,9 +12,9 @@ import org.apache.logging.log4j.Logger;
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 
 /**
- * /github 命令（user / repo / search）
- * - /github user <username>
- * - /github repo <owner>/<repo>
+ * /github 命令（user / repo / search）)<br>
+ * - /github user <username><br>
+ * - /github repo <owner>/<repo><br>
  * - /github search <keywords> [--top=3] [--lang=Java] [--sort=stars|updated] [--order=desc|asc]
  */
 public class GitHubCommand implements chiloven.lukosbot2.commands.BotCommand {
@@ -23,14 +23,6 @@ public class GitHubCommand implements chiloven.lukosbot2.commands.BotCommand {
 
     public GitHubCommand(String token) {
         this.api = new GitHubApi(token);
-    }
-
-    private static String usage() {
-        return """
-                用法：
-                /github user <用户名>
-                /github repo <owner>/<repo>
-                /github search <关键词> [--top=3] [--lang=Java] [--sort=stars|updated] [--order=desc|asc]""";
     }
 
     private static String get(JsonObject obj, String k) {
@@ -51,6 +43,15 @@ public class GitHubCommand implements chiloven.lukosbot2.commands.BotCommand {
     @Override
     public String description() {
         return "GitHub 查询工具（user/repo/search）";
+    }
+
+    @Override
+    public String usage() {
+        return """
+                用法：
+                /github user <用户名>
+                /github repo <owner>/<repo>
+                /github search <关键词> [--top=3] [--lang=Java] [--sort=stars|updated] [--order=desc|asc]""";
     }
 
     @Override
