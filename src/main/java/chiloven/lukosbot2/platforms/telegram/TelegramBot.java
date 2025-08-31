@@ -20,6 +20,11 @@ final class TelegramBot extends TelegramLongPollingBot {
         this.username = username;
     }
 
+    /**
+     * Bind message handler
+     *
+     * @param sink message handler, usually bound to Router::receive
+     */
     void setSink(Consumer<MessageIn> sink) {
         this.sink = (sink != null) ? sink : __ -> {
         };
@@ -29,8 +34,6 @@ final class TelegramBot extends TelegramLongPollingBot {
     public String getBotUsername() {
         return username;
     } // 仍需实现
-
-    // 不要再重写 getBotToken() —— 由父类持有并返回
 
     @Override
     public void onUpdateReceived(Update u) {

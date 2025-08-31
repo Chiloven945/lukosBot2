@@ -11,6 +11,11 @@ public final class OneBotSender implements Sender {
         this.stack = stack;
     }
 
+    /**
+     * Send a message
+     *
+     * @param out message to send
+     */
     @Override
     public void send(MessageOut out) {
         JsonObject req = new JsonObject();

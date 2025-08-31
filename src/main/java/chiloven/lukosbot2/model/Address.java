@@ -1,7 +1,11 @@
 package chiloven.lukosbot2.model;
 
 /**
- * @param chatId 群或私聊唯一 ID（Telegram chatId / OneBot group_id or user_id）
+ * Address of a chat (user or group)
+ *
+ * @param platform the chat platform
+ * @param chatId  the chat ID
+ * @param group  whether the address is a group chat
  */
 public record Address(ChatPlatform platform, long chatId, boolean group) {
 }

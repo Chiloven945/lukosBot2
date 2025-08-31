@@ -9,14 +9,14 @@ public final class Lifecycle {
     }
 
     /**
-     * 关闭所有 AutoCloseable（忽略异常）
+     * Close multiple AutoCloseable resources quietly, logging any exceptions.
      */
     public static void shutdownQuietly(List<AutoCloseable> closeables, Logger log) {
         for (AutoCloseable c : closeables) {
             try {
                 if (c != null) c.close();
             } catch (Exception e) {
-                log.warn("关闭资源失败: {}", c, e);
+                log.warn("Failed to close the resources: {}", c, e);
             }
         }
     }

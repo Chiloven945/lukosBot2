@@ -13,20 +13,26 @@ public class SenderMux implements Sender {
     private static final Logger log = LogManager.getLogger(SenderMux.class);
     private final Map<ChatPlatform, Sender> routes = new EnumMap<>(ChatPlatform.class);
 
+    /**
+     * Register a Sender for a specific ChatPlatform
+     *
+     * @param p the chat platform
+     * @param s the sender implementation
+     */
     public void register(ChatPlatform p, Sender s) {
         routes.put(p, s);
     }
 
     /**
-     * 发送消息
+     * Send a message using the appropriate Sender based on the message's platform
      *
-     * @param out 要发送的消息
+     * @param out message to send
      */
     @Override
     public void send(MessageOut out) {
         Sender s = routes.get(out.addr().platform());
         if (s == null) {
-            log.warn("未找到 Sender：{}", out.addr().platform());
+            log.warn("Unable to find the Sender：{}", out.addr().platform());
             return;
         }
         s.send(out);

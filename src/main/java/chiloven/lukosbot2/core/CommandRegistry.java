@@ -10,6 +10,12 @@ import java.util.List;
 public class CommandRegistry {
     private final List<BotCommand> list = new ArrayList<>();
 
+    /**
+     * Add a command to the registry
+     *
+     * @param c the command to add
+     * @return this registry for chaining
+     */
     public CommandRegistry add(BotCommand c) {
         list.add(c);
         return this;

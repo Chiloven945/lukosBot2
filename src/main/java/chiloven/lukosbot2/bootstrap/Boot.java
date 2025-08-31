@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 启动期各阶段的封装
+ * Bootstrap helper class
  */
 public final class Boot {
     private Boot() {
@@ -55,7 +55,7 @@ public final class Boot {
     }
 
     /**
-     * 启动各平台 Receiver 并把 Sender 注册到 mux；返回需要关闭的资源列表
+     * Start platform receivers and register their senders to the mux; return a list of closeable resources
      */
     public static List<AutoCloseable> startPlatformsOrThrow(
             Config cfg, Router router, SenderMux senderMux, Logger log) {

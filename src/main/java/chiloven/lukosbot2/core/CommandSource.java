@@ -19,7 +19,7 @@ public class CommandSource {
     }
 
     /**
-     * 在命令中调用：把文本回复追加到当前消息的输出列表
+     * Call this in command: append a text reply to the output list of the current message
      */
     public void reply(String text) {
         sink.accept(MessageOut.replyTo(in, text));

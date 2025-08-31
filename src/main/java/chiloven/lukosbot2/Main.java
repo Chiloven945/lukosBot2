@@ -21,31 +21,31 @@ public class Main {
         log.info("Starting lukosBot2...");
         List<AutoCloseable> closeables = new ArrayList<>();
         try {
-            // 1) 配置
+            // 1) Configuration
             Config cfg = Boot.loadConfigOrThrow();
             log.info("Configuration loaded.");
 
-            // 2) 命令 & 流水线
+            // 2) Command & Pipeline
             CommandRegistry registry = Boot.buildCommandsOrThrow(cfg);
             log.info("Commands registered: {}", registry.listCommands());
 
             Pipeline pipeline = Boot.buildPipelineOrThrow(cfg, registry);
             log.info("Message processing pipeline built.");
 
-            // 3) 出站路由 & Router
+            // 3) SenderMux & Router
             SenderMux senderMux = new SenderMux();
             Router router = new Router(pipeline, senderMux);
             log.info("Outbound routing set up.");
 
-            // 4) 平台启动与注册（入站绑定、出站注册）
+            // 4) Platforms registration & startup
             closeables.addAll(Boot.startPlatformsOrThrow(cfg, router, senderMux, log));
             log.info("Chat platforms started.");
 
-            // 5) 启动完成
+            // 5) Startup complete
             log.info("lukosBot2 started. Prefix: '{}'", cfg.prefix);
 
         } catch (BootStepError e) {
-            // 分阶段退出码
+            // Shutdown and exit with specific code
             log.error(e.getMessage(), e.getCause());
             Lifecycle.shutdownQuietly(closeables, log);
             System.exit(e.code());

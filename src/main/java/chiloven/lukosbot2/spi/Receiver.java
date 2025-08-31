@@ -6,36 +6,36 @@ import chiloven.lukosbot2.model.MessageIn;
 import java.util.function.Consumer;
 
 /**
- * 接收器接口：负责从指定平台接收消息
+ * Receiver interface: responsible for receiving messages from a specific platform and passing them to the message handler
  */
 public interface Receiver extends AutoCloseable {
     ChatPlatform platform();
 
     /**
-     * 绑定消息处理函数
+     * Bind message handler
      *
-     * @param sink 消息处理函数
+     * @param sink message handler, usually bound to Router::receive
      */
-    void bind(Consumer<MessageIn> sink);  // 通常绑定到 Router::receive
+    void bind(Consumer<MessageIn> sink);
 
     /**
-     * 启动接收器
+     * Start the receiver
      *
-     * @throws Exception 启动失败时抛出异常
+     * @throws Exception throw exception if start failed
      */
     void start() throws Exception;
 
     /**
-     * 停止接收器
+     * Stop the receiver
      *
-     * @throws Exception 停止失败时抛出异常
+     * @throws Exception throw exception if stop failed
      */
     void stop() throws Exception;
 
     /**
-     * 关闭接收器，默认调用 stop 方法
+     * Close the receiver, equivalent to stop()
      *
-     * @throws Exception 关闭失败时抛出异常
+     * @throws Exception throw exception if stop failed
      */
     @Override
     default void close() throws Exception {

@@ -14,7 +14,7 @@ import java.util.function.Consumer;
 
 public final class OneBotReceiver implements Receiver {
     private final String url, token;
-    private OneBotStack stack;                   // ← 内部持有
+    private OneBotStack stack;
     private Consumer<MessageIn> sink = __ -> {
     };
 
@@ -28,18 +28,38 @@ public final class OneBotReceiver implements Receiver {
         return ChatPlatform.ONEBOT;
     }
 
+    /**
+     * Bind message handler
+     *
+     * @param sink message handler, usually bound to Router::receive
+     */
     @Override
     public void bind(Consumer<MessageIn> sink) {
         this.sink = (sink != null) ? sink : __ -> {
         };
     }
 
+    /**
+     * Start the receiver
+     */
     @Override
     public void start() {
         if (stack != null) return;
         stack = new OneBotStack(url, token, new WebSocket.Listener() {
             private final StringBuilder buf = new StringBuilder();
 
+            /**
+             * Text message received
+             *
+             * @param w
+             *         the WebSocket on which the data has been received
+             * @param d
+             *         the data
+             * @param last
+             *         whether this invocation completes the message
+             *
+             * @return a CompletionStage that, when completed, indicates that the processing of the message has been completed
+             */
             @Override
             public CompletionStage<?> onText(WebSocket w, CharSequence d, boolean last) {
                 buf.append(d);
@@ -62,13 +82,16 @@ public final class OneBotReceiver implements Receiver {
         });
     }
 
+    /**
+     * Stop the receiver (close connection)
+     */
     @Override
     public void stop() {
         if (stack != null) stack.close();
     }
 
     /**
-     * 复用同一条连接返回 Sender（避免 Main 触碰 Stack）
+     * Reuse the same connection to return a Sender (avoid Main touching Stack)
      */
     public Sender sender() {
         if (stack == null) start();

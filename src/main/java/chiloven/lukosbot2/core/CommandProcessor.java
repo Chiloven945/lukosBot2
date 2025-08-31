@@ -22,6 +22,12 @@ public class CommandProcessor implements Processor {
         log.info("Brigadier registered {} commands", registry.all().size());
     }
 
+    /**
+     * Handle a message, executing commands if the prefix matches.
+     *
+     * @param in the incoming message
+     * @return a list of outgoing messages as command responses, or an empty list if no command was executed
+     */
     @Override
     public List<MessageOut> handle(MessageIn in) {
         String t = in.text() == null ? "" : in.text().trim();

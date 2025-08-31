@@ -3,13 +3,13 @@ package chiloven.lukosbot2.spi;
 import chiloven.lukosbot2.model.MessageOut;
 
 /**
- * 发送器接口：负责将消息发送到指定平台
+ * Sender interface: responsible for sending messages to the appropriate platform
  */
 public interface Sender {
     /**
-     * 发送消息
+     * Send a message
      *
-     * @param out 要发送的消息
+     * @param out message to send
      */
     void send(MessageOut out);
 }

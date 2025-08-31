@@ -14,6 +14,11 @@ public final class TelegramSender implements Sender {
         this.stack = stack;
     }
 
+    /**
+     * Send a message via Telegram.
+     *
+     * @param out message to send
+     */
     @Override
     public void send(MessageOut out) {
         try {

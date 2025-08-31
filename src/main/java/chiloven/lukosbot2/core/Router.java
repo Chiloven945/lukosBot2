@@ -20,9 +20,9 @@ public class Router {
     }
 
     /**
-     * 接收消息并处理
+     * Receive a message, process it through the pipeline, and send out any resulting messages.
      *
-     * @param in 接收到的消息
+     * @param in incoming message
      */
     public void receive(MessageIn in) {
         List<MessageOut> outs = pipeline.handle(in);

@@ -21,6 +21,11 @@ public final class TelegramReceiver implements Receiver {
         return ChatPlatform.TELEGRAM;
     }
 
+    /**
+     * Bind message handler
+     *
+     * @param sink message handler, usually bound to Router::receive
+     */
     @Override
     public void bind(Consumer<MessageIn> sink) {
         this.sink = (sink != null) ? sink : __ -> {
@@ -28,6 +33,11 @@ public final class TelegramReceiver implements Receiver {
         if (stack.bot != null) stack.bot.setSink(this.sink);
     }
 
+    /**
+     * Start the receiver
+     *
+     * @throws Exception on failure
+     */
     @Override
     public void start() throws Exception {
         stack.ensureStarted();
@@ -38,7 +48,7 @@ public final class TelegramReceiver implements Receiver {
     public void stop() { /* Telegram SDK 无显式 stop，可忽略 */ }
 
     /**
-     * 复用同一条连接返回 Sender（避免 Main 触碰 Stack）
+     * Reuse the same connection to return a Sender (avoid Main touching Stack)
      */
     public Sender sender() throws Exception {
         start();                           // 确保已启动（幂等）
