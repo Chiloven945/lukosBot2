@@ -5,7 +5,8 @@ import chiloven.lukosbot2.commands.HelpCommand;
 import chiloven.lukosbot2.commands.PingCommand;
 import chiloven.lukosbot2.config.Config;
 import chiloven.lukosbot2.core.*;
-import chiloven.lukosbot2.model.ChatPlatform;
+import chiloven.lukosbot2.platforms.ChatPlatform;
+import chiloven.lukosbot2.platforms.discord.DiscordReceiver;
 import chiloven.lukosbot2.platforms.onebot.OneBotReceiver;
 import chiloven.lukosbot2.platforms.telegram.TelegramReceiver;
 import chiloven.lukosbot2.util.json.JsonUtil;
@@ -43,10 +44,10 @@ public final class Boot {
         }
     }
 
-    public static Pipeline buildPipelineOrThrow(Config cfg, CommandRegistry registry) {
+    public static PipelineProcessor buildPipelineOrThrow(Config cfg, CommandRegistry registry) {
         try {
             CommandProcessor cmd = new CommandProcessor(cfg.prefix, registry);
-            return new Pipeline()
+            return new PipelineProcessor()
                     .add(new PrefixGuardProcessor(cfg.prefix))
                     .add(cmd);
         } catch (Exception e) {
@@ -75,9 +76,17 @@ public final class Boot {
                 ob.start();
                 senderMux.register(ChatPlatform.ONEBOT, ob.sender());
                 closeables.add(ob);
-                log.info("OneBot ready {}", cfg.onebot.wsUrl);
+                log.info("OneBot ready on {}", cfg.onebot.wsUrl);
             }
-            if (!cfg.telegram.enabled && !cfg.onebot.enabled) {
+            if (cfg.discord.enabled) {
+                DiscordReceiver dc = new DiscordReceiver(cfg.discord.token);
+                dc.bind(router::receive);
+                dc.start();
+                senderMux.register(ChatPlatform.DISCORD, dc.sender());
+                closeables.add(dc);
+                log.info("Discord ready");
+            }
+            if (!(cfg.telegram.enabled || cfg.onebot.enabled || cfg.discord.enabled)) {
                 throw new BootStepError(6, "No platform enabled (please enable telegram/onebot in config/config.json)", null);
             }
             return closeables;

@@ -53,6 +53,10 @@ This project uses the following third-party libraries. All dependencies are comp
     - Repository: [google/gson](https://github.com/google/gson)
     - License: [Apache-2.0](https://github.com/google/gson/blob/main/LICENSE)
 
+- **JDA**
+  - Repository: [discord-jda/JDA](https://github.com/discord-jda/JDA)
+  - License: [Apache-2.0](https://github.com/discord-jda/JDA/blob/master/LICENSE)
+
 - **Log4j2**
     - Repository: [apache/logging-log4j2](https://github.com/apache/logging-log4j2)
     - License: [Apache-2.0](https://github.com/apache/logging-log4j2/blob/2.x/LICENSE.txt)
