@@ -1,0 +1,14 @@
+{
+  "prefix": "/",
+  "telegram": {
+    "enabled": true,
+    "botToken": "8138224142:AAHhTIdZxm4CRjzZDSfDFhGGbIcuQlxO5Mw",
+    "botUsername": "lukos945_bot"
+  },
+  "onebot": {
+    "enabled": false,
+    "wsUrl": "ws://127.0.0.1:6700",
+    "accessToken": "YOUR_ONEBOT_ACCESS_TOKEN_IF_ANY",
+    "selfId": 123456789
+  }
+}
