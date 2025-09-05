@@ -3,6 +3,8 @@ package chiloven.lukosbot2.bootstrap;
 import chiloven.lukosbot2.commands.EchoCommand;
 import chiloven.lukosbot2.commands.HelpCommand;
 import chiloven.lukosbot2.commands.PingCommand;
+import chiloven.lukosbot2.commands.WikiCommand;
+import chiloven.lukosbot2.commands.github.GitHubCommand;
 import chiloven.lukosbot2.config.Config;
 import chiloven.lukosbot2.core.*;
 import chiloven.lukosbot2.platforms.ChatPlatform;
@@ -10,8 +12,13 @@ import chiloven.lukosbot2.platforms.discord.DiscordReceiver;
 import chiloven.lukosbot2.platforms.onebot.OneBotReceiver;
 import chiloven.lukosbot2.platforms.telegram.TelegramReceiver;
 import chiloven.lukosbot2.util.json.JsonUtil;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.apache.logging.log4j.Logger;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,20 +30,92 @@ public final class Boot {
     private Boot() {
     }
 
-    public static Config loadConfigOrThrow() {
+    public static Config loadConfigOrThrow(Logger log) {
+        Path dir = Path.of("config");
+        Path file = dir.resolve("config.json");
         try {
-            return JsonUtil.readJson(Path.of("config", "config.json"), Config.class);
+            if (!Files.exists(dir)) {
+                Files.createDirectories(dir);
+            }
+
+            // 1) Default config as JsonObject
+            Config defCfg = new Config();
+            JsonObject def = JsonUtil.toJsonTree(defCfg);
+
+            JsonObject current;
+            boolean created = false;
+
+            // 2) Read existing or create new
+            if (!Files.exists(file)) {
+                String json = JsonUtil.toJson(defCfg);
+                Files.writeString(file, json, StandardCharsets.UTF_8);
+                current = def.deepCopy();
+                created = true;
+                log.info("Unable to find config file, a new one has been created at: {}", file.toString());
+            } else {
+                String raw = Files.readString(file, StandardCharsets.UTF_8).trim();
+                if (raw.isEmpty()) raw = "{}";
+                JsonElement parsed = JsonParser.parseString(raw);
+                current = parsed.isJsonObject() ? parsed.getAsJsonObject() : new JsonObject();
+            }
+
+            // 3) Deep merge: use current to override def, resulting in merged (= def + missing filled)
+            JsonObject merged = def.deepCopy();
+            deepMergeInto(merged, current);
+
+            // 4) If there are changes (merged != current), write back to file
+            boolean patched = !JsonUtil.normalizePretty(current).equals(JsonUtil.normalizePretty(merged));
+            if (patched && !created) {
+                Files.writeString(file, JsonUtil.toJson(merged), StandardCharsets.UTF_8);
+                log.info("Missing keys have been added and written back to: {}", file);
+            }
+
+            // 5) Return the final Config object
+            return JsonUtil.fromJsonTree(merged, Config.class);
+
         } catch (Exception e) {
-            throw new BootStepError(1, "Failed to read the configuration: config/config.json", e);
+            throw new BootStepError(1, "加载/创建配置失败: " + file, e);
+        }
+    }
+
+    /**
+     * Deep merge src into dst (modifies dst).
+     * If both dst and src have a value for the same key and both values are Json
+     * objects, merge them recursively. Otherwise, overwrite dst's value with src's value.
+     * This does not handle Json arrays specially; src's value
+     * will overwrite dst's value if they are arrays.
+     *
+     * @param dst the destination JsonObject to merge into
+     * @param src the source JsonObject to merge from
+     */
+    private static void deepMergeInto(JsonObject dst, JsonObject src) {
+        for (String key : src.keySet()) {
+            JsonElement srcVal = src.get(key);
+            // If dst does not have the key, simply add it
+            if (!dst.has(key)) {
+                dst.add(key, srcVal);
+                continue;
+            }
+
+            JsonElement dstVal = dst.get(key);
+            // If both values are JsonObjects, merge them recursively
+            if (srcVal != null && srcVal.isJsonObject() && dstVal != null && dstVal.isJsonObject()) {
+                deepMergeInto(dstVal.getAsJsonObject(), srcVal.getAsJsonObject());
+            } else {
+                dst.add(key, srcVal);
+            }
         }
     }
 
     public static CommandRegistry buildCommandsOrThrow(Config cfg) {
         try {
             CommandRegistry registry = new CommandRegistry()
-                    .add(new PingCommand())
-                    .add(new EchoCommand())
-                    .add(new chiloven.lukosbot2.commands.github.GitHubCommand(cfg.github.token));
+                    .add(
+                            new PingCommand(),
+                            new EchoCommand(),
+                            new GitHubCommand(cfg.github.token),
+                            new WikiCommand()
+                    );
             registry.add(new HelpCommand(registry, cfg.prefix));
             return registry;
         } catch (Exception e) {
@@ -87,7 +166,7 @@ public final class Boot {
                 log.info("Discord ready");
             }
             if (!(cfg.telegram.enabled || cfg.onebot.enabled || cfg.discord.enabled)) {
-                throw new BootStepError(6, "No platform enabled (please enable telegram/onebot in config/config.json)", null);
+                throw new BootStepError(6, "No platform enabled (please enable telegram/onebot/discord in config/config.json)", null);
             }
             return closeables;
         } catch (BootStepError e) {

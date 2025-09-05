@@ -34,7 +34,7 @@ public final class TelegramSender implements Sender {
     public void send(MessageOut out) {
         long chatId = out.addr().chatId();
 
-        // 1) 文本
+        // 1) Texts
         if (out.text() != null && !out.text().isBlank()) {
             try {
                 stack.bot.execute(SendMessage.builder()
@@ -47,7 +47,7 @@ public final class TelegramSender implements Sender {
             }
         }
 
-        // 2) 附件
+        // 2) Attachments
         if (out.attachments() == null) return;
         for (Attachment a : out.attachments()) {
             try {

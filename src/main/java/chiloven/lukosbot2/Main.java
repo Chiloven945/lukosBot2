@@ -30,7 +30,7 @@ public class Main {
         List<AutoCloseable> closeables = new ArrayList<>();
         try {
             // 1) Configuration
-            Config cfg = Boot.loadConfigOrThrow();
+            Config cfg = Boot.loadConfigOrThrow(log);
             log.info("Configuration loaded.");
 
             // 2) Command & Pipeline
@@ -54,7 +54,7 @@ public class Main {
 
         } catch (BootStepError e) {
             // Shutdown and exit with specific code
-            log.error(e.getMessage(), e.getCause());
+            log.fatal(e.getMessage(), e.getCause());
             Lifecycle.shutdownQuietly(closeables, log);
             System.exit(e.code());
             return;

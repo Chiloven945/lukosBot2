@@ -2,6 +2,7 @@ package chiloven.lukosbot2.util.json;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 
 import java.io.*;
@@ -193,5 +194,48 @@ public final class JsonUtil {
         String fn = target.getFileName().toString();
         String tmpName = fn + ".tmp-" + System.nanoTime();
         return (target.getParent() == null) ? Path.of(tmpName) : target.getParent().resolve(tmpName);
+    }
+
+    /**
+     * Converts an object to its JSON string representation
+     * (Pretty print, HTML characters not escaped)
+     *
+     * @param obj the object to convert
+     * @return the JSON string representation
+     */
+    public static String toJson(Object obj) {
+        return GSON.toJson(obj);
+    }
+
+    /**
+     * Converts an object to a JsonObject
+     *
+     * @param obj the object to convert
+     * @return the JsonObject representation
+     */
+    public static JsonObject toJsonTree(Object obj) {
+        return GSON.toJsonTree(obj).getAsJsonObject();
+    }
+
+    /**
+     * Deserializes a JsonObject into an object of the specified class
+     *
+     * @param obj the JsonObject to deserialize
+     * @param cls the target class
+     * @param <T> type parameter
+     * @return the deserialized object
+     */
+    public static <T> T fromJsonTree(JsonObject obj, Class<T> cls) {
+        return GSON.fromJson(obj, cls);
+    }
+
+    /**
+     * Normalizes a JsonObject to a pretty-printed JSON string
+     *
+     * @param obj the JsonObject to normalize
+     * @return the pretty-printed JSON string
+     */
+    public static String normalizePretty(JsonObject obj) {
+        return GSON.toJson(obj);
     }
 }

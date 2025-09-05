@@ -11,7 +11,7 @@ public class Config {
      * GitHub Configuration
      */
     public static class GitHub {
-        public String token = null;       // 可为空
+        public String token = "";       // 可为空
     }
 
     /**
