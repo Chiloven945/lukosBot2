@@ -21,6 +21,17 @@ public class CommandRegistry {
         return this;
     }
 
+    /**
+     * Add multiple commands to the registry
+     *
+     * @param c the commands to add
+     * @return this registry for chaining
+     */
+    public CommandRegistry add(BotCommand... c){
+        Collections.addAll(list, c);
+        return this;
+    }
+
     public List<BotCommand> all() {
         return Collections.unmodifiableList(list);
     }
@@ -36,5 +47,21 @@ public class CommandRegistry {
             sb.append(" ");
         }
         return sb.toString();
+    }
+
+    /**
+     * Get a command by its name (case-insensitive).
+     *
+     * @param name the command name
+     * @return the BotCommand instance, or null if not found
+     */
+    public BotCommand get(String name) {
+        if (name == null) return null;
+        for (BotCommand c : list) {
+            if (c.name().equalsIgnoreCase(name)) {
+                return c;
+            }
+        }
+        return null;
     }
 }
