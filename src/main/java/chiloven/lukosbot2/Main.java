@@ -16,6 +16,7 @@ import java.util.List;
 
 public class Main {
     private static final Logger log = LogManager.getLogger(Main.class);
+    public static final String VERSION = "Alpha.0.0.1";
 
     public static void main(String[] args) {
         System.out.println("""
@@ -26,7 +27,7 @@ public class Main {
                   \\ \\ \\L\\ \\\\ \\ \\_\\ \\ \\ \\\\`\\ \\ \\ \\_\\ \\/\\ \\L\\ \\ \\ \\L\\ \\\\ \\ \\_\\ \\ \\ \\ \\  // /_\\ \\
                    \\ \\____/ \\ \\_____\\ \\_\\ \\_\\\\ \\_____\\ `\\____\\ \\____/ \\ \\_____\\ \\ \\_\\/\\______/
                     \\/___/   \\/_____/\\/_/\\/_/ \\/_____/\\/_____/\\/___/   \\/_____/  \\/_/\\/_____/\s""");
-        log.info("Starting lukosBot2...");
+        log.info("Starting lukosBot2 {} ...", VERSION);
         List<AutoCloseable> closeables = new ArrayList<>();
         try {
             // 1) Configuration
