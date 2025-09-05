@@ -1,25 +1,27 @@
 package chiloven.lukosbot2.platforms.telegram;
 
-import org.telegram.telegrambots.meta.TelegramBotsApi;
-import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
+import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 final class TelegramStack implements AutoCloseable {
-    private final String token, username;
+    final String token, username;
     TelegramBot bot;
-    private TelegramBotsApi api;
+    private TelegramBotsLongPollingApplication app;
 
     TelegramStack(String token, String username) {
         this.token = token;
         this.username = username;
     }
 
-    void ensureStarted() throws Exception {
+    void ensureStarted() throws TelegramApiException {
         if (bot != null) return;
-        api = new TelegramBotsApi(DefaultBotSession.class);
-        bot = new TelegramBot(token, username);
-        api.registerBot(bot);
+        app = new TelegramBotsLongPollingApplication();
+        bot = new TelegramBot(username);
+        app.registerBot(token, bot);
     }
 
     @Override
-    public void close() { /* Telegram SDK 无显式 close，可省略 */ }
+    public void close() throws TelegramApiException {
+        if (app != null) app.stop();
+    }
 }
