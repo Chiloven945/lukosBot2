@@ -1,18 +1,19 @@
 package chiloven.lukosbot2;
 
 import chiloven.lukosbot2.bootstrap.Boot;
-import chiloven.lukosbot2.bootstrap.BootStepError;
-import chiloven.lukosbot2.bootstrap.Lifecycle;
+import chiloven.lukosbot2.config.Config;
 import chiloven.lukosbot2.core.CommandRegistry;
 import chiloven.lukosbot2.core.PipelineProcessor;
 import chiloven.lukosbot2.core.Router;
 import chiloven.lukosbot2.core.SenderMux;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
 
-import java.util.ArrayList;
-import java.util.List;
-
+@SpringBootApplication
 public class Main {
     public static final String VERSION = "Alpha.0.0.1";
     private static final Logger log = LogManager.getLogger(Main.class);
@@ -27,43 +28,50 @@ public class Main {
                    \\ \\____/ \\ \\_____\\ \\_\\ \\_\\\\ \\_____\\ `\\____\\ \\____/ \\ \\_____\\ \\ \\_\\/\\______/
                     \\/___/   \\/_____/\\/_/\\/_/ \\/_____/\\/_____/\\/___/   \\/_____/  \\/_/\\/_____/\s""");
         log.info("Starting lukosBot2 {} ...", VERSION);
-        List<AutoCloseable> closeable = new ArrayList<>();
-        try {
-            // 1) Configuration
-            Boot.loadConfig();
-            log.info("Configuration loaded.");
+        SpringApplication.run(Main.class, args);
+    }
 
-            // 2) Command & Pipeline
-            CommandRegistry registry = Boot.buildCommands();
-            log.info("Commands registered: {}", registry.listCommands());
+    // 1) Configuration
+    @Bean
+    public Config config() {
+        Boot.loadConfig();
+        log.info("Configuration loaded.");
+        return Config.get();
+    }
 
-            PipelineProcessor pipeline = Boot.buildPipeline(registry);
-            log.info("Message processing pipeline built.");
+    // 2) Command
+    @Bean
+    public CommandRegistry commandRegistry() {
+        CommandRegistry registry = Boot.buildCommands();
+        log.info("Commands registered: {}", registry.listCommands());
+        return registry;
+    }
 
-            // 3) SenderMux & Router
-            SenderMux senderMux = new SenderMux();
-            Router router = new Router(pipeline, senderMux);
-            log.info("Outbound routing set up.");
+    // 3) Pipeline
+    @Bean
+    public PipelineProcessor pipelineProcessor(CommandRegistry registry) {
+        PipelineProcessor pipeline = Boot.buildPipeline(registry);
+        log.info("Message processing pipeline built.");
+        return pipeline;
+    }
 
-            // 4) Platforms registration & startup
-            closeable.addAll(Boot.startPlatforms(router, senderMux));
-            log.info("Chat platforms started.");
+    // 4) SenderMux
+    @Bean
+    public SenderMux senderMux() {
+        return new SenderMux();
+    }
 
-            // 5) Startup complete
-            log.info("lukosBot2 started.");
-        } catch (BootStepError e) {
-            // Shutdown and exit with specific code
-            log.fatal(e.getMessage(), e.getCause());
-            Lifecycle.shutdownQuietly(closeable);
-            System.exit(e.code());
-            return;
-        } catch (Throwable t) {
-            log.fatal("Unexpected fatal error during startup", t);
-            Lifecycle.shutdownQuietly(closeable);
-            System.exit(99);
-            return;
-        }
+    // 5) Router
+    @Bean
+    public Router router(PipelineProcessor pipeline, SenderMux senderMux) {
+        Router router = new Router(pipeline, senderMux);
+        log.info("Outbound routing set up.");
+        return router;
+    }
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> Lifecycle.shutdownQuietly(closeable)));
+    // 6) Start chat platforms (Telegram/OneBot/Discord) after the container is ready
+    @Bean
+    public ApplicationRunner startPlatforms(PlatformManager platforms) {
+        return args -> platforms.start();
     }
 }

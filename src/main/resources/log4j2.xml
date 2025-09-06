@@ -6,6 +6,10 @@
             <PatternLayout
                     pattern="[%d{HH:mm:ss.SSS}] [%t/%logger/%highlight{%level}]: %msg%n"
                     disableAnsi="false" noConsoleNoAnsi="false"/>
+            <!-- 仅此处新增：控制台从 DEBUG 起输出 -->
+            <Filters>
+                <ThresholdFilter level="debug" onMatch="ACCEPT" onMismatch="DENY"/>
+            </Filters>
         </Console>
 
         <RollingFile name="RollingFile"
@@ -22,16 +26,17 @@
             </Policies>
         </RollingFile>
 
-        <File name="TraceFile" fileName="logs/trace.log" append="false">
+        <File name="TraceFile" fileName="logs/debug.log" append="false">
             <PatternLayout pattern="[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%t/%logger/%level]: %msg%n"/>
             <Filters>
-                <ThresholdFilter level="trace" onMatch="ACCEPT" onMismatch="DENY"/>
+                <ThresholdFilter level="debug" onMatch="ACCEPT" onMismatch="DENY"/>
             </Filters>
         </File>
     </Appenders>
 
+    <!-- 保持 Root 为 trace，这样 TraceFile 还能拿到 TRACE -->
     <Loggers>
-        <Root level="trace">
+        <Root level="debug">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="RollingFile"/>
             <AppenderRef ref="TraceFile"/>
