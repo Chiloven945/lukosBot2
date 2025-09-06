@@ -1,9 +1,6 @@
 package chiloven.lukosbot2.util.json;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonSyntaxException;
+import com.google.gson.*;
 
 import java.io.*;
 import java.lang.reflect.Type;
@@ -237,5 +234,34 @@ public final class JsonUtil {
      */
     public static String normalizePretty(JsonObject obj) {
         return GSON.toJson(obj);
+    }
+
+    /**
+     * Deep merge src into dst (modifies dst).
+     * If both dst and src have a value for the same key and both values are Json
+     * objects, merge them recursively. Otherwise, overwrite dst's value with src's value.
+     * This does not handle Json arrays specially; src's value
+     * will overwrite dst's value if they are arrays.
+     *
+     * @param dst the destination JsonObject to merge into
+     * @param src the source JsonObject to merge from
+     */
+    public static void mergeInto(JsonObject dst, JsonObject src) {
+        for (String key : src.keySet()) {
+            JsonElement srcVal = src.get(key);
+            // If dst does not have the key, add it
+            if (!dst.has(key)) {
+                dst.add(key, srcVal);
+                continue;
+            }
+
+            JsonElement dstVal = dst.get(key);
+            // If both values are JsonObjects, merge them recursively
+            if (srcVal != null && srcVal.isJsonObject() && dstVal != null && dstVal.isJsonObject()) {
+                mergeInto(dstVal.getAsJsonObject(), srcVal.getAsJsonObject());
+            } else {
+                dst.add(key, srcVal);
+            }
+        }
     }
 }

@@ -15,6 +15,7 @@ import chiloven.lukosbot2.util.json.JsonUtil;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.nio.charset.StandardCharsets;
@@ -27,10 +28,12 @@ import java.util.List;
  * Bootstrap helper class
  */
 public final class Boot {
+    private static final Logger log = LogManager.getLogger(Boot.class);
+
     private Boot() {
     }
 
-    public static Config loadConfigOrThrow(Logger log) {
+    public static void loadConfig() {
         Path dir = Path.of("config");
         Path file = dir.resolve("config.json");
         try {
@@ -61,7 +64,7 @@ public final class Boot {
 
             // 3) Deep merge: use current to override def, resulting in merged (= def + missing filled)
             JsonObject merged = def.deepCopy();
-            deepMergeInto(merged, current);
+            JsonUtil.mergeInto(merged, current);
 
             // 4) If there are changes (merged != current), write back to file
             boolean patched = !JsonUtil.normalizePretty(current).equals(JsonUtil.normalizePretty(merged));
@@ -71,44 +74,16 @@ public final class Boot {
             }
 
             // 5) Return the final Config object
-            return JsonUtil.fromJsonTree(merged, Config.class);
+            Config.set(JsonUtil.fromJsonTree(merged, Config.class));
 
         } catch (Exception e) {
             throw new BootStepError(1, "加载/创建配置失败: " + file, e);
         }
     }
 
-    /**
-     * Deep merge src into dst (modifies dst).
-     * If both dst and src have a value for the same key and both values are Json
-     * objects, merge them recursively. Otherwise, overwrite dst's value with src's value.
-     * This does not handle Json arrays specially; src's value
-     * will overwrite dst's value if they are arrays.
-     *
-     * @param dst the destination JsonObject to merge into
-     * @param src the source JsonObject to merge from
-     */
-    private static void deepMergeInto(JsonObject dst, JsonObject src) {
-        for (String key : src.keySet()) {
-            JsonElement srcVal = src.get(key);
-            // If dst does not have the key, simply add it
-            if (!dst.has(key)) {
-                dst.add(key, srcVal);
-                continue;
-            }
-
-            JsonElement dstVal = dst.get(key);
-            // If both values are JsonObjects, merge them recursively
-            if (srcVal != null && srcVal.isJsonObject() && dstVal != null && dstVal.isJsonObject()) {
-                deepMergeInto(dstVal.getAsJsonObject(), srcVal.getAsJsonObject());
-            } else {
-                dst.add(key, srcVal);
-            }
-        }
-    }
-
-    public static CommandRegistry buildCommandsOrThrow(Config cfg) {
+    public static CommandRegistry buildCommands() {
         try {
+            Config cfg = Config.get();
             CommandRegistry registry = new CommandRegistry()
                     .add(
                             new PingCommand(),
@@ -123,8 +98,9 @@ public final class Boot {
         }
     }
 
-    public static PipelineProcessor buildPipelineOrThrow(Config cfg, CommandRegistry registry) {
+    public static PipelineProcessor buildPipeline(CommandRegistry registry) {
         try {
+            Config cfg = Config.get();
             CommandProcessor cmd = new CommandProcessor(cfg.prefix, registry);
             return new PipelineProcessor()
                     .add(new PrefixGuardProcessor(cfg.prefix))
@@ -137,16 +113,16 @@ public final class Boot {
     /**
      * Start platform receivers and register their senders to the mux; return a list of closeable resources
      */
-    public static List<AutoCloseable> startPlatformsOrThrow(
-            Config cfg, Router router, SenderMux senderMux, Logger log) {
-        List<AutoCloseable> closeables = new ArrayList<>();
+    public static List<AutoCloseable> startPlatforms(Router router, SenderMux senderMux) {
+        List<AutoCloseable> closeable = new ArrayList<>();
         try {
+            Config cfg = Config.get();
             if (cfg.telegram.enabled) {
                 TelegramReceiver tg = new TelegramReceiver(cfg.telegram.botToken, cfg.telegram.botUsername);
                 tg.bind(router::receive);
                 tg.start();
                 senderMux.register(ChatPlatform.TELEGRAM, tg.sender());
-                closeables.add(tg);
+                closeable.add(tg);
                 log.info("Telegram ready as @{}", cfg.telegram.botUsername);
             }
             if (cfg.onebot.enabled) {
@@ -154,7 +130,7 @@ public final class Boot {
                 ob.bind(router::receive);
                 ob.start();
                 senderMux.register(ChatPlatform.ONEBOT, ob.sender());
-                closeables.add(ob);
+                closeable.add(ob);
                 log.info("OneBot ready on {}", cfg.onebot.wsUrl);
             }
             if (cfg.discord.enabled) {
@@ -162,13 +138,13 @@ public final class Boot {
                 dc.bind(router::receive);
                 dc.start();
                 senderMux.register(ChatPlatform.DISCORD, dc.sender());
-                closeables.add(dc);
+                closeable.add(dc);
                 log.info("Discord ready");
             }
             if (!(cfg.telegram.enabled || cfg.onebot.enabled || cfg.discord.enabled)) {
                 throw new BootStepError(6, "No platform enabled (please enable telegram/onebot/discord in config/config.json)", null);
             }
-            return closeables;
+            return closeable;
         } catch (BootStepError e) {
             throw e;
         } catch (Exception e) {

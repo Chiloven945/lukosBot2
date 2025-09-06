@@ -3,7 +3,6 @@ package chiloven.lukosbot2;
 import chiloven.lukosbot2.bootstrap.Boot;
 import chiloven.lukosbot2.bootstrap.BootStepError;
 import chiloven.lukosbot2.bootstrap.Lifecycle;
-import chiloven.lukosbot2.config.Config;
 import chiloven.lukosbot2.core.CommandRegistry;
 import chiloven.lukosbot2.core.PipelineProcessor;
 import chiloven.lukosbot2.core.Router;
@@ -15,8 +14,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Main {
-    private static final Logger log = LogManager.getLogger(Main.class);
     public static final String VERSION = "Alpha.0.0.1";
+    private static final Logger log = LogManager.getLogger(Main.class);
 
     public static void main(String[] args) {
         System.out.println("""
@@ -28,17 +27,17 @@ public class Main {
                    \\ \\____/ \\ \\_____\\ \\_\\ \\_\\\\ \\_____\\ `\\____\\ \\____/ \\ \\_____\\ \\ \\_\\/\\______/
                     \\/___/   \\/_____/\\/_/\\/_/ \\/_____/\\/_____/\\/___/   \\/_____/  \\/_/\\/_____/\s""");
         log.info("Starting lukosBot2 {} ...", VERSION);
-        List<AutoCloseable> closeables = new ArrayList<>();
+        List<AutoCloseable> closeable = new ArrayList<>();
         try {
             // 1) Configuration
-            Config cfg = Boot.loadConfigOrThrow(log);
+            Boot.loadConfig();
             log.info("Configuration loaded.");
 
             // 2) Command & Pipeline
-            CommandRegistry registry = Boot.buildCommandsOrThrow(cfg);
+            CommandRegistry registry = Boot.buildCommands();
             log.info("Commands registered: {}", registry.listCommands());
 
-            PipelineProcessor pipeline = Boot.buildPipelineOrThrow(cfg, registry);
+            PipelineProcessor pipeline = Boot.buildPipeline(registry);
             log.info("Message processing pipeline built.");
 
             // 3) SenderMux & Router
@@ -47,25 +46,24 @@ public class Main {
             log.info("Outbound routing set up.");
 
             // 4) Platforms registration & startup
-            closeables.addAll(Boot.startPlatformsOrThrow(cfg, router, senderMux, log));
+            closeable.addAll(Boot.startPlatforms(router, senderMux));
             log.info("Chat platforms started.");
 
             // 5) Startup complete
-            log.info("lukosBot2 started. Prefix: '{}'", cfg.prefix);
-
+            log.info("lukosBot2 started.");
         } catch (BootStepError e) {
             // Shutdown and exit with specific code
             log.fatal(e.getMessage(), e.getCause());
-            Lifecycle.shutdownQuietly(closeables, log);
+            Lifecycle.shutdownQuietly(closeable);
             System.exit(e.code());
             return;
         } catch (Throwable t) {
             log.fatal("Unexpected fatal error during startup", t);
-            Lifecycle.shutdownQuietly(closeables, log);
+            Lifecycle.shutdownQuietly(closeable);
             System.exit(99);
             return;
         }
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> Lifecycle.shutdownQuietly(closeables, log)));
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> Lifecycle.shutdownQuietly(closeable)));
     }
 }
