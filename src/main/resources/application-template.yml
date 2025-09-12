@@ -1,0 +1,27 @@
+# Generated at runtime from classpath template
+lukos:
+  prefix: "/"
+  language: "zh-cn"
+
+  github:
+    token: "${GITHUB_TOKEN:}"
+
+  telegram:
+    enabled: false
+    bot-token: "${TELEGRAM_BOT_TOKEN:}"
+    bot-username: ""
+
+  onebot:
+    enabled: false
+    ws-url: "ws://127.0.0.1:6700"
+    access-token: "${ONEBOT_ACCESS_TOKEN:}"
+
+  discord:
+    enabled: false
+    token: "${DISCORD_TOKEN:}"
+
+shiro:
+  ws:
+    client:
+      enable: false
+      url: "${lukos.onebot.ws-url}"

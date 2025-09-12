@@ -1,4 +1,4 @@
-package chiloven.lukosbot2.util.json;
+package chiloven.lukosbot2.util;
 
 import com.google.gson.*;
 

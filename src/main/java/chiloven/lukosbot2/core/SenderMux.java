@@ -9,6 +9,10 @@ import org.apache.logging.log4j.Logger;
 import java.util.EnumMap;
 import java.util.Map;
 
+/**
+ * A Sender implementation that routes messages to different Sender instances based on the ChatPlatform.
+ * This allows for a unified interface to send messages across multiple platforms.
+ */
 public class SenderMux implements Sender {
     private static final Logger log = LogManager.getLogger(SenderMux.class);
     private final Map<ChatPlatform, Sender> routes = new EnumMap<>(ChatPlatform.class);

@@ -1,14 +1,12 @@
 package chiloven.lukosbot2;
 
 import chiloven.lukosbot2.bootstrap.Boot;
-import chiloven.lukosbot2.config.Config;
 import chiloven.lukosbot2.core.CommandRegistry;
 import chiloven.lukosbot2.core.PipelineProcessor;
 import chiloven.lukosbot2.core.Router;
 import chiloven.lukosbot2.core.SenderMux;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -26,42 +24,35 @@ public class Main {
                  \\ \\ \\  __\\ \\ \\ \\ \\ \\ , <  \\ \\ \\ \\ \\/_\\__ \\\\ \\  _ <'\\ \\ \\ \\ \\ \\ \\ \\\\/_/// /__\s
                   \\ \\ \\L\\ \\\\ \\ \\_\\ \\ \\ \\\\`\\ \\ \\ \\_\\ \\/\\ \\L\\ \\ \\ \\L\\ \\\\ \\ \\_\\ \\ \\ \\ \\  // /_\\ \\
                    \\ \\____/ \\ \\_____\\ \\_\\ \\_\\\\ \\_____\\ `\\____\\ \\____/ \\ \\_____\\ \\ \\_\\/\\______/
-                    \\/___/   \\/_____/\\/_/\\/_/ \\/_____/\\/_____/\\/___/   \\/_____/  \\/_/\\/_____/\s""");
+                    \\/___/   \\/_____/\\/_/\\/_/ \\/_____/\\/_____/\\/___/   \\/_____/  \\/_/\\/_____/\s
+                """);
         log.info("Starting lukosBot2 {} ...", VERSION);
         SpringApplication.run(Main.class, args);
     }
 
-    // 1) Configuration
+    // 1) Command
     @Bean
-    public Config config() {
-        Boot.loadConfig();
-        log.info("Configuration loaded.");
-        return Config.get();
-    }
-
-    // 2) Command
-    @Bean
-    public CommandRegistry commandRegistry() {
-        CommandRegistry registry = Boot.buildCommands();
+    public CommandRegistry commandRegistry(Boot boot) {
+        CommandRegistry registry = boot.buildCommands();
         log.info("Commands registered: {}", registry.listCommands());
         return registry;
     }
 
-    // 3) Pipeline
+    // 2) Pipeline
     @Bean
-    public PipelineProcessor pipelineProcessor(CommandRegistry registry) {
-        PipelineProcessor pipeline = Boot.buildPipeline(registry);
+    public PipelineProcessor pipelineProcessor(Boot boot, CommandRegistry registry) {
+        PipelineProcessor pipeline = boot.buildPipeline(registry);
         log.info("Message processing pipeline built.");
         return pipeline;
     }
 
-    // 4) SenderMux
+    // 3) SenderMux
     @Bean
     public SenderMux senderMux() {
         return new SenderMux();
     }
 
-    // 5) Router
+    // 4) Router
     @Bean
     public Router router(PipelineProcessor pipeline, SenderMux senderMux) {
         Router router = new Router(pipeline, senderMux);
@@ -69,9 +60,4 @@ public class Main {
         return router;
     }
 
-    // 6) Start chat platforms (Telegram/OneBot/Discord) after the container is ready
-    @Bean
-    public ApplicationRunner startPlatforms(PlatformManager platforms) {
-        return args -> platforms.start();
-    }
 }

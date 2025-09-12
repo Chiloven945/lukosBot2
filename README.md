@@ -46,29 +46,57 @@ This project is licensed under the GNU Affero General Public License v3.0 (AGPL-
 This project uses the following third-party libraries. All dependencies are compatible with AGPL-3.0, and their licenses are respected:
 
 - **Brigadier**
-    - Repository: [Mojang/brigadier](https://github.com/Mojang/brigadier)
-    - License: [MIT](https://github.com/Mojang/brigadier/blob/master/LICENSE)
+  - Repository: [Mojang/brigadier](https://github.com/Mojang/brigadier)
+  - License: [MIT](https://github.com/Mojang/brigadier/blob/master/LICENSE)
+
+- **Flexmark**
+  - Repository: [vsch/flexmark-java](https://github.com/vsch/flexmark-java)
+  - License: [BSD-2-Clause](https://github.com/vsch/flexmark-java/blob/master/LICENSE.txt)
 
 - **Gson**
-    - Repository: [google/gson](https://github.com/google/gson)
-    - License: [Apache-2.0](https://github.com/google/gson/blob/main/LICENSE)
+  - Repository: [google/gson](https://github.com/google/gson)
+  - License: [Apache-2.0](https://github.com/google/gson/blob/main/LICENSE)
 
 - **JDA**
   - Repository: [discord-jda/JDA](https://github.com/discord-jda/JDA)
   - License: [Apache-2.0](https://github.com/discord-jda/JDA/blob/master/LICENSE)
 
+- **Jsoup**
+  - Repository: [jhy/jsoup](https://github.com/jhy/jsoup)
+  - License: [MIT](https://github.com/jhy/jsoup/blob/master/LICENSE)
+
 - **Log4j2**
-    - Repository: [apache/logging-log4j2](https://github.com/apache/logging-log4j2)
-    - License: [Apache-2.0](https://github.com/apache/logging-log4j2/blob/2.x/LICENSE.txt)
+  - Repository: [apache/logging-log4j2](https://github.com/apache/logging-log4j2)
+  - License: [Apache-2.0](https://github.com/apache/logging-log4j2/blob/2.x/LICENSE.txt)
+
+- **Lombok**
+  - Repository: [projectlombok/lombok](https://github.com/projectlombok/lombok)
+  - License: [MIT](https://github.com/projectlombok/lombok/blob/master/LICENSE)
+
+- **Selenium**
+  - Repository: [SeleniumHQ/selenium](https://github.com/SeleniumHQ/selenium)
+  - License: [Apache-2.0](https://github.com/SeleniumHQ/selenium/blob/trunk/LICENSE)
+
+- **Shiro (OneBot)**
+  - Repository: [MisakaTAT/Shiro](https://github.com/mikuac/shiro)
+  - License: [AGPL-3.0](https://github.com/MisakaTAT/Shiro/blob/main/LICENSE)
 
 - **SLF4J**
-    - Repository: [qos-ch/slf4j](https://github.com/qos-ch/slf4j)
-    - License: [MIT](https://github.com/qos-ch/slf4j/blob/master/LICENSE.txt)
+  - Repository: [qos-ch/slf4j](https://github.com/qos-ch/slf4j)
+  - License: [MIT](https://github.com/qos-ch/slf4j/blob/master/LICENSE.txt)
+
+- **SnakeYAML**
+  - Repository: [snakeyaml/snakeyaml](https://github.com/snakeyaml/snakeyaml)
+  - License: [Apache-2.0](https://github.com/snakeyaml/snakeyaml/blob/master/LICENSE.txt)
+
+- **Spring Boot**
+  - Repository: [spring-projects/spring-boot](https://github.com/spring-projects/spring-boot)
+  - License: [Apache-2.0](https://github.com/spring-projects/spring-boot/blob/main/LICENSE.txt)
 
 - **TelegramBots**
-    - Repository: [rubenlagus/TelegramBots](https://github.com/rubenlagus/TelegramBots)
-    - License: [MIT](https://github.com/rubenlagus/TelegramBots/blob/master/LICENSE)
+  - Repository: [rubenlagus/TelegramBots](https://github.com/rubenlagus/TelegramBots)
+  - License: [MIT](https://github.com/rubenlagus/TelegramBots/blob/master/LICENSE)
 
-- **Maven Assembly Plugin**
-    - Repository: [apache/maven-assembly-plugin](https://github.com/apache/maven-assembly-plugin)
-    - License: [Apache-2.0](https://github.com/apache/maven-assembly-plugin/blob/master/LICENSE)
+- **WebDriverManager**
+  - Repository: [bonigarcia/webdrivermanager](https://github.com/bonigarcia/webdrivermanager)
+  - License: [Apache-2.0](https://github.com/bonigarcia/webdrivermanager/blob/master/LICENSE)

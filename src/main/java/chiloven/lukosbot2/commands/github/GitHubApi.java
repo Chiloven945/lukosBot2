@@ -1,6 +1,6 @@
 package chiloven.lukosbot2.commands.github;
 
-import chiloven.lukosbot2.util.http.HttpJson;
+import chiloven.lukosbot2.util.HttpJson;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
