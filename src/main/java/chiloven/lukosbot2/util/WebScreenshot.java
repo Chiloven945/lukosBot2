@@ -6,17 +6,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jsoup.Jsoup;
 import org.openqa.selenium.*;
-import org.openqa.selenium.Dimension;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.edge.EdgeDriver;
 import org.openqa.selenium.edge.EdgeOptions;
 
-import javax.imageio.ImageIO;
-import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -46,7 +40,7 @@ public final class WebScreenshot {
 
             // Page height may vary; limit to a max height to avoid issues
             Long height = (Long) ((JavascriptExecutor) driver).executeScript("return Math.min(document.body.scrollHeight || 800, 8000);");
-            driver.manage().window().setSize(new Dimension(1280, Objects.requireNonNull(height).intValue()));
+            driver.manage().window().setSize(new Dimension(1080, Objects.requireNonNull(height).intValue()));
 
             Thread.sleep(500);
             log.info("Full-page screenshot completed.");
@@ -71,7 +65,7 @@ public final class WebScreenshot {
      * @throws Exception if an error occurs or if the URL is not a Wikipedia link
      */
     public static ContentData screenshotWikipedia(String url) throws Exception {
-        if (!WikiCommand.isWikipedia(url)) {
+        if (WikiCommand.isNotWikipedia(url)) {
             throw new IllegalArgumentException("Not a Wikipedia URL: " + url);
         }
 
@@ -102,7 +96,7 @@ public final class WebScreenshot {
             Number n1 = (Number) ((JavascriptExecutor) driver).executeScript(script);
             int h1 = toPx(n1, 1200);
             log.debug("First measured height = {}", h1);
-            driver.manage().window().setSize(new Dimension(1920, h1));
+            driver.manage().window().setSize(new Dimension(1380, h1));
             Thread.sleep(700);
 
             Number n2 = (Number) ((JavascriptExecutor) driver).executeScript(script);
@@ -110,13 +104,13 @@ public final class WebScreenshot {
             int target = Math.max(h1, h2);
             log.debug("Second measured height = {}, final target = {}", h2, target);
             if (target > h1) {
-                driver.manage().window().setSize(new Dimension(1920, target));
+                driver.manage().window().setSize(new Dimension(1380, target));
                 Thread.sleep(400);
             }
 
             log.info("Wikipedia intro screenshot completed.");
             byte[] png = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
-            byte[] jpg = pngToJpg(png, 0.9f);
+            byte[] jpg = ImageUtils.pngToJpg(png, 0.9f);
 
             // 取条目标题作为文件名
             String title = "wikipedia";
@@ -232,7 +226,6 @@ public final class WebScreenshot {
         }
     }
 
-
     /**
      * Sanitize a filename by replacing illegal characters with underscores.
      * If the result is empty, return "wikipedia".
@@ -245,42 +238,5 @@ public final class WebScreenshot {
         String safe = raw.replaceAll("[\\\\/:*?\"<>|\\r\\n\\t]", "_").trim();
         return safe.isEmpty() ? "wikipedia" : safe;
     }
-
-    /**
-     * Convert PNG bytes to JPG bytes with specified quality.
-     * Fills transparent areas with a white background.
-     *
-     * @param pngBytes the PNG image bytes
-     * @param quality  the JPEG quality (0.0 to 1.0)
-     * @return the JPG image bytes
-     * @throws Exception if conversion fails
-     */
-    private static byte[] pngToJpg(byte[] pngBytes, float quality) throws Exception {
-        var src = ImageIO.read(new ByteArrayInputStream(pngBytes));
-        if (src == null) throw new IllegalArgumentException("Invalid screenshot image");
-        BufferedImage rgb = new BufferedImage(src.getWidth(), src.getHeight(), BufferedImage.TYPE_INT_RGB);
-        Graphics2D g = rgb.createGraphics();
-        g.setColor(Color.WHITE);
-        g.fillRect(0, 0, rgb.getWidth(), rgb.getHeight());
-        g.drawImage(src, 0, 0, null);
-        g.dispose();
-
-        try (var baos = new ByteArrayOutputStream()) {
-            var writer = ImageIO.getImageWritersByFormatName("jpg").next();
-            try (var ios = ImageIO.createImageOutputStream(baos)) {
-                writer.setOutput(ios);
-                var param = writer.getDefaultWriteParam();
-                if (param.canWriteCompressed()) {
-                    param.setCompressionMode(javax.imageio.ImageWriteParam.MODE_EXPLICIT);
-                    param.setCompressionQuality(quality);
-                }
-                writer.write(null, new javax.imageio.IIOImage(rgb, null, null), param);
-            } finally {
-                writer.dispose();
-            }
-            return baos.toByteArray();
-        }
-    }
-
 
 }

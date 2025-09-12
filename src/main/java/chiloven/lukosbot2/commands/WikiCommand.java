@@ -19,25 +19,41 @@ import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 public class WikiCommand implements BotCommand {
     private static final Logger log = LogManager.getLogger(WikiCommand.class);
 
-    private static String normalize(String link) {
-        link = link.trim();
-        if (!link.startsWith("http://") && !link.startsWith("https://")) {
-            link = "https://" + link;
+    // TODO: change to the language in the application.yml
+    private static final String DEFAULT_LANG = "zh";
+
+    /**
+     * Return a correct URL of Wikipedia.
+     * This allows user to use both URL and the article name.
+     *
+     * @param linkOrTitle the link or article title to fetch
+     * @return normalized URL
+     */
+    private static String normalize(String linkOrTitle) {
+        String s = linkOrTitle.trim();
+        if (s.startsWith("http://") || s.startsWith("https://")) {
+            return s;
         }
-        return link;
+        return titleToWikipediaUrl(s);
     }
 
-    private static String filenameFromUrl(String url, String fallback) {
+    private static String titleToWikipediaUrl(String input) {
+        if (input == null) return null;
+        String s = input.trim();
+
+        String lang = DEFAULT_LANG;
+        int idx = s.indexOf(':');
+        if (idx > 0 && idx <= 6 && s.substring(0, idx).matches("[A-Za-z-]{2,6}")) {
+            lang = s.substring(0, idx);
+            s = s.substring(idx + 1).trim();
+        }
+
+        String title = s.replace(' ', '_');
         try {
-            String path = new URI(url).getPath();
-            if (path == null || path.isBlank() || path.equals("/")) return fallback;
-            String last = path.substring(path.lastIndexOf('/') + 1);
-            if (last.isBlank()) return fallback;
-            // Simple sanitize
-            last = last.replaceAll("[^A-Za-z0-9._-]", "_");
-            return last;
+            String enc = java.net.URLEncoder.encode(title, java.nio.charset.StandardCharsets.UTF_8);
+            return "https://" + lang + ".wikipedia.org/wiki/" + enc;
         } catch (Exception e) {
-            return fallback;
+            return "https://" + lang + ".wikipedia.org/wiki/" + title;
         }
     }
 
@@ -47,13 +63,13 @@ public class WikiCommand implements BotCommand {
      * @param url the URL to check
      * @return true if it's a Wikipedia URL, false otherwise
      */
-    public static boolean isWikipedia(String url) {
+    public static boolean isNotWikipedia(String url) {
         try {
             var u = new URI(url).toURL();
             String host = u.getHost() == null ? "" : u.getHost().toLowerCase();
-            return host.endsWith(".wikipedia.org") || host.equals("wikipedia.org");
+            return !host.endsWith(".wikipedia.org") && !host.equals("wikipedia.org");
         } catch (Exception e) {
-            return false;
+            return true;
         }
     }
 
@@ -73,10 +89,10 @@ public class WikiCommand implements BotCommand {
     public String usage() {
         return """
                 用法：
-                /wiki <wikipedia_link>          # 生成页面截图
-                /wiki md <wikipedia_link>       # 抓取并转为 Markdown 文件
+                /wiki <wikipedia_link|article>          # 生成页面截图
+                /wiki md <wikipedia_link|article>       # 抓取并转为 Markdown 文件
                 示例：
-                /wiki https://en.wikipedia.org/wiki/Java_(programming_language)
+                /wiki Java
                 /wiki md https://zh.wikipedia.org/wiki/Java
                 """;
     }
@@ -116,7 +132,7 @@ public class WikiCommand implements BotCommand {
     private void runScreenshot(CommandSource src, String link) {
         try {
             String url = normalize(link);
-            if (!isWikipedia(url)) {
+            if (isNotWikipedia(url)) {
                 src.reply("仅支持 Wikipedia 链接。示例：/wiki https://en.wikipedia.org/wiki/Java");
             }
             var img = WebScreenshot.screenshotWikipedia(url);
@@ -133,7 +149,7 @@ public class WikiCommand implements BotCommand {
     private void runMarkdown(CommandSource src, String link) {
         try {
             String url = normalize(link);
-            if (!isWikipedia(url)) {
+            if (isNotWikipedia(url)) {
                 src.reply("仅支持 Wikipedia 链接。示例：/wiki md https://zh.wikipedia.org/wiki/Java");
             }
             var md = WebToMarkdown.fetchAndConvert(url);
