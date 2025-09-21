@@ -21,11 +21,11 @@ import java.util.function.Supplier;
  * - fromJsonString / toJsonString: Convert between string and object<br>
  * - readResource: Reads from classpath resources (e.g., default configuration templates)<br>
  */
-public final class JsonUtil {
+public final class JsonUtils {
 
     public static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
-    private JsonUtil() {
+    private JsonUtils() {
     }
 
     /* ===================== File ←→ Object ===================== */
@@ -172,7 +172,7 @@ public final class JsonUtil {
      */
     public static <T> T readResource(String resourcePath, Class<T> cls) throws IOException {
         Objects.requireNonNull(resourcePath);
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(Objects.requireNonNull(JsonUtil.class.getResourceAsStream(resourcePath)), StandardCharsets.UTF_8))) {
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(Objects.requireNonNull(JsonUtils.class.getResourceAsStream(resourcePath)), StandardCharsets.UTF_8))) {
             return GSON.fromJson(br, cls);
         } catch (NullPointerException npe) {
             throw new IOException("资源未找到: " + resourcePath, npe);

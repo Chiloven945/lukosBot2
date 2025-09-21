@@ -24,7 +24,7 @@ public final class DiscordReceiver implements Receiver {
     /**
      * Bind message handler
      *
-     * @param sink message handler, usually bound to Router::receive
+     * @param sink message handler, usually bound to MessageDispatcher::receive
      */
     @Override
     public void bind(Consumer<MessageIn> sink) {

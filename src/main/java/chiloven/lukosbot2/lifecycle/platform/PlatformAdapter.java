@@ -1,7 +1,7 @@
 package chiloven.lukosbot2.lifecycle.platform;
 
-import chiloven.lukosbot2.core.Router;
-import chiloven.lukosbot2.core.SenderMux;
+import chiloven.lukosbot2.core.MessageDispatcher;
+import chiloven.lukosbot2.core.MessageSenderHub;
 
 import java.util.List;
 
@@ -14,12 +14,12 @@ public interface PlatformAdapter {
     /**
      * Platform startup, return resources that need to be closed uniformly (such as connections, threads, Client instances wrapped as AutoCloseable)
      *
-     * @param router    The message router to handle incoming messages
-     * @param senderMux The sender multiplexer to register platform senders
+     * @param md    The message md to handle incoming messages
+     * @param msh The sender multiplexer to register platform senders
      * @return a list of AutoCloseable resources to be closed on shutdown
      * @throws Exception if startup fails
      */
-    List<AutoCloseable> start(Router router, SenderMux senderMux) throws Exception;
+    List<AutoCloseable> start(MessageDispatcher md, MessageSenderHub msh) throws Exception;
 
     /**
      * Get the name of the platform adapter

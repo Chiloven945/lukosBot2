@@ -2,16 +2,20 @@
 
 # lukosBot2
 
-[![Stars](https://img.shields.io/github/stars/Chiloven945/lukosBot2?style=flat&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZlcnNpb249IjEiIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZD0iTTggLjI1YS43NS43NSAwIDAgMSAuNjczLjQxOGwxLjg4MiAzLjgxNSA0LjIxLjYxMmEuNzUuNzUgMCAwIDEgLjQxNiAxLjI3OWwtMy4wNDYgMi45Ny43MTkgNC4xOTJhLjc1MS43NTEgMCAwIDEtMS4wODguNzkxTDggMTIuMzQ3bC0zLjc2NiAxLjk4YS43NS43NSAwIDAgMS0xLjA4OC0uNzlsLjcyLTQuMTk0TC44MTggNi4zNzRhLjc1Ljc1IDAgMCAxIC40MTYtMS4yOGw0LjIxLS42MTFMNy4zMjcuNjY4QS43NS43NSAwIDAgMSA4IC4yNVoiIGZpbGw9IiNlYWM1NGYiLz48L3N2Zz4=&logoSize=auto&label=Stars&labelColor=444444&color=eac54f)](https://github.com/Chiloven945/lukosBot2/)
-[![GitHub CI](https://img.shields.io/github/actions/workflow/status/Chiloven945/lukosBot2/maven.yml?style=flat&labelColor=444444&branch=master&label=GitHub%20CI&logo=github)](https://github.com/Chiloven945/lukosBot2/actions/workflows/maven.yml)
-[![Telegram](https://img.shields.io/badge/Telegram-LukosBot-2299d5?style=flat&logo=telegram&logoColor=2ba3df)](https://t.me/lukos945_bot)
+[![Stars](https://img.shields.io/github/stars/Chiloven945/lukosBot2?style=flat-square&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZlcnNpb249IjEiIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZD0iTTggLjI1YS43NS43NSAwIDAgMSAuNjczLjQxOGwxLjg4MiAzLjgxNSA0LjIxLjYxMmEuNzUuNzUgMCAwIDEgLjQxNiAxLjI3OWwtMy4wNDYgMi45Ny43MTkgNC4xOTJhLjc1MS43NTEgMCAwIDEtMS4wODguNzkxTDggMTIuMzQ3bC0zLjc2NiAxLjk4YS43NS43NSAwIDAgMS0xLjA4OC0uNzlsLjcyLTQuMTk0TC44MTggNi4zNzRhLjc1Ljc1IDAgMCAxIC40MTYtMS4yOGw0LjIxLS42MTFMNy4zMjcuNjY4QS43NS43NSAwIDAgMSA4IC4yNVoiIGZpbGw9IiNlYWM1NGYiLz48L3N2Zz4=&logoSize=auto&label=Stars&labelColor=444444&color=eac54f)](https://github.com/Chiloven945/lukosBot2/)
+[![GitHub CI](https://img.shields.io/github/actions/workflow/status/Chiloven945/lukosBot2/maven.yml?style=flat-square&labelColor=444444&branch=master&label=GitHub%20CI&logo=github)](https://github.com/Chiloven945/lukosBot2/actions/workflows/maven.yml)
+[![Telegram](https://img.shields.io/badge/Telegram-LukosBot-2299d5?style=flat-square&logo=telegram&logoColor=2ba3df)](https://t.me/lukos945_bot)
+[![Discord](https://img.shields.io/badge/Discord-LukosBot2-5662f6?style=flat-square&logo=discord&logoColor=ffffff)](https://discord.com/oauth2/authorize?client_id=1417426824618573906)
 
 </div>
 
-lukosBot2 is a multifunctional and multiplatform chatbot, using [TelegramBots](https://github.com/rubenlagus/TelegramBots) and the OneBot protocol, analysing commands
-with [brigadier](https://github.com/Mojang/brigadier).
+lukosBot2 is a multifunctional and multiplatform chatbot, using
+the [TelegramBots](https://github.com/rubenlagus/TelegramBots) for Telegram platform, the JDA for Discord platform, and
+the Shiro for QQ using OneBot protocol, analysing command
+with the [brigadier](https://github.com/Mojang/brigadier).
 
-This is an experimental project. I'm using it to practice my skills, and it is not guaranteed to be stable or secure. Use at your own risk.
+This is an experimental project. I'm using it to practice my skills, and it is not guaranteed to be stable or secure.
+Please use at your own risk.
 
 ## Supported Commands
 

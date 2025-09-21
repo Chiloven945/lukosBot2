@@ -22,7 +22,7 @@ final class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
     /**
      * Set message handler
      *
-     * @param sink message handler, usually bound to Router::receive
+     * @param sink message handler, usually bound to MessageDispatcher::receive
      */
     void setSink(Consumer<MessageIn> sink) {
         this.sink = (sink != null) ? sink : __ -> {

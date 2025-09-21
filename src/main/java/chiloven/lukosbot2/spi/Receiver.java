@@ -14,7 +14,7 @@ public interface Receiver extends AutoCloseable {
     /**
      * Bind message handler
      *
-     * @param sink message handler, usually bound to Router::receive
+     * @param sink message handler, usually bound to MessageDispatcher::receive
      */
     void bind(Consumer<MessageIn> sink);
 

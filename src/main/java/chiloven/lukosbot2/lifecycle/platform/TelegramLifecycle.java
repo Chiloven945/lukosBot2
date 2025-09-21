@@ -1,8 +1,8 @@
 package chiloven.lukosbot2.lifecycle.platform;
 
 import chiloven.lukosbot2.config.AppProperties;
-import chiloven.lukosbot2.core.Router;
-import chiloven.lukosbot2.core.SenderMux;
+import chiloven.lukosbot2.core.MessageDispatcher;
+import chiloven.lukosbot2.core.MessageSenderHub;
 import chiloven.lukosbot2.platforms.ChatPlatform;
 import chiloven.lukosbot2.platforms.telegram.TelegramReceiver;
 import lombok.RequiredArgsConstructor;
@@ -22,21 +22,21 @@ public class TelegramLifecycle implements SmartLifecycle, PlatformAdapter {
 
     private static final Logger log = LogManager.getLogger(TelegramLifecycle.class);
 
-    private final Router router;
-    private final SenderMux senderMux;
+    private final MessageDispatcher md;
+    private final MessageSenderHub msh;
     private final AppProperties props;
     private final BaseCloseable closeable = new BaseCloseable();
     private volatile boolean running = false;
 
     @Override
-    public List<AutoCloseable> start(Router router, SenderMux senderMux) throws Exception {
+    public List<AutoCloseable> start(MessageDispatcher md, MessageSenderHub msh) throws Exception {
         TelegramReceiver tg = new TelegramReceiver(
                 props.getTelegram().getBotToken(),
                 props.getTelegram().getBotUsername()
         );
-        tg.bind(router::receive);
+        tg.bind(md::receive);
         tg.start();
-        senderMux.register(ChatPlatform.TELEGRAM, tg.sender());
+        msh.register(ChatPlatform.TELEGRAM, tg.sender());
         closeable.add(tg);
         log.info("Telegram ready as @{}", props.getTelegram().getBotUsername());
         return List.of(closeable);
@@ -52,7 +52,7 @@ public class TelegramLifecycle implements SmartLifecycle, PlatformAdapter {
     public void start() {
         if (running) return;
         try {
-            List<AutoCloseable> cs = start(router, senderMux);
+            List<AutoCloseable> cs = start(md, msh);
             closeable.addAll(cs);
             running = true;
             log.info("[{}] started (prefix='{}')", name(), props.getPrefix());

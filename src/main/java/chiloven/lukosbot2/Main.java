@@ -2,9 +2,9 @@ package chiloven.lukosbot2;
 
 import chiloven.lukosbot2.bootstrap.Boot;
 import chiloven.lukosbot2.core.CommandRegistry;
+import chiloven.lukosbot2.core.MessageDispatcher;
+import chiloven.lukosbot2.core.MessageSenderHub;
 import chiloven.lukosbot2.core.PipelineProcessor;
-import chiloven.lukosbot2.core.Router;
-import chiloven.lukosbot2.core.SenderMux;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.boot.SpringApplication;
@@ -46,18 +46,18 @@ public class Main {
         return pipeline;
     }
 
-    // 3) SenderMux
+    // 3) MessageSenderHub
     @Bean
-    public SenderMux senderMux() {
-        return new SenderMux();
+    public MessageSenderHub senderMux() {
+        return new MessageSenderHub();
     }
 
-    // 4) Router
+    // 4) MessageDispatcher
     @Bean
-    public Router router(PipelineProcessor pipeline, SenderMux senderMux) {
-        Router router = new Router(pipeline, senderMux);
+    public MessageDispatcher router(PipelineProcessor pipeline, MessageSenderHub msh) {
+        MessageDispatcher md = new MessageDispatcher(pipeline, msh);
         log.info("Outbound routing set up.");
-        return router;
+        return md;
     }
 
 }

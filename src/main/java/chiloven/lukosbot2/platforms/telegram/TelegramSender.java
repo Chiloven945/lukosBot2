@@ -38,7 +38,6 @@ public final class TelegramSender implements Sender {
                         .chatId(String.valueOf(chatId))
                         .text(out.text())
                         .build());
-                log.info("Telegram send to chatId={}", chatId);
             } catch (Exception e) {
                 log.error("Telegram text failed", e);
             }

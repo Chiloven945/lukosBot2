@@ -1,8 +1,8 @@
 package chiloven.lukosbot2.lifecycle.platform;
 
 import chiloven.lukosbot2.config.AppProperties;
-import chiloven.lukosbot2.core.Router;
-import chiloven.lukosbot2.core.SenderMux;
+import chiloven.lukosbot2.core.MessageDispatcher;
+import chiloven.lukosbot2.core.MessageSenderHub;
 import chiloven.lukosbot2.platforms.ChatPlatform;
 import chiloven.lukosbot2.platforms.onebot.OneBotReceiver;
 import lombok.RequiredArgsConstructor;
@@ -22,22 +22,22 @@ public class OneBotLifecycle implements SmartLifecycle, PlatformAdapter {
 
     private static final Logger log = LogManager.getLogger(OneBotLifecycle.class);
 
-    private final Router router;
-    private final SenderMux senderMux;
+    private final MessageDispatcher md;
+    private final MessageSenderHub msh;
     private final AppProperties props;
     private final BaseCloseable closeable = new BaseCloseable();
     private volatile boolean running = false;
 
     @Override
-    public List<AutoCloseable> start(Router router, SenderMux senderMux) throws Exception {
+    public List<AutoCloseable> start(MessageDispatcher md, MessageSenderHub msh) throws Exception {
         // 保持原有启动顺序：new → bind → start → register → closeable.add
         OneBotReceiver ob = new OneBotReceiver(
                 props.getOnebot().getWsUrl(),
                 props.getOnebot().getAccessToken()
         );
-        ob.bind(router::receive);
+        ob.bind(md::receive);
         ob.start(); // 实际连接&事件由 Shiro 托管，这里保持原始生命周期
-        senderMux.register(ChatPlatform.ONEBOT, ob.sender());
+        msh.register(ChatPlatform.ONEBOT, ob.sender());
         closeable.add(ob);
 
         log.info("OneBot (Shiro) ready at {}", props.getOnebot().getWsUrl());
@@ -53,7 +53,7 @@ public class OneBotLifecycle implements SmartLifecycle, PlatformAdapter {
     public void start() {
         if (running) return;
         try {
-            closeable.addAll(start(router, senderMux));
+            closeable.addAll(start(md, msh));
             running = true;
             log.info("[{}] started (prefix='{}')", name(), props.getPrefix());
         } catch (Exception e) {
