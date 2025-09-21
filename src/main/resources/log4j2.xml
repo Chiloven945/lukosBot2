@@ -6,7 +6,6 @@
             <PatternLayout
                     pattern="[%d{HH:mm:ss.SSS}] [%t/%logger/%highlight{%level}]: %msg%n"
                     disableAnsi="false" noConsoleNoAnsi="false"/>
-            <!-- 仅此处新增：控制台从 DEBUG 起输出 -->
             <Filters>
                 <ThresholdFilter level="debug" onMatch="ACCEPT" onMismatch="DENY"/>
             </Filters>

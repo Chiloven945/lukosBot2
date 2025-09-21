@@ -1,7 +1,9 @@
 package chiloven.lukosbot2.util;
 
 import chiloven.lukosbot2.commands.WikiCommand;
+import chiloven.lukosbot2.config.ProxyConfig;
 import chiloven.lukosbot2.model.ContentData;
+import chiloven.lukosbot2.support.SpringBeans;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jsoup.Jsoup;
@@ -140,61 +142,46 @@ public final class WebScreenshot {
 
     // ====== Internal Utils ======
     private static WebDriver createDriver() {
-        String chromeBin = null;
+        ProxyConfig proxy = SpringBeans.getBean(ProxyConfig.class);
 
-        // Environment variable
-        String env = System.getenv("CHROME_BIN");
-        if (env != null && new File(env).isFile()) {
-            chromeBin = env;
-        } else {
-            // Common install locations on Windows
-            List<String> candidates = new ArrayList<>();
-            String local = System.getenv("LOCALAPPDATA");
-            String programFiles = System.getenv("ProgramFiles");
-            String programFilesX86 = System.getenv("ProgramFiles(x86)");
-
-            if (programFiles != null) candidates.add(programFiles + "\\Google\\Chrome\\Application\\chrome.exe");
-            if (programFilesX86 != null) candidates.add(programFilesX86 + "\\Google\\Chrome\\Application\\chrome.exe");
-            if (local != null) candidates.add(local + "\\Google\\Chrome\\Application\\chrome.exe");
-
-            String userHome = System.getProperty("user.home");
-            if (userHome != null) {
-                candidates.add(userHome + "\\.cache\\selenium\\chrome\\win64\\chrome.exe");
-                candidates.add(userHome + "\\AppData\\Local\\ms-playwright\\chrome\\chrome-win\\chrome.exe");
-            }
-
-            for (String c : candidates) {
-                if (new File(c).isFile()) {
-                    chromeBin = c;
-                    break;
-                }
-            }
-        }
-
+        String chromeBin = detectChrome();
         if (chromeBin != null) {
             ChromeOptions co = new ChromeOptions();
-            co.addArguments(
-                    "--headless=new",
-                    "--disable-gpu",
-                    "--no-sandbox",
-                    "--disable-dev-shm-usage",
-                    "--window-size=1920,1080",
-                    "--force-device-scale-factor=3"
-            );
+            co.addArguments("--headless=new", "--disable-gpu", "--no-sandbox",
+                    "--disable-dev-shm-usage", "--window-size=1920,1080",
+                    "--force-device-scale-factor=3");
+            String arg = proxy.chromiumProxyArg();
+            if (arg != null) co.addArguments(arg);
             co.setBinary(chromeBin);
             return new ChromeDriver(co);
         } else {
             EdgeOptions eo = new EdgeOptions();
-            eo.addArguments(
-                    "--headless=new",
-                    "--disable-gpu",
-                    "--no-sandbox",
-                    "--disable-dev-shm-usage",
-                    "--window-size=1920,1080",
-                    "--force-device-scale-factor=3"
-            );
+            eo.addArguments("--headless=new", "--disable-gpu", "--no-sandbox",
+                    "--disable-dev-shm-usage", "--window-size=1920,1080",
+                    "--force-device-scale-factor=3");
+            org.openqa.selenium.Proxy sp = proxy.toSeleniumProxy();
+            if (sp != null) eo.setProxy(sp);
             return new EdgeDriver(eo);
         }
+    }
+
+    private static String detectChrome() {
+        String env = System.getenv("CHROME_BIN");
+        if (env != null && new File(env).isFile()) return env;
+        List<String> candidates = new ArrayList<>();
+        String local = System.getenv("LOCALAPPDATA");
+        String pf = System.getenv("ProgramFiles");
+        String pfx86 = System.getenv("ProgramFiles(x86)");
+        if (pf != null) candidates.add(pf + "\\Google\\Chrome\\Application\\chrome.exe");
+        if (pfx86 != null) candidates.add(pfx86 + "\\Google\\Chrome\\Application\\chrome.exe");
+        if (local != null) candidates.add(local + "\\Google\\Chrome\\Application\\chrome.exe");
+        String home = System.getProperty("user.home");
+        if (home != null) {
+            candidates.add(home + "\\.cache\\selenium\\chrome\\win64\\chrome.exe");
+            candidates.add(home + "\\AppData\\Local\\ms-playwright\\chrome\\chrome-win\\chrome.exe");
+        }
+        for (String c : candidates) if (new File(c).isFile()) return c;
+        return null;
     }
 
     /**

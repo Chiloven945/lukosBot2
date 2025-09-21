@@ -3,6 +3,21 @@ lukos:
   prefix: "/"
   language: "zh-cn"
 
+  proxy:
+    enabled: true
+    # NONE | SOCKS5 | HTTPS
+    type: "NONE"
+    host: "127.0.0.1"
+    port: 1080
+    username: ""     # 可选
+    password: ""     # 可选
+    non-proxy-hosts-list:
+      - "*.local"
+      - "localhost"
+      - "127.*"
+      - "10.*"
+      - "192.168.*"
+
   github:
     token: "${GITHUB_TOKEN:}"
 

@@ -1,10 +1,17 @@
 package chiloven.lukosbot2.util;
 
+import chiloven.lukosbot2.config.ProxyConfig;
 import chiloven.lukosbot2.model.ContentData;
+import chiloven.lukosbot2.support.SpringBeans;
+import com.vladsch.flexmark.html2md.converter.FlexmarkHtmlConverter;
+import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
+import java.net.Proxy;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.Objects;
 
 public final class WebToMarkdown {
     private WebToMarkdown() {
@@ -19,10 +26,19 @@ public final class WebToMarkdown {
      * @throws Exception if fetching or conversion fails
      */
     public static ContentData fetchAndConvert(String url) throws Exception {
-        Document doc = Jsoup.connect(url)
+        ProxyConfig proxy =
+                SpringBeans.getBean(ProxyConfig.class);
+
+        Connection conn = Jsoup.connect(url)
                 .userAgent("Mozilla/5.0 (compatible; LukosBot/1.0)")
-                .timeout((int) java.time.Duration.ofSeconds(15).toMillis())
-                .get();
+                .timeout((int) Duration.ofSeconds(15).toMillis());
+
+        Proxy p = proxy.toJavaProxy();
+        if (proxy.isEnabled() && p != Proxy.NO_PROXY) {
+            conn.proxy(p);
+        }
+
+        Document doc = conn.get();
 
         // 标题 -> 文件名
         String title = "wikipedia";
@@ -30,12 +46,12 @@ public final class WebToMarkdown {
         if (h1 != null) title = h1.text();
         String filename = sanitizeFilename(title) + ".md";
 
-        // 主体内容（按你原来的选择器）
+        // 主体内容
         String html = doc.selectFirst("#content") != null
-                ? java.util.Objects.requireNonNull(doc.selectFirst("#content")).html()
+                ? Objects.requireNonNull(doc.selectFirst("#content")).html()
                 : doc.html();
 
-        String md = com.vladsch.flexmark.html2md.converter.FlexmarkHtmlConverter.builder().build().convert(html);
+        String md = FlexmarkHtmlConverter.builder().build().convert(html);
         byte[] bytes = md.getBytes(StandardCharsets.UTF_8);
         return new ContentData(filename, "text/markdown; charset=utf-8", bytes);
     }
