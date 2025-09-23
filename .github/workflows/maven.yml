@@ -1,4 +1,4 @@
-name: lukosBot2 CI
+name: Maven CI
 
 on:
   push:
@@ -11,14 +11,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source code
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v5
 
       - name: Set up JDK 25
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
           java-version: '25'
+          cache: maven
 
       - name: Cache Maven packages
         uses: actions/cache@v4
@@ -32,8 +33,11 @@ jobs:
       - name: Build with Maven
         run: mvn -B clean package
 
-      - name: Upload Artifact
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lukos-bot2-jar
-          path: target/lukos-bot-2-*-jar-with-dependencies.jar
+          name: lukos-bot2-artifacts
+          path: |
+            target/*.jar
+            !target/*-sources.jar
+            !target/*-javadoc.jar
