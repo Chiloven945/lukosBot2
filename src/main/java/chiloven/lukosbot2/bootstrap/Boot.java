@@ -1,9 +1,6 @@
 package chiloven.lukosbot2.bootstrap;
 
-import chiloven.lukosbot2.commands.EchoCommand;
-import chiloven.lukosbot2.commands.HelpCommand;
-import chiloven.lukosbot2.commands.PingCommand;
-import chiloven.lukosbot2.commands.WikiCommand;
+import chiloven.lukosbot2.commands.*;
 import chiloven.lukosbot2.commands.github.GitHubCommand;
 import chiloven.lukosbot2.config.AppProperties;
 import chiloven.lukosbot2.core.CommandProcessor;
@@ -28,7 +25,7 @@ public final class Boot {
         try {
             CommandRegistry registry = new CommandRegistry()
                     .add(
-                            new PingCommand(),
+                            new BilibiliCommand(),
                             new EchoCommand(),
                             new GitHubCommand(props.getGithub().getToken()),
                             new McWikiCommand(),
