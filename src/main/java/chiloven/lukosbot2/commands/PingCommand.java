@@ -60,7 +60,6 @@ public class PingCommand implements BotCommand {
         long freeMem = runtime.freeMemory() / 1024 / 1024;
         long totalMem = runtime.totalMemory() / 1024 / 1024;
         long maxMem = runtime.maxMemory() / 1024 / 1024;
-        int cores = runtime.availableProcessors();
 
         RuntimeMXBean rtBean = ManagementFactory.getRuntimeMXBean();
         long uptimeSec = rtBean.getUptime() / 1000;
@@ -71,23 +70,46 @@ public class PingCommand implements BotCommand {
                 .withZone(ZoneId.systemDefault())
                 .format(Instant.now());
 
+        // 版本信息
+        String javaVersion = System.getProperty("java.version");
+        String springVersion = org.springframework.core.SpringVersion.getVersion();
+
+        String tgVersion = "9.1.0";
+        String jdaVersion = getImplVersion("net.dv8tion.jda.api.JDA");
+        String shiroVersion = "2.4.9";
+
         return String.format("""
                         Pong 🏓
                         时间: %s
                         运行时间: %s
-                        CPU 核心: %d
                         系统: %s %s
-                        负载: %.2f
                         内存: 已用 %d MB / 总 %d MB (最大 %d MB)
                         线程数: %d
+                        Java: %s | Spring: %s
+                        TelegramBots: %s | JDA: %s | Shiro: %s
                         """,
                 time,
                 uptimeFmt,
-                cores,
                 osBean.getName(), osBean.getVersion(),
-                osBean.getSystemLoadAverage(),
                 (totalMem - freeMem), totalMem, maxMem,
-                Thread.activeCount()
+                Thread.activeCount(),
+                javaVersion, springVersion,
+                tgVersion, jdaVersion, shiroVersion
         );
+    }
+
+    /**
+     * 通过类名反射获取依赖版本号（Manifest Implementation-Version）
+     */
+    private String getImplVersion(String className) {
+        try {
+            Class<?> clazz = Class.forName(className);
+            Package p = clazz.getPackage();
+            if (p != null && p.getImplementationVersion() != null) {
+                return p.getImplementationVersion();
+            }
+        } catch (ClassNotFoundException ignored) {
+        }
+        return "unknown";
     }
 }
