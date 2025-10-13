@@ -152,7 +152,7 @@ public class WikiCommand implements BotCommand {
             if (isNotWikipedia(url)) {
                 src.reply("仅支持 Wikipedia 链接。示例：/wiki md https://zh.wikipedia.org/wiki/Java");
             }
-            var md = WebToMarkdown.fetchAndConvert(url);
+            var md = WebToMarkdown.fetchWikipediaMarkdown(url);
             MessageOut out = MessageOut.text(src.in().addr(), "已转换为 Markdown")
                     .with(Attachment.fileBytes(md.filename(), md.bytes(), md.mime()));
             src.reply(out);

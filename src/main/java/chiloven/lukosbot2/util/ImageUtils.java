@@ -1,12 +1,20 @@
 package chiloven.lukosbot2.util;
 
+import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 
-public class ImageUtils {
+/**
+ * Image utility functions.
+ *
+ * @author Chiloven945
+ */
+public final class ImageUtils {
     /**
      * Convert PNG bytes to JPG bytes with specified quality.
      * Fills transparent areas with a white background.
@@ -16,7 +24,7 @@ public class ImageUtils {
      * @return the JPG image bytes
      * @throws Exception if conversion fails
      */
-    static byte[] pngToJpg(byte[] pngBytes, float quality) throws Exception {
+    static byte[] pngToJpg(byte[] pngBytes, float quality) throws IOException {
         var src = ImageIO.read(new ByteArrayInputStream(pngBytes));
         if (src == null) throw new IllegalArgumentException("Invalid screenshot image");
         BufferedImage rgb = new BufferedImage(src.getWidth(), src.getHeight(), BufferedImage.TYPE_INT_RGB);
@@ -32,14 +40,26 @@ public class ImageUtils {
                 writer.setOutput(ios);
                 var param = writer.getDefaultWriteParam();
                 if (param.canWriteCompressed()) {
-                    param.setCompressionMode(javax.imageio.ImageWriteParam.MODE_EXPLICIT);
+                    param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
                     param.setCompressionQuality(quality);
                 }
-                writer.write(null, new javax.imageio.IIOImage(rgb, null, null), param);
+                writer.write(null, new IIOImage(rgb, null, null), param);
             } finally {
                 writer.dispose();
             }
             return baos.toByteArray();
         }
+    }
+
+    /**
+     * Convert PNG bytes to JPG bytes with default quality (0.9).
+     * Fills transparent areas with a white background.
+     *
+     * @param pngBytes the PNG image bytes
+     * @return the JPG image bytes
+     * @throws IOException if conversion fails
+     */
+    static byte[] pngToJpg(byte[] pngBytes) throws IOException {
+        return pngToJpg(pngBytes, 0.9f);
     }
 }

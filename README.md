@@ -31,11 +31,17 @@ The bot currently supports the following commands:
 - `/ping` - check if the bot is alive.
 - `/echo` (WIP) - Echo back the provided message.
     - `<message>` - The message to echo.
+- `/wiki` - Get Wikipedia information.
+  - `*empty*` - Get a screenshot of the page.
+  - `md` - Get a markdown file of the page, transforming from html.
+- `/mcwiki` - Get Minecraft Wikipedia information.
+  - `*empty*` - Get a brief introduction about the article.
+  - `md` - Get a markdown file of the page, transforming from html.
+  - `ss` - Get a screenshot of the page.
 
 ## Planned Features
 
 - `/weather` - Get weather information for a specific location.
-- `/ping` - Check the bot's responsiveness.
 - `/translate` - Translate text between languages.
 - `/music` - Search and play music.
 - `/cave` - Echo cave...

@@ -1,6 +1,5 @@
 package chiloven.lukosbot2.util;
 
-import chiloven.lukosbot2.commands.WikiCommand;
 import chiloven.lukosbot2.config.ProxyConfig;
 import chiloven.lukosbot2.model.ContentData;
 import chiloven.lukosbot2.support.SpringBeans;
@@ -14,6 +13,9 @@ import org.openqa.selenium.edge.EdgeDriver;
 import org.openqa.selenium.edge.EdgeOptions;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -60,27 +62,24 @@ public final class WebScreenshot {
     }
 
     /**
-     * Take a screenshot of the introductory section of a Wikipedia article.
+     * Core intro screenshot for MediaWiki-family sites (e.g., Wikipedia, Minecraft Wiki).
+     * Reuses the same DOM measurement & CSS-injection logic as Wikipedia.
      *
-     * @param url the Wikipedia article URL
-     * @return the screenshot as a byte array (PNG format)
-     * @throws Exception if an error occurs or if the URL is not a Wikipedia link
+     * @param url             target article URL
+     * @param defaultFileBase default filename base when title cannot be fetched (e.g., "wikipedia" / "mcwiki")
+     * @return ContentData containing JPEG bytes, mime, and a safe filename
      */
-    public static ContentData screenshotWikipedia(String url) throws Exception {
-        if (WikiCommand.isNotWikipedia(url)) {
-            throw new IllegalArgumentException("Not a Wikipedia URL: " + url);
-        }
-
+    private static ContentData screenshotMediaWiki(String url, String defaultFileBase) throws Exception {
         WebDriver driver = null;
         try {
-            log.info("Starting Wikipedia intro screenshot: {}", url);
+            log.info("Starting MediaWiki intro screenshot: {}", url);
             driver = createDriver();
             driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(20));
             driver.get(url);
 
             JavascriptExecutor js = (JavascriptExecutor) driver;
 
-            // Inject CSS to hide overlays that may block content
+            // Hide sticky headers / banners that may obstruct the lead section
             log.debug("Injecting style to hide overlays");
             js.executeScript("""
                         const hide = document.createElement('style');
@@ -92,16 +91,17 @@ public final class WebScreenshot {
                         window.scrollTo(0, 0);
                     """);
 
+            // Measure lead height twice for stability
             String script = loadScript("js/wikiIntroMeasure.js");
             log.debug("Loaded measure script.");
 
-            Number n1 = (Number) ((JavascriptExecutor) driver).executeScript(script);
+            Number n1 = (Number) js.executeScript(script);
             int h1 = toPx(n1, 1200);
             log.debug("First measured height = {}", h1);
             driver.manage().window().setSize(new Dimension(1380, h1));
             Thread.sleep(700);
 
-            Number n2 = (Number) ((JavascriptExecutor) driver).executeScript(script);
+            Number n2 = (Number) js.executeScript(script);
             int h2 = toPx(n2, h1);
             int target = Math.max(h1, h2);
             log.debug("Second measured height = {}, final target = {}", h2, target);
@@ -110,39 +110,56 @@ public final class WebScreenshot {
                 Thread.sleep(400);
             }
 
-            log.info("Wikipedia intro screenshot completed.");
+            log.info("MediaWiki intro screenshot completed.");
+            // Take PNG then convert to JPEG to reduce size (consistent with Wikipedia path)
             byte[] png = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
-            byte[] jpg = ImageUtils.pngToJpg(png, 0.9f);
+            byte[] jpg = ImageUtils.pngToJpg(png);
 
-            // 取条目标题作为文件名
-            String title = "wikipedia";
+            // Try to fetch page title as filename; fallback to provided base
+            String title = defaultFileBase;
             try {
                 var doc = Jsoup.connect(url)
                         .userAgent("Mozilla/5.0 (compatible; LukosBot/1.0)")
                         .timeout(10_000)
                         .get();
                 var h1Tag = doc.selectFirst("h1#firstHeading");
-                if (h1Tag != null) title = h1Tag.text();
-            } catch (Exception ignore) {
+                if (h1Tag != null && !h1Tag.text().isBlank()) {
+                    title = h1Tag.text().trim();
+                }
+            } catch (IOException ignore) {
             }
 
             String filename = sanitizeFilename(title) + ".jpg";
             return new ContentData(filename, "image/jpeg", jpg);
         } catch (Exception e) {
-            log.error("Wikipedia intro screenshot failed for {}", url, e);
+            log.error("MediaWiki intro screenshot failed for {}", url, e);
             throw e;
         } finally {
             if (driver != null) try {
                 driver.quit();
-                log.debug("WebDriver quit successfully (wiki intro)");
-            } catch (Exception ignored) {
+                log.debug("WebDriver quit successfully (mediawiki intro)");
+            } catch (Exception _) {
             }
         }
+    }
+
+    public static ContentData screenshotWikipedia(String url) throws Exception {
+        return screenshotMediaWiki(url, "wikipedia");
+    }
+
+    /**
+     * Minecraft Wiki intro screenshot (delegates to MediaWiki core).
+     */
+    public static ContentData screenshotMcWiki(String url) throws Exception {
+        return screenshotMediaWiki(url, "mcwiki");
     }
 
     // ====== Internal Utils ======
     private static WebDriver createDriver() {
         ProxyConfig proxy = SpringBeans.getBean(ProxyConfig.class);
+
+        // 清理“空字符串”的系统代理属性，避免 Selenium Manager 拼出 --proxy 但无值
+        normalizeProxySystemProps();
 
         String chromeBin = detectChrome();
         if (chromeBin != null) {
@@ -150,7 +167,11 @@ public final class WebScreenshot {
             co.addArguments("--headless=new", "--disable-gpu", "--no-sandbox",
                     "--disable-dev-shm-usage", "--window-size=1920,1080",
                     "--force-device-scale-factor=3");
+            // 只有在确实有有效参数时才传给 Chromium
             String arg = proxy.chromiumProxyArg();
+            if (hasText(arg)) {
+                co.addArguments(arg);
+            }
             if (arg != null) co.addArguments(arg);
             co.setBinary(chromeBin);
             return new ChromeDriver(co);
@@ -159,30 +180,88 @@ public final class WebScreenshot {
             eo.addArguments("--headless=new", "--disable-gpu", "--no-sandbox",
                     "--disable-dev-shm-usage", "--window-size=1920,1080",
                     "--force-device-scale-factor=3");
+            // 仅当 ProxyConfig 真的给出了有效地址时才设置代理；否则明确走 DIRECT
             org.openqa.selenium.Proxy sp = proxy.toSeleniumProxy();
-            if (sp != null) eo.setProxy(sp);
+            if (isValidSeleniumProxy(sp)) {
+                eo.setProxy(sp);
+            }
             return new EdgeDriver(eo);
         }
     }
 
     private static String detectChrome() {
+        // 1. 优先环境变量
         String env = System.getenv("CHROME_BIN");
-        if (env != null && new File(env).isFile()) return env;
+        if (env != null && new File(env).isFile()) {
+            log.debug("Using CHROME_BIN from environment: {}", env);
+            return env;
+        }
+
         List<String> candidates = new ArrayList<>();
-        String local = System.getenv("LOCALAPPDATA");
-        String pf = System.getenv("ProgramFiles");
-        String pfx86 = System.getenv("ProgramFiles(x86)");
-        if (pf != null) candidates.add(pf + "\\Google\\Chrome\\Application\\chrome.exe");
-        if (pfx86 != null) candidates.add(pfx86 + "\\Google\\Chrome\\Application\\chrome.exe");
-        if (local != null) candidates.add(local + "\\Google\\Chrome\\Application\\chrome.exe");
+
+        // 2. 常见安装路径
+        addCandidate(candidates, System.getenv("ProgramFiles"), "Google", "Chrome", "Application", "chrome.exe");
+        addCandidate(candidates, System.getenv("ProgramFiles(x86)"), "Google", "Chrome", "Application", "chrome.exe");
+        addCandidate(candidates, System.getenv("LOCALAPPDATA"), "Google", "Chrome", "Application", "chrome.exe");
+
+        // 3. 用户目录下的一些常见缓存/安装路径
         String home = System.getProperty("user.home");
         if (home != null) {
-            candidates.add(home + "\\.cache\\selenium\\chrome\\win64\\chrome.exe");
-            candidates.add(home + "\\AppData\\Local\\ms-playwright\\chrome\\chrome-win\\chrome.exe");
+            addCandidate(candidates, home, ".cache", "selenium", "chrome", "win64", "chrome.exe");
+            addCandidate(candidates, home, "AppData", "Local", "ms-playwright", "chrome", "chrome-win", "chrome.exe");
         }
-        for (String c : candidates) if (new File(c).isFile()) return c;
+
+        // 4. 遍历候选
+        for (String c : candidates) {
+            if (new File(c).isFile()) {
+                log.debug("Detected Chrome binary: {}", c);
+                return c;
+            }
+        }
+        log.warn("Chrome binary not found in common locations.");
         return null;
     }
+
+    private static void addCandidate(List<String> list, String base, String... parts) {
+        if (base == null || base.isBlank()) return;
+        Path path = Paths.get(base, parts);
+        list.add(path.toString());
+    }
+
+
+    /**
+     * 清理空字符串系统代理属性，避免 Selenium Manager 误认为需要 --proxy 但没有值。
+     */
+    private static void normalizeProxySystemProps() {
+        String[] keys = {
+                "http.proxyHost", "https.proxyHost",
+                "http.proxyPort", "https.proxyPort",
+                "http.nonProxyHosts"
+        };
+        for (String k : keys) {
+            String v = System.getProperty(k);
+            if (v != null && v.isBlank()) {
+                System.clearProperty(k);
+                log.debug("Cleared blank system property: {}", k);
+            }
+        }
+    }
+
+    private static boolean hasText(String s) {
+        return s != null && !s.isBlank();
+    }
+
+    /**
+     * 只在代理字段确实有值时才视为有效代理
+     */
+    private static boolean isValidSeleniumProxy(org.openqa.selenium.Proxy p) {
+        if (p == null) return false;
+        String hp = p.getHttpProxy();
+        String sp = p.getSslProxy();
+        String pac = p.getProxyAutoconfigUrl();
+        return hasText(hp) || hasText(sp) || hasText(pac);
+    }
+
 
     /**
      * Turns a valid pixel height from a JavaScript number (Long or Double) returned by Selenium.

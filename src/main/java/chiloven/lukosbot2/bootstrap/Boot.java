@@ -31,6 +31,8 @@ public final class Boot {
                             new PingCommand(),
                             new EchoCommand(),
                             new GitHubCommand(props.getGithub().getToken()),
+                            new McWikiCommand(),
+                            new PingCommand(),
                             new WikiCommand()
                     );
             registry.add(new HelpCommand(registry, props.getPrefix()));

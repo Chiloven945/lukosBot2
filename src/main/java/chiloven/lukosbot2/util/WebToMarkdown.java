@@ -4,32 +4,27 @@ import chiloven.lukosbot2.config.ProxyConfig;
 import chiloven.lukosbot2.model.ContentData;
 import chiloven.lukosbot2.support.SpringBeans;
 import com.vladsch.flexmark.html2md.converter.FlexmarkHtmlConverter;
-import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 
 import java.net.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.Objects;
 
 public final class WebToMarkdown {
     private WebToMarkdown() {
     }
 
-    /**
-     * Fetch HTML content from a URL and convert it to Markdown.
-     * Uses Jsoup for fetching and Flexmark for conversion.
-     *
-     * @param url the URL to fetch
-     * @return the content in Markdown format as a byte array
-     * @throws Exception if fetching or conversion fails
-     */
-    public static ContentData fetchAndConvert(String url) throws Exception {
-        ProxyConfig proxy =
-                SpringBeans.getBean(ProxyConfig.class);
-
-        Connection conn = Jsoup.connect(url)
+    // WebToMarkdown.java —— 在类中追加以下方法
+    public static ContentData fetchAndConvertWithSelectors(
+            String url,
+            String titleSelector,
+            String contentSelectorsCsv,
+            String defaultTitleBase
+    ) throws Exception {
+        var proxy = SpringBeans.getBean(ProxyConfig.class);
+        var conn = Jsoup.connect(url)
                 .userAgent("Mozilla/5.0 (compatible; LukosBot/1.0)")
                 .timeout((int) Duration.ofSeconds(15).toMillis());
 
@@ -40,20 +35,38 @@ public final class WebToMarkdown {
 
         Document doc = conn.get();
 
-        // 标题 -> 文件名
-        String title = "wikipedia";
-        var h1 = doc.selectFirst("h1#firstHeading");
-        if (h1 != null) title = h1.text();
+        // 标题
+        String title = defaultTitleBase != null ? defaultTitleBase : "page";
+        var h = (titleSelector == null || titleSelector.isBlank())
+                ? null
+                : doc.selectFirst(titleSelector);
+        if (h != null && !h.text().isBlank()) {
+            title = h.text().trim();
+        }
         String filename = sanitizeFilename(title) + ".md";
 
-        // 主体内容
-        String html = doc.selectFirst("#content") != null
-                ? Objects.requireNonNull(doc.selectFirst("#content")).html()
-                : doc.html();
+        // 主体容器：按逗号分隔的多个 selector，择一使用
+        Element contentEl = null;
+        if (contentSelectorsCsv != null && !contentSelectorsCsv.isBlank()) {
+            for (String selector : contentSelectorsCsv.split(",")) {
+                selector = selector.trim();
+                if (selector.isEmpty()) continue;
+                Element cand = doc.selectFirst(selector);
+                if (cand != null) {
+                    contentEl = cand;
+                    break;
+                }
+            }
+        }
+        String html = contentEl != null ? contentEl.html() : doc.html();
 
         String md = FlexmarkHtmlConverter.builder().build().convert(html);
         byte[] bytes = md.getBytes(StandardCharsets.UTF_8);
         return new ContentData(filename, "text/markdown; charset=utf-8", bytes);
+    }
+
+    public static ContentData fetchWikipediaMarkdown(String url) throws Exception {
+        return fetchAndConvertWithSelectors(url, "h1#firstHeading", "#content", "wikipedia");
     }
 
     private static String sanitizeFilename(String raw) {
