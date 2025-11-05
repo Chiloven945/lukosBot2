@@ -12,7 +12,7 @@
     <properties>
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
-        <log4j2.version>2.25.1</log4j2.version>
+        <log4j2.version>2.25.2</log4j2.version>
         <spring.version>3.5.7</spring.version>
         <telegrambots.version>9.2.0</telegrambots.version>
     </properties>
