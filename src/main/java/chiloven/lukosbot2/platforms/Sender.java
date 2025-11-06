@@ -1,4 +1,4 @@
-package chiloven.lukosbot2.spi;
+package chiloven.lukosbot2.platforms;
 
 import chiloven.lukosbot2.model.MessageOut;
 

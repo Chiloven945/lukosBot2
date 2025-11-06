@@ -6,7 +6,6 @@ import chiloven.lukosbot2.config.AppProperties;
 import chiloven.lukosbot2.core.CommandProcessor;
 import chiloven.lukosbot2.core.CommandRegistry;
 import chiloven.lukosbot2.core.PipelineProcessor;
-import chiloven.lukosbot2.core.PrefixGuardProcessor;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

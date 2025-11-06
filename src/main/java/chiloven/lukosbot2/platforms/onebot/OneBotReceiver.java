@@ -2,7 +2,7 @@ package chiloven.lukosbot2.platforms.onebot;
 
 import chiloven.lukosbot2.model.MessageIn;
 import chiloven.lukosbot2.platforms.ChatPlatform;
-import chiloven.lukosbot2.spi.Receiver;
+import chiloven.lukosbot2.platforms.Receiver;
 
 import java.util.function.Consumer;
 

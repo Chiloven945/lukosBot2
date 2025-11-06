@@ -2,8 +2,8 @@ package chiloven.lukosbot2.platforms.discord;
 
 import chiloven.lukosbot2.model.MessageIn;
 import chiloven.lukosbot2.platforms.ChatPlatform;
-import chiloven.lukosbot2.spi.Receiver;
-import chiloven.lukosbot2.spi.Sender;
+import chiloven.lukosbot2.platforms.Receiver;
+import chiloven.lukosbot2.platforms.Sender;
 
 import java.util.function.Consumer;
 

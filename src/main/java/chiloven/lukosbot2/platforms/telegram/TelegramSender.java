@@ -3,7 +3,7 @@ package chiloven.lukosbot2.platforms.telegram;
 
 import chiloven.lukosbot2.model.Attachment;
 import chiloven.lukosbot2.model.MessageOut;
-import chiloven.lukosbot2.spi.Sender;
+import chiloven.lukosbot2.platforms.Sender;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;

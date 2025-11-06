@@ -3,7 +3,7 @@ package chiloven.lukosbot2.platforms.onebot;
 import chiloven.lukosbot2.model.Attachment;
 import chiloven.lukosbot2.model.MessageOut;
 import chiloven.lukosbot2.model.OutContentType;
-import chiloven.lukosbot2.spi.Sender;
+import chiloven.lukosbot2.platforms.Sender;
 import chiloven.lukosbot2.support.SpringBeans;
 import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.core.Bot;
