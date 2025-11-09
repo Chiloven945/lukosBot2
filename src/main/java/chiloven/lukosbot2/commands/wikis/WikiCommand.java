@@ -1,4 +1,4 @@
-package chiloven.lukosbot2.commands;
+package chiloven.lukosbot2.commands.wikis;
 
 import chiloven.lukosbot2.core.CommandSource;
 import chiloven.lukosbot2.model.Attachment;
@@ -12,65 +12,29 @@ import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.net.URI;
-
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 
-public class WikiCommand implements BotCommand {
+/**
+ * The /wiki command for Wikipedia screenshots and markdown conversion.
+ *
+ * @author Chiloven945
+ */
+public class WikiCommand implements WikiishCommand {
     private static final Logger log = LogManager.getLogger(WikiCommand.class);
 
-    // TODO: change to the language in the application.yml
-    private static final String DEFAULT_LANG = "zh";
-
-    /**
-     * Return a correct URL of Wikipedia.
-     * This allows user to use both URL and the article name.
-     *
-     * @param linkOrTitle the link or article title to fetch
-     * @return normalized URL
-     */
-    private static String normalize(String linkOrTitle) {
-        String s = linkOrTitle.trim();
-        if (s.startsWith("http://") || s.startsWith("https://")) {
-            return s;
-        }
-        return titleToWikipediaUrl(s);
+    @Override
+    public String defaultLang() {
+        return "zh";
     }
 
-    private static String titleToWikipediaUrl(String input) {
-        if (input == null) return null;
-        String s = input.trim();
-
-        String lang = DEFAULT_LANG;
-        int idx = s.indexOf(':');
-        if (idx > 0 && idx <= 6 && s.substring(0, idx).matches("[A-Za-z-]{2,6}")) {
-            lang = s.substring(0, idx);
-            s = s.substring(idx + 1).trim();
-        }
-
-        String title = s.replace(' ', '_');
-        try {
-            String enc = java.net.URLEncoder.encode(title, java.nio.charset.StandardCharsets.UTF_8);
-            return "https://" + lang + ".wikipedia.org/wiki/" + enc;
-        } catch (Exception e) {
-            return "https://" + lang + ".wikipedia.org/wiki/" + title;
-        }
+    @Override
+    public String pathPrefix() {
+        return "/wiki/";
     }
 
-    /**
-     * Check if the URL belongs to Wikipedia.
-     *
-     * @param url the URL to check
-     * @return true if it's a Wikipedia URL, false otherwise
-     */
-    public static boolean isNotWikipedia(String url) {
-        try {
-            var u = new URI(url).toURL();
-            String host = u.getHost() == null ? "" : u.getHost().toLowerCase();
-            return !host.endsWith(".wikipedia.org") && !host.equals("wikipedia.org");
-        } catch (Exception e) {
-            return true;
-        }
+    @Override
+    public String domainRoot() {
+        return "wikipedia.org";
     }
 
     @Override
@@ -83,14 +47,12 @@ public class WikiCommand implements BotCommand {
         return "维基百科工具，支持截图和转 Markdown";
     }
 
-    // ====== 执行实现 ======
-
     @Override
     public String usage() {
         return """
                 用法：
-                /wiki <wikipedia_link|article>          # 生成页面截图
-                /wiki md <wikipedia_link|article>       # 抓取并转为 Markdown 文件
+                `/wiki <wikipedia_link|article>`    # 生成页面截图
+                `/wiki md <wikipedia_link|article>` # 抓取并转为 Markdown 文件
                 示例：
                 /wiki Java
                 /wiki md https://zh.wikipedia.org/wiki/Java
@@ -127,12 +89,10 @@ public class WikiCommand implements BotCommand {
         );
     }
 
-    // ====== Tools ======
-
     private void runScreenshot(CommandSource src, String link) {
         try {
             String url = normalize(link);
-            if (isNotWikipedia(url)) {
+            if (isNot(url)) {
                 src.reply("仅支持 Wikipedia 链接。示例：/wiki https://en.wikipedia.org/wiki/Java");
             }
             var img = WebScreenshot.screenshotWikipedia(url);
@@ -149,7 +109,7 @@ public class WikiCommand implements BotCommand {
     private void runMarkdown(CommandSource src, String link) {
         try {
             String url = normalize(link);
-            if (isNotWikipedia(url)) {
+            if (isNot(url)) {
                 src.reply("仅支持 Wikipedia 链接。示例：/wiki md https://zh.wikipedia.org/wiki/Java");
             }
             var md = WebToMarkdown.fetchWikipediaMarkdown(url);

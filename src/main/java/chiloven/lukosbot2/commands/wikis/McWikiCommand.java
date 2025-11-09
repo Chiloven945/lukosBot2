@@ -1,4 +1,4 @@
-package chiloven.lukosbot2.commands;
+package chiloven.lukosbot2.commands.wikis;
 
 import chiloven.lukosbot2.core.CommandSource;
 import chiloven.lukosbot2.model.Attachment;
@@ -15,63 +15,23 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
-import java.net.URI;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 
-public class McWikiCommand implements BotCommand {
+/**
+ * The /mcwiki command for Minecraft Wiki title+lead, markdown conversion, and screenshots.
+ *
+ * @author Chiloven945
+ */
+public class McWikiCommand implements WikiishCommand {
     private static final Logger log = LogManager.getLogger(McWikiCommand.class);
 
-    // 与 WikiCommand 一致的默认语言策略
-    private static final String DEFAULT_LANG = "zh";
-
-    private static boolean isNotMcWiki(String url) {
-        try {
-            var u = new URI(url).toURL();
-            String host = u.getHost() == null ? "" : u.getHost().toLowerCase();
-            // 允许 zh.minecraft.wiki、en.minecraft.wiki 等
-            return !host.endsWith(".minecraft.wiki") && !host.equals("minecraft.wiki");
-        } catch (Exception e) {
-            return true;
-        }
-    }
-
-    private static String normalizeMcWiki(String linkOrTitle) {
-        String s = linkOrTitle.trim();
-        if (s.startsWith("http://") || s.startsWith("https://")) {
-            return s;
-        }
-        return titleToMcWikiUrl(s);
-    }
-
-    /// Support optional language prefixes, like `en:Zombie` and `zh:僵尸`.
-    ///
-    /// Minecraft Wiki's path is `/w/Title`.
-    ///
-    /// @param input the title to transform to the url.
-    /// @return the transformed url.
-    private static String titleToMcWikiUrl(String input) {
-        if (input == null) return null;
-        String s = input.trim();
-
-        String lang = DEFAULT_LANG;
-        int idx = s.indexOf(':');
-        if (idx > 0 && idx <= 6 && s.substring(0, idx).matches("[A-Za-z-]{2,6}")) {
-            lang = s.substring(0, idx);
-            s = s.substring(idx + 1).trim();
-        }
-
-        String encoded = URLEncoder.encode(s.replace(' ', '_'), StandardCharsets.UTF_8);
-        return "https://" + lang + ".minecraft.wiki/w/" + encoded;
-    }
-
-    /// Fetch the h1 title and the lead
-    ///
-    /// @param url the url to fetch
-    /// @return [TitleLead] with the title and lead
-    /// @throws Exception if the connection failed
+    /**
+     * Fetch title and lead paragraph(s) from a Minecraft Wiki article.
+     *
+     * @param url The full URL of the Minecraft Wiki article.
+     * @return {@link TitleLead} object containing the title and lead text.
+     * @throws Exception if fetching or parsing fails.
+     */
     private static TitleLead fetchTitleAndLead(String url) throws Exception {
         Connection conn = Jsoup.connect(url)
                 .userAgent("Mozilla/5.0 (compatible; LukosBot/1.0)")
@@ -103,18 +63,35 @@ public class McWikiCommand implements BotCommand {
         return new TitleLead(title, sb.toString().trim());
     }
 
-    // ===== 具体执行 =====
-
+    /**
+     * Get trimmed text of an element, or empty string if null.
+     *
+     * @param e The Jsoup Element.
+     * @return Trimmed text or empty string.
+     */
     private static String textOrEmpty(Element e) {
         return e == null ? "" : e.text().trim();
+    }
+
+    @Override
+    public String defaultLang() {
+        return "zh";
+    }
+
+    @Override
+    public String pathPrefix() {
+        return "/w/";
+    }
+
+    @Override
+    public String domainRoot() {
+        return "minecraft.wiki";
     }
 
     @Override
     public String name() {
         return "mcwiki";
     }
-
-    // ===== URL / 站点判断 & 解析 =====
 
     @Override
     public String description() {
@@ -125,8 +102,8 @@ public class McWikiCommand implements BotCommand {
     public String usage() {
         return """
                 用法：
-                /mcwiki <minecraftwiki_link|article>     # 返回“标题\\n简介”
-                /mcwiki md <minecraftwiki_link|article>  # 抓取整页并转为 Markdown 文件
+                `/mcwiki <minecraftwiki_link|article>`    # 返回“标题\\n简介”
+                `/mcwiki md <minecraftwiki_link|article>` # 抓取整页并转为 Markdown 文件
                 示例：
                 /mcwiki 僵尸猪灵
                 /mcwiki md https://zh.minecraft.wiki/w/僵尸猪灵
@@ -174,17 +151,20 @@ public class McWikiCommand implements BotCommand {
         );
     }
 
-    // ===== 抓取简介段落 =====
-
+    /**
+     * Run the summary subcommand: fetch title and lead paragraph(s).
+     *
+     * @param src         The command source.
+     * @param linkOrTitle The Minecraft Wiki link or article title.
+     */
     private void runSummary(CommandSource src, String linkOrTitle) {
         try {
-            String url = normalizeMcWiki(linkOrTitle);
-            if (isNotMcWiki(url)) {
+            String url = normalize(linkOrTitle);
+            if (isNot(url)) {
                 src.reply("仅支持 Minecraft Wiki 链接或条目名。示例：/mcwiki https://zh.minecraft.wiki/w/下界合金");
                 return;
             }
 
-            // 抓取标题 + 简介段
             var summary = fetchTitleAndLead(url);
             if (summary.title().isBlank()) {
                 src.reply("未抓到有效内容。请检查条目是否存在。");
@@ -200,15 +180,20 @@ public class McWikiCommand implements BotCommand {
         }
     }
 
+    /**
+     * Run the markdown subcommand: fetch and convert to Markdown.
+     *
+     * @param src         The command source.
+     * @param linkOrTitle The Minecraft Wiki link or article title.
+     */
     private void runMarkdown(CommandSource src, String linkOrTitle) {
         try {
-            String url = normalizeMcWiki(linkOrTitle);
-            if (isNotMcWiki(url)) {
+            String url = normalize(linkOrTitle);
+            if (isNot(url)) {
                 src.reply("仅支持 Minecraft Wiki 链接或条目名。示例：/mcwiki md https://zh.minecraft.wiki/w/下界合金");
                 return;
             }
 
-            // 直接复用 WebToMarkdown 的通用转换（见下文新增方法）
             var md = WebToMarkdown.fetchAndConvertWithSelectors(
                     url,
                     "h1#firstHeading",                // 标题选择器（与 MediaWiki 一致）
@@ -225,15 +210,20 @@ public class McWikiCommand implements BotCommand {
         }
     }
 
+    /**
+     * Run the screenshot subcommand: capture a screenshot of the article.
+     *
+     * @param src         The command source.
+     * @param linkOrTitle The Minecraft Wiki link or article title.
+     */
     private void runScreenshot(CommandSource src, String linkOrTitle) {
         try {
-            String url = normalizeMcWiki(linkOrTitle);
-            if (isNotMcWiki(url)) {
+            String url = normalize(linkOrTitle);
+            if (isNot(url)) {
                 src.reply("仅支持 Minecraft Wiki 链接或条目名。示例：/mcwiki ss https://zh.minecraft.wiki/w/下界合金");
                 return;
             }
 
-            // 获取 ContentData 并通过 Attachment.imageBytes 返回
             var cd = chiloven.lukosbot2.util.WebScreenshot.screenshotMcWiki(url);
 
             MessageOut out = MessageOut.text(src.in().addr(), "截图如下：")
@@ -246,6 +236,12 @@ public class McWikiCommand implements BotCommand {
         }
     }
 
+    /**
+     * Title and lead paragraph(s) record.
+     *
+     * @param title the article title
+     * @param lead  the lead paragraph(s)
+     */
     private record TitleLead(String title, String lead) {
     }
 }
