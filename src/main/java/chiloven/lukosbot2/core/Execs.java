@@ -15,14 +15,30 @@ final class Execs {
     }
 
     /**
-     * Returns a virtual-thread-per-task {@link java.util.concurrent.ExecutorService} where each
-     * submitted task runs in its own virtual thread, suitable for massively concurrent, potentially
-     * blocking workloads.
+     * Creates a virtual-thread-per-task {@link java.util.concurrent.ExecutorService} whose threads are explicitly
+     * named using the given printf-style pattern (e.g., {@code "proc-%02d"} or {@code "send-%02d"}), enabling
+     * clearer logs and diagnostics while preserving the lightweight concurrency of virtual threads.
      *
-     * @return a new virtual-thread-per-task executor service
+     * @param pattern the thread name pattern containing an optional {@code %d} placeholder that will be replaced
+     *                by a monotonically increasing index starting at 1
+     * @return a per-task executor that creates named virtual threads for each submitted task
+     */
+    static ExecutorService newVirtualExecutor(String pattern) {
+        java.util.concurrent.atomic.AtomicLong seq = new java.util.concurrent.atomic.AtomicLong(1);
+        ThreadFactory vf = Thread.ofVirtual()
+                .name(pattern, seq.getAndIncrement())
+                .factory();
+        return Executors.newThreadPerTaskExecutor(vf);
+    }
+
+    /**
+     * Creates a virtual-thread-per-task {@link java.util.concurrent.ExecutorService} with a default naming
+     * pattern {@code "v-%02d"}, suitable when explicit naming is desired but a custom pattern is not needed.
+     *
+     * @return a per-task executor that creates named virtual threads using the default pattern
      */
     static ExecutorService newVirtualExecutor() {
-        return Executors.newVirtualThreadPerTaskExecutor();
+        return newVirtualExecutor("v-%02d");
     }
 
     /**
@@ -35,9 +51,10 @@ final class Execs {
      */
     static ThreadFactory platformNamedFactory(String pattern) {
         AtomicLong seq = new AtomicLong(1);
-        return r -> Thread.ofPlatform()
-                .daemon(true)
-                .name(pattern, seq.getAndIncrement())
-                .unstarted(r);
+        return r -> {
+            long n = seq.getAndIncrement();
+            String name = String.format(pattern, n);
+            return Thread.ofPlatform().daemon(true).name(name).unstarted(r);
+        };
     }
 }

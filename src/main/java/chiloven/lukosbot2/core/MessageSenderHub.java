@@ -25,7 +25,7 @@ public class MessageSenderHub {
     private static final Logger log = LogManager.getLogger(MessageSenderHub.class);
     private final Map<ChatPlatform, Sender> routes = new EnumMap<>(ChatPlatform.class);
 
-    private final ExecutorService sendPool = Execs.newVirtualExecutor();
+    private final ExecutorService sendPool = Execs.newVirtualExecutor("send-%02d");
 
     /**
      * Registers (or replaces) the {@link chiloven.lukosbot2.platforms.Sender} responsible for delivering messages

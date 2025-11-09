@@ -8,63 +8,66 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Dispatches incoming messages by applying an optional prefix filter, scheduling processing on striped
- * single-thread lanes keyed by chat ID to guarantee per-chat ordering while allowing cross-chat concurrency,
- * and batching the resulting outputs for delivery via {@link MessageSenderHub} with optional order
- * preservation; intended as the high-throughput gateway from receivers to the processing pipeline.
+ * High-throughput dispatcher that optionally filters messages by prefix, executes the processing
+ * pipeline on a virtual-thread pool for parallelism, and hands off results to striped single-thread
+ * lanes to guarantee per-chat ordering while allowing cross-chat concurrency; when configured to
+ * serialize per chat, messages from the same chat are sent in order, otherwise batches may be sent
+ * concurrently without ordering guarantees.
  */
-public class MessageDispatcher {
+public class MessageDispatcher implements AutoCloseable {
     public static final StringUtils SU = new StringUtils();
     private static final Logger log = LogManager.getLogger(MessageDispatcher.class);
     private final Processor pipeline;
     private final MessageSenderHub msh;
     private final StripedExecutor lanes;
+    private final ExecutorService procPool;
     private final String prefix;
-    private final boolean preserveOrder;
+    private final boolean serializePerChat;
 
     /**
-     * Creates a dispatcher with no prefix filtering, a default stripe count of {@code max(2, CPU*2)} for
-     * per-chat serialization, and batch sending with order preserved; use this when you want sensible
-     * defaults without additional tuning.
+     * Constructs a dispatcher with sensible defaults—no prefix filtering, a stripe count of
+     * {@code max(2, CPU*2)} for per-chat serialization, and ordered batch sending—suitable for most
+     * deployments without additional tuning.
      *
      * @param pipeline the processing pipeline that transforms a {@link chiloven.lukosbot2.model.MessageIn}
-     *                 into zero or more {@link chiloven.lukosbot2.model.MessageOut} messages
-     * @param msh      the hub responsible for routing and sending outgoing messages to their
-     *                 platform-specific{@link chiloven.lukosbot2.platforms.Sender}s
+     *                 into zero or more {@link chiloven.lukosbot2.model.MessageOut} instances
+     * @param msh      the hub responsible for routing and transmitting produced messages to platform senders
      */
     public MessageDispatcher(Processor pipeline, MessageSenderHub msh) {
         this(pipeline, msh, null, Math.max(2, Runtime.getRuntime().availableProcessors() * 2), true);
     }
 
     /**
-     * Creates a dispatcher configured with explicit prefix filtering, stripe count, and batch-sending order
-     * semantics; messages not starting with the given prefix (when non-null) are dropped early, messages
-     * from the same chat ID are serialized on the same lane, and produced outputs are sent in a batch with
-     * optional order preservation.
+     * Constructs a dispatcher with explicit prefix filtering, stripe count, and per-chat serialization
+     * behavior; messages not starting with the given prefix (when non-{@code null}) are dropped early,
+     * processing runs on a virtual-thread pool, and results are delivered on striped lanes either in
+     * order per chat or concurrently depending on {@code serializePerChat}.
      *
-     * @param pipeline      the processing pipeline that handles inbound messages
-     * @param msh           the hub that performs actual sending of produced messages
-     * @param prefix        the required message prefix for quick filtering; {@code null} disables prefix checks
-     * @param stripes       the number of striped single-thread lanes used to serialize processing per chat while
-     *                      enabling cross-chat parallelism
-     * @param preserveOrder whether to preserve the order of messages within each batch during sending
+     * @param pipeline         the processing pipeline that handles inbound messages
+     * @param msh              the hub that performs the actual sending of produced messages
+     * @param prefix           the required message prefix for fast filtering; {@code null} disables the check
+     * @param stripes          the number of striped single-thread lanes used for delivery
+     * @param serializePerChat whether to preserve per-chat send order ({@code true}) or allow
+     *                         concurrent, out-of-order sending within a chat ({@code false})
      */
-    public MessageDispatcher(Processor pipeline, MessageSenderHub msh, String prefix, int stripes, boolean preserveOrder) {
+    public MessageDispatcher(Processor pipeline, MessageSenderHub msh, String prefix, int stripes, boolean serializePerChat) {
         this.pipeline = Objects.requireNonNull(pipeline);
         this.msh = Objects.requireNonNull(msh);
         this.prefix = prefix;
-        this.preserveOrder = preserveOrder;
-        this.lanes = new StripedExecutor(stripes, "lane-%d");
+        this.serializePerChat = serializePerChat;
+        this.lanes = new StripedExecutor(Math.max(1, stripes), "lane-%02d");
+        this.procPool = Execs.newVirtualExecutor("proc-%02d");
     }
 
     /**
-     * Receives an inbound message, applies the optional prefix filter, enqueues accepted work onto the lane
-     * determined by the message’s chat ID for ordered processing, executes the pipeline to produce zero or
-     * more outputs, and forwards any results to the sender hub as a batch according to the configured order
-     * policy.
+     * Receives an inbound message, applies the optional prefix filter, executes the pipeline on the
+     * virtual-thread pool to produce zero or more outputs, and enqueues delivery on striped lanes with
+     * ordering determined by {@code serializePerChat}.
      *
      * @param in the incoming message to process
      */
@@ -77,8 +80,7 @@ public class MessageDispatcher {
             if (!t.startsWith(prefix)) return;
         }
 
-        Object key = in.addr().chatId();
-        lanes.submit(key, () -> {
+        procPool.submit(() -> {
             long t0 = System.nanoTime();
             List<MessageOut> outs = pipeline.handle(in);
             long costMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - t0);
@@ -88,7 +90,27 @@ public class MessageDispatcher {
                 return;
             }
             log.info("PIPELINE result: {} message(s) ({} ms)", outs.size(), costMs);
-            msh.sendBatch(outs, preserveOrder);
+
+            if (serializePerChat) {
+                Object key = in.addr().chatId(); // 同一 chat 保序发送
+                lanes.submit(key, () -> msh.sendBatch(outs, true));
+            } else {
+                Object key = ThreadLocalRandom.current().nextLong();
+                lanes.submit(key, () -> msh.sendBatch(outs, false));
+            }
         });
+    }
+
+    /**
+     * Closes the dispatcher by initiating an orderly shutdown of the striped lane executors and the
+     * virtual-thread processing pool so no new tasks are accepted and in-flight tasks can complete.
+     */
+    @Override
+    public void close() {
+        try {
+            lanes.close();
+        } finally {
+            procPool.shutdown();
+        }
     }
 }
