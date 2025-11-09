@@ -30,13 +30,12 @@ public class OneBotLifecycle implements SmartLifecycle, PlatformAdapter {
 
     @Override
     public List<AutoCloseable> start(MessageDispatcher md, MessageSenderHub msh) throws Exception {
-        // 保持原有启动顺序：new → bind → start → register → closeable.add
         OneBotReceiver ob = new OneBotReceiver(
                 props.getOnebot().getWsUrl(),
                 props.getOnebot().getAccessToken()
         );
         ob.bind(md::receive);
-        ob.start(); // 实际连接&事件由 Shiro 托管，这里保持原始生命周期
+        ob.start();
         msh.register(ChatPlatform.ONEBOT, ob.sender());
         closeable.add(ob);
 

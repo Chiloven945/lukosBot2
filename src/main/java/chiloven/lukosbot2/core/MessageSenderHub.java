@@ -13,30 +13,40 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
- * 路由中心：
- * - 按平台路由到不同 Sender
- * - 提供 send/sendAsync/sendBatch
- * - 批量发送时可选择是否保序
- *
- * 说明：Java 25 环境，统一使用虚拟线程执行发送任务。
+ * Central hub for routing and delivering {@link chiloven.lukosbot2.model.MessageOut} messages to platform-specific
+ * {@link chiloven.lukosbot2.platforms.Sender}s, supporting synchronous sends, asynchronous sends backed by a
+ * virtual-thread executor, and batch delivery with optional order preservation; acts as the single egress point
+ * so callers don’t manage sender lookups or concurrency themselves.
  */
 public class MessageSenderHub {
     private static final Logger log = LogManager.getLogger(MessageSenderHub.class);
     private final Map<ChatPlatform, Sender> routes = new EnumMap<>(ChatPlatform.class);
 
-    private final ExecutorService sendPool = Executors.newVirtualThreadPerTaskExecutor();
+    private final ExecutorService sendPool = Execs.newVirtualExecutor();
 
     /**
-     * 注册平台 sender
+     * Registers (or replaces) the {@link chiloven.lukosbot2.platforms.Sender} responsible for delivering messages
+     * on the given {@link chiloven.lukosbot2.platforms.ChatPlatform}, enabling the hub to route outgoing messages
+     * by platform without callers holding sender references.
+     *
+     * @param p the chat platform whose messages should be handled by the provided sender; must not be {@code null}
+     * @param s the sender implementation that performs the actual delivery for the platform; must not be {@code null}
      */
     public void register(ChatPlatform p, Sender s) {
         routes.put(Objects.requireNonNull(p), Objects.requireNonNull(s));
     }
 
-    /** 兼容旧方法：同步（当前线程） */
+    /**
+     * Sends a single {@link chiloven.lukosbot2.model.MessageOut} synchronously by routing it to the registered
+     * {@link chiloven.lukosbot2.platforms.Sender} for its platform, logging basic metadata and swallowing
+     * delivery exceptions to prevent failures from propagating to the caller.
+     *
+     * @param out the outgoing message to deliver; must not be {@code null} and must contain a valid address with
+     *            platform and chat ID
+     * @return nothing
+     */
     public void send(MessageOut out) {
         int att = (out.attachments() == null) ? 0 : out.attachments().size();
         log.info("OUT -> [{}] to chat={} text=\"{}\" attachments={}",
@@ -54,23 +64,34 @@ public class MessageSenderHub {
     }
 
     /**
-     * 异步发送（虚拟线程）
+     * Sends a single {@link chiloven.lukosbot2.model.MessageOut} asynchronously by delegating to
+     * {@link #send(chiloven.lukosbot2.model.MessageOut)} on a virtual-thread executor, returning a
+     * {@link java.util.concurrent.CompletableFuture} that completes when the send finishes or
+     * completes exceptionally if delivery fails.
+     *
+     * @param out the outgoing message to deliver asynchronously; must not be {@code null}
+     * @return a future representing the completion of the send operation
      */
     public CompletableFuture<Void> sendAsync(MessageOut out) {
         return CompletableFuture.runAsync(() -> send(out), sendPool);
     }
 
     /**
-     * 批量发送；preserveOrder=true 时按顺序逐条发送，否则并发发送
+     * Sends a list of {@link chiloven.lukosbot2.model.MessageOut} messages either sequentially in the provided
+     * order (when {@code preserveOrder} is true) or concurrently using
+     * {@link #sendAsync(chiloven.lukosbot2.model.MessageOut)} and waiting for all to complete
+     * (when {@code preserveOrder} is false), ignoring empty or {@code null} input.
+     *
+     * @param outs          the messages to deliver; {@code null} or empty lists result in no action
+     * @param preserveOrder whether to send messages one-by-one in the given order ({@code true}) or dispatch
+     *                      them concurrently and wait for completion ({@code false})
      */
     public void sendBatch(List<MessageOut> outs, boolean preserveOrder) {
         if (outs == null || outs.isEmpty()) return;
         if (preserveOrder) {
             for (MessageOut out : outs) send(out);
         } else {
-            CompletableFuture<?>[] fs = outs.stream()
-                    .map(this::sendAsync)
-                    .toArray(CompletableFuture[]::new);
+            CompletableFuture<?>[] fs = outs.stream().map(this::sendAsync).toArray(CompletableFuture[]::new);
             CompletableFuture.allOf(fs).join();
         }
     }

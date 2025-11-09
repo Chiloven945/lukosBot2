@@ -11,10 +11,10 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 新 Dispatcher：
- * - 可选 prefix 快速过滤（不进入流水线）
- * - StripedExecutor：跨 chat 并行、同 chat 有序
- * - 下游发送可批量 & 保序
+ * Dispatches incoming messages by applying an optional prefix filter, scheduling processing on striped
+ * single-thread lanes keyed by chat ID to guarantee per-chat ordering while allowing cross-chat concurrency,
+ * and batching the resulting outputs for delivery via {@link MessageSenderHub} with optional order
+ * preservation; intended as the high-throughput gateway from receivers to the processing pipeline.
  */
 public class MessageDispatcher {
     private static final Logger log = LogManager.getLogger(MessageDispatcher.class);
@@ -22,21 +22,37 @@ public class MessageDispatcher {
     private final Processor pipeline;
     private final MessageSenderHub msh;
     private final StripedExecutor lanes;
-    private final String prefix;            // 可选命令前缀（如 "!"）
-    private final boolean preserveOrder;    // 批量发送时是否保序
+    private final String prefix;
+    private final boolean preserveOrder;
 
     /**
-     * 兼容旧构造：默认无前缀过滤、并发条带=2*CPU、发送保序
+     * Creates a dispatcher with no prefix filtering, a default stripe count of {@code max(2, CPU*2)} for
+     * per-chat serialization, and batch sending with order preserved; use this when you want sensible
+     * defaults without additional tuning.
+     *
+     * @param pipeline the processing pipeline that transforms a {@link chiloven.lukosbot2.model.MessageIn}
+     *                 into zero or more {@link chiloven.lukosbot2.model.MessageOut} messages
+     * @param msh      the hub responsible for routing and sending outgoing messages to their
+     *                 platform-specific{@link chiloven.lukosbot2.platforms.Sender}s
      */
     public MessageDispatcher(Processor pipeline, MessageSenderHub msh) {
         this(pipeline, msh, null, Math.max(2, Runtime.getRuntime().availableProcessors() * 2), true);
     }
 
-    public MessageDispatcher(Processor pipeline,
-                             MessageSenderHub msh,
-                             String prefix,
-                             int stripes,
-                             boolean preserveOrder) {
+    /**
+     * Creates a dispatcher configured with explicit prefix filtering, stripe count, and batch-sending order
+     * semantics; messages not starting with the given prefix (when non-null) are dropped early, messages
+     * from the same chat ID are serialized on the same lane, and produced outputs are sent in a batch with
+     * optional order preservation.
+     *
+     * @param pipeline      the processing pipeline that handles inbound messages
+     * @param msh           the hub that performs actual sending of produced messages
+     * @param prefix        the required message prefix for quick filtering; {@code null} disables prefix checks
+     * @param stripes       the number of striped single-thread lanes used to serialize processing per chat while
+     *                      enabling cross-chat parallelism
+     * @param preserveOrder whether to preserve the order of messages within each batch during sending
+     */
+    public MessageDispatcher(Processor pipeline, MessageSenderHub msh, String prefix, int stripes, boolean preserveOrder) {
         this.pipeline = Objects.requireNonNull(pipeline);
         this.msh = Objects.requireNonNull(msh);
         this.prefix = prefix;
@@ -45,22 +61,23 @@ public class MessageDispatcher {
     }
 
     /**
-     * 入口：接收消息 ->（可选）前缀快速过滤 -> 进入条带执行 -> 流水线 -> 批量发送
+     * Receives an inbound message, applies the optional prefix filter, enqueues accepted work onto the lane
+     * determined by the message’s chat ID for ordered processing, executes the pipeline to produce zero or
+     * more outputs, and forwards any results to the sender hub as a batch according to the configured order
+     * policy.
+     *
+     * @param in the incoming message to process
      */
     public void receive(MessageIn in) {
-        String oneLine = StringUtils.oneLine(in.text());
         log.info("IN <- [{}] user={} chat={} text=\"{}\"",
-                in.addr().platform(), in.userId(), in.addr().chatId(), oneLine);
+                in.addr().platform(), in.userId(), in.addr().chatId(), StringUtils.oneLine(in.text()));
 
-        // 快速过滤：不满足前缀，直接丢弃（不进入 pipeline）
         if (prefix != null) {
             String t = (in.text() == null ? "" : in.text().trim());
-            if (!t.startsWith(prefix)) {
-                return;
-            }
+            if (!t.startsWith(prefix)) return;
         }
 
-        Object key = in.addr().chatId(); // 保证同 chat 顺序
+        Object key = in.addr().chatId();
         lanes.submit(key, () -> {
             long t0 = System.nanoTime();
             List<MessageOut> outs = pipeline.handle(in);
@@ -71,8 +88,6 @@ public class MessageDispatcher {
                 return;
             }
             log.info("PIPELINE result: {} message(s) ({} ms)", outs.size(), costMs);
-
-            // 批量发送（可配置保序）
             msh.sendBatch(outs, preserveOrder);
         });
     }

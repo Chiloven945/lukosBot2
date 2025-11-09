@@ -13,10 +13,10 @@ import org.springframework.context.annotation.Bean;
 
 @SpringBootApplication
 public class Main {
-    public static final String VERSION = "Alpha.0.0.1";
+
     private static final Logger log = LogManager.getLogger(Main.class);
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         log.info("""
                         Starting lukosBot2 {} ...
                          __       __  __  __  __   _____   ____    ____     _____   ______    ___    \s
@@ -26,7 +26,7 @@ public class Main {
                           \\ \\ \\L\\ \\\\ \\ \\_\\ \\ \\ \\\\`\\ \\ \\ \\_\\ \\/\\ \\L\\ \\ \\ \\L\\ \\\\ \\ \\_\\ \\ \\ \\ \\  // /_\\ \\
                            \\ \\____/ \\ \\_____\\ \\_\\ \\_\\\\ \\_____\\ `\\____\\ \\____/ \\ \\_____\\ \\ \\_\\/\\______/
                             \\/___/   \\/_____/\\/_/\\/_/ \\/_____/\\/_____/\\/___/   \\/_____/  \\/_/\\/_____/\s"""
-                , VERSION
+                , Constants.VERSION
         );
         SpringApplication.run(Main.class, args);
     }

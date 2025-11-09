@@ -10,6 +10,7 @@
     <name>lukosBot2</name>
 
     <properties>
+        <maven.compiler.release>25</maven.compiler.release>
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
         <log4j2.version>2.25.2</log4j2.version>
