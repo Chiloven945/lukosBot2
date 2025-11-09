@@ -1,6 +1,6 @@
 package chiloven.lukosbot2.bootstrap;
 
-public final class BootStepError extends RuntimeException {
+public class BootStepException extends RuntimeException {
     private final int code;
 
     /**
@@ -10,7 +10,7 @@ public final class BootStepError extends RuntimeException {
      * @param message error message
      * @param cause the cause of the error
      */
-    public BootStepError(int code, String message, Throwable cause) {
+    public BootStepException(int code, String message, Throwable cause) {
         super(message, cause);
         this.code = code;
     }

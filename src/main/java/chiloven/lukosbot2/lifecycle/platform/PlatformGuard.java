@@ -1,6 +1,5 @@
 package chiloven.lukosbot2.lifecycle.platform;
 
-import chiloven.lukosbot2.bootstrap.BootStepError;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.SmartLifecycle;
@@ -21,9 +20,9 @@ public class PlatformGuard implements SmartLifecycle {
     }
 
     @Override
-    public void start() {
+    public void start() throws NoPlatformEnabledException {
         if (adapters.isEmpty()) {
-            throw new BootStepError(6, "No platform enabled (set lukos.telegram/onebot/discord.enabled in application.yml)", null);
+            throw new NoPlatformEnabledException();
         }
         running = true;
     }
