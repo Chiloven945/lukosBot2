@@ -25,7 +25,7 @@ public final class JsonUtils {
 
     public static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
-    private JsonUtils() {
+    public JsonUtils() {
     }
 
     /* ===================== File ←→ Object ===================== */
@@ -40,7 +40,7 @@ public final class JsonUtils {
      * @throws IOException         if file read fails
      * @throws JsonSyntaxException if JSON is malformed
      */
-    public static <T> T readJson(Path path, Class<T> cls) throws IOException, JsonSyntaxException {
+    public <T> T readFile(Path path, Class<T> cls) throws IOException, JsonSyntaxException {
         Objects.requireNonNull(path);
         try (Reader r = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
             return GSON.fromJson(r, cls);
@@ -57,7 +57,7 @@ public final class JsonUtils {
      * @throws IOException         if file read fails
      * @throws JsonSyntaxException if JSON is malformed
      */
-    public static <T> T readJson(Path path, Type type) throws IOException, JsonSyntaxException {
+    public <T> T readFile(Path path, Type type) throws IOException, JsonSyntaxException {
         Objects.requireNonNull(path);
         try (Reader r = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
             return GSON.fromJson(r, type);
@@ -73,7 +73,7 @@ public final class JsonUtils {
      * @param obj  object to serialize
      * @throws IOException if file write fails
      */
-    public static void writeJson(Path path, Object obj) throws IOException {
+    public void writeFile(Path path, Object obj) throws IOException {
         Objects.requireNonNull(path);
         Objects.requireNonNull(obj);
 
@@ -82,7 +82,9 @@ public final class JsonUtils {
 
         String json = toJsonString(obj);
 
-        Path tmp = tempSibling(path);
+        String fn = path.getFileName().toString();
+        String tmpName = fn + ".tmp-" + System.nanoTime();
+        Path tmp = (path.getParent() == null) ? Path.of(tmpName) : path.getParent().resolve(tmpName);
         try (Writer w = Files.newBufferedWriter(tmp, StandardCharsets.UTF_8)) {
             w.write(json);
         }
@@ -104,17 +106,17 @@ public final class JsonUtils {
      * @return deserialized object or default object
      * @throws IOException if file read/write fails
      */
-    public static <T> T loadOrCreate(Path path, Class<T> cls, Supplier<T> defaults) throws IOException {
+    public <T> T loadOrCreateFile(Path path, Class<T> cls, Supplier<T> defaults) throws IOException {
         Objects.requireNonNull(path);
         Objects.requireNonNull(cls);
         Objects.requireNonNull(defaults);
 
         if (Files.notExists(path)) {
             T def = defaults.get();
-            writeJson(path, def);
+            writeFile(path, def);
             return def;
         }
-        return readJson(path, cls);
+        return readFile(path, cls);
     }
 
     /* ===================== String ←→ Object ===================== */
@@ -128,7 +130,7 @@ public final class JsonUtils {
      * @return deserialized object
      * @throws JsonSyntaxException if JSON is malformed
      */
-    public static <T> T fromJsonString(String json, Class<T> cls) throws JsonSyntaxException {
+    public <T> T fromJsonString(String json, Class<T> cls) throws JsonSyntaxException {
         Objects.requireNonNull(json);
         return GSON.fromJson(json, cls);
     }
@@ -142,7 +144,7 @@ public final class JsonUtils {
      * @return deserialized object
      * @throws JsonSyntaxException if JSON is malformed
      */
-    public static <T> T fromJsonString(String json, Type type) throws JsonSyntaxException {
+    public <T> T fromJsonString(String json, Type type) throws JsonSyntaxException {
         Objects.requireNonNull(json);
         return GSON.fromJson(json, type);
     }
@@ -153,7 +155,7 @@ public final class JsonUtils {
      * @param obj object to serialize
      * @return JSON string
      */
-    public static String toJsonString(Object obj) {
+    public String toJsonString(Object obj) {
         Objects.requireNonNull(obj);
         return GSON.toJson(obj);
     }
@@ -170,47 +172,24 @@ public final class JsonUtils {
      * @throws IOException         if resource not found or read fails
      * @throws JsonSyntaxException if JSON is malformed
      */
-    public static <T> T readResource(String resourcePath, Class<T> cls) throws IOException {
+    public <T> T readResourceAs(String resourcePath, Class<T> cls) throws IOException {
         Objects.requireNonNull(resourcePath);
         try (BufferedReader br = new BufferedReader(new InputStreamReader(Objects.requireNonNull(JsonUtils.class.getResourceAsStream(resourcePath)), StandardCharsets.UTF_8))) {
             return GSON.fromJson(br, cls);
         } catch (NullPointerException npe) {
-            throw new IOException("资源未找到: " + resourcePath, npe);
+            throw new IOException("Unable to find the resource: " + resourcePath, npe);
         }
     }
 
     /* =====================  Private Helpers  ===================== */
 
     /**
-     * Generates a temporary sibling path for atomic file writing
+     * Serializes an object into a JsonObject
      *
-     * @param target the target file path
-     * @return temporary sibling path
+     * @param obj the object to serialize
+     * @return the resulting JsonObject
      */
-    private static Path tempSibling(Path target) {
-        String fn = target.getFileName().toString();
-        String tmpName = fn + ".tmp-" + System.nanoTime();
-        return (target.getParent() == null) ? Path.of(tmpName) : target.getParent().resolve(tmpName);
-    }
-
-    /**
-     * Converts an object to its JSON string representation
-     * (Pretty print, HTML characters not escaped)
-     *
-     * @param obj the object to convert
-     * @return the JSON string representation
-     */
-    public static String toJson(Object obj) {
-        return GSON.toJson(obj);
-    }
-
-    /**
-     * Converts an object to a JsonObject
-     *
-     * @param obj the object to convert
-     * @return the JsonObject representation
-     */
-    public static JsonObject toJsonTree(Object obj) {
+    public JsonObject toJsonObject(Object obj) {
         return GSON.toJsonTree(obj).getAsJsonObject();
     }
 
@@ -222,18 +201,8 @@ public final class JsonUtils {
      * @param <T> type parameter
      * @return the deserialized object
      */
-    public static <T> T fromJsonTree(JsonObject obj, Class<T> cls) {
+    public <T> T fromJsonObject(JsonObject obj, Class<T> cls) {
         return GSON.fromJson(obj, cls);
-    }
-
-    /**
-     * Normalizes a JsonObject to a pretty-printed JSON string
-     *
-     * @param obj the JsonObject to normalize
-     * @return the pretty-printed JSON string
-     */
-    public static String normalizePretty(JsonObject obj) {
-        return GSON.toJson(obj);
     }
 
     /**
@@ -246,7 +215,7 @@ public final class JsonUtils {
      * @param dst the destination JsonObject to merge into
      * @param src the source JsonObject to merge from
      */
-    public static void mergeInto(JsonObject dst, JsonObject src) {
+    public void mergeInto(JsonObject dst, JsonObject src) {
         for (String key : src.keySet()) {
             JsonElement srcVal = src.get(key);
             // If dst does not have the key, add it
@@ -263,5 +232,52 @@ public final class JsonUtils {
                 dst.add(key, srcVal);
             }
         }
+    }
+
+    /**
+     * Get a string value from a JsonObject by key, with a default if the key is missing or null.
+     *
+     * @param o   the JsonObject
+     * @param k   the key
+     * @param def the default value
+     * @return the string value or the default
+     */
+    public String getString(JsonObject o, String k, String def) {
+        return (o != null && o.has(k) && !o.get(k).isJsonNull()) ? o.get(k).getAsString() : def;
+    }
+
+    /**
+     * Get a long value from a JsonObject by key, with a default if the key is missing or null.
+     *
+     * @param o   the JsonObject
+     * @param k   the key
+     * @param def the default value
+     * @return the long value or the default
+     */
+    public long getLong(JsonObject o, String k, long def) {
+        return (o != null && o.has(k) && !o.get(k).isJsonNull()) ? o.get(k).getAsLong() : def;
+    }
+
+    /**
+     * Get an int value from a JsonObject by key, with a default if the key is missing or null.
+     *
+     * @param o   the JsonObject
+     * @param k   the key
+     * @param def the default value
+     * @return the int value or the default
+     */
+    public int getInt(JsonObject o, String k, int def) {
+        return (o != null && o.has(k) && !o.get(k).isJsonNull()) ? o.get(k).getAsInt() : def;
+    }
+
+    /**
+     * Get a JsonObject value from a JsonObject by key, or null if the key is missing or not a JsonObject.
+     *
+     * @param o the JsonObject
+     * @param k the key
+     * @return the JsonObject value or null
+     */
+    public JsonObject getObj(JsonObject o, String k) {
+        return (o != null && o.has(k) && o.get(k).isJsonObject()) ? o.getAsJsonObject(k) : null;
     }
 }
