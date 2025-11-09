@@ -23,15 +23,15 @@ public class HelpCommand implements BotCommand {
 
     @Override
     public String description() {
-        return "帮助：列出命令或显示某命令详细用法";
+        return "列出可用命令或其详细用法";
     }
 
     @Override
     public String usage() {
         return """
                 用法：
-                /help
-                /help <command>
+                `/help`           # 列出所有可用命令
+                `/help <command>` # 显示指定命令的用法
                 """;
     }
 
@@ -49,6 +49,7 @@ public class HelpCommand implements BotCommand {
                                             .append(c.description())
                                             .append("\n")
                             );
+                            sb.append("使用 `/help <command>` 查看具体命令的用法。");
                             ctx.getSource().reply(sb.toString().trim());
                             return 1;
                         })
@@ -60,7 +61,7 @@ public class HelpCommand implements BotCommand {
                                     if (cmd != null) {
                                         ctx.getSource().reply(cmd.usage().trim());
                                     } else {
-                                        ctx.getSource().reply("未知命令: " + cmdName);
+                                        ctx.getSource().reply("未知的命令: %s\n使用 `/help` 查看可用命令列表。".formatted(cmdName));
                                     }
                                     return 1;
                                 })

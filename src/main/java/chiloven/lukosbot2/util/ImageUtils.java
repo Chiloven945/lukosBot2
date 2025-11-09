@@ -22,7 +22,7 @@ public final class ImageUtils {
      * @param pngBytes the PNG image bytes
      * @param quality  the JPEG quality (0.0 to 1.0)
      * @return the JPG image bytes
-     * @throws Exception if conversion fails
+     * @throws IOException if conversion fails
      */
     static byte[] pngToJpg(byte[] pngBytes, float quality) throws IOException {
         var src = ImageIO.read(new ByteArrayInputStream(pngBytes));

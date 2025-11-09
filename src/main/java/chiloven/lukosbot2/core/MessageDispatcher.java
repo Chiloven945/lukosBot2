@@ -17,8 +17,8 @@ import java.util.concurrent.TimeUnit;
  * preservation; intended as the high-throughput gateway from receivers to the processing pipeline.
  */
 public class MessageDispatcher {
+    public static final StringUtils SU = new StringUtils();
     private static final Logger log = LogManager.getLogger(MessageDispatcher.class);
-
     private final Processor pipeline;
     private final MessageSenderHub msh;
     private final StripedExecutor lanes;
@@ -70,7 +70,7 @@ public class MessageDispatcher {
      */
     public void receive(MessageIn in) {
         log.info("IN <- [{}] user={} chat={} text=\"{}\"",
-                in.addr().platform(), in.userId(), in.addr().chatId(), StringUtils.oneLine(in.text()));
+                in.addr().platform(), in.userId(), in.addr().chatId(), SU.truncate(in.text()));
 
         if (prefix != null) {
             String t = (in.text() == null ? "" : in.text().trim());

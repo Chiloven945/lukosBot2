@@ -37,6 +37,8 @@ public class PingCommand implements BotCommand {
     public String usage() {
         return """
                 用法：
+                /ping # 返回 pong 及运行状态
+                示例：
                 /ping
                 """;
     }

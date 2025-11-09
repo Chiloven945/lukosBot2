@@ -237,47 +237,47 @@ public final class JsonUtils {
     /**
      * Get a string value from a JsonObject by key, with a default if the key is missing or null.
      *
-     * @param o   the JsonObject
-     * @param k   the key
+     * @param obj the JsonObject
+     * @param key the key
      * @param def the default value
      * @return the string value or the default
      */
-    public String getString(JsonObject o, String k, String def) {
-        return (o != null && o.has(k) && !o.get(k).isJsonNull()) ? o.get(k).getAsString() : def;
+    public String getString(JsonObject obj, String key, String def) {
+        return (obj != null && obj.has(key) && !obj.get(key).isJsonNull()) ? obj.get(key).getAsString() : def;
     }
 
     /**
      * Get a long value from a JsonObject by key, with a default if the key is missing or null.
      *
-     * @param o   the JsonObject
-     * @param k   the key
+     * @param obj the JsonObject
+     * @param key the key
      * @param def the default value
      * @return the long value or the default
      */
-    public long getLong(JsonObject o, String k, long def) {
-        return (o != null && o.has(k) && !o.get(k).isJsonNull()) ? o.get(k).getAsLong() : def;
+    public long getLong(JsonObject obj, String key, long def) {
+        return (obj != null && obj.has(key) && !obj.get(key).isJsonNull()) ? obj.get(key).getAsLong() : def;
     }
 
     /**
      * Get an int value from a JsonObject by key, with a default if the key is missing or null.
      *
-     * @param o   the JsonObject
-     * @param k   the key
+     * @param obj the JsonObject
+     * @param key the key
      * @param def the default value
      * @return the int value or the default
      */
-    public int getInt(JsonObject o, String k, int def) {
-        return (o != null && o.has(k) && !o.get(k).isJsonNull()) ? o.get(k).getAsInt() : def;
+    public int getInt(JsonObject obj, String key, int def) {
+        return (obj != null && obj.has(key) && !obj.get(key).isJsonNull()) ? obj.get(key).getAsInt() : def;
     }
 
     /**
      * Get a JsonObject value from a JsonObject by key, or null if the key is missing or not a JsonObject.
      *
-     * @param o the JsonObject
-     * @param k the key
+     * @param obj the JsonObject
+     * @param key the key
      * @return the JsonObject value or null
      */
-    public JsonObject getObj(JsonObject o, String k) {
-        return (o != null && o.has(k) && o.get(k).isJsonObject()) ? o.getAsJsonObject(k) : null;
+    public JsonObject getObj(JsonObject obj, String key) {
+        return (obj != null && obj.has(key) && obj.get(key).isJsonObject()) ? obj.getAsJsonObject(key) : null;
     }
 }

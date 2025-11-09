@@ -8,4 +8,5 @@ package chiloven.lukosbot2.model;
  * @param text message text
  */
 public record MessageIn(Address addr, Long userId, String text) {
+    //todo: multiple message types support
 }

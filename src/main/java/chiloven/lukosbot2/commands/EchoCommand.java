@@ -16,14 +16,16 @@ public class EchoCommand implements BotCommand {
 
     @Override
     public String description() {
-        return "回声：原样返回文本";
+        return "原样返回文本";
     }
 
     @Override
     public String usage() {
         return """
                 用法：
-                /echo <text>
+                `/echo <text>` # 返回输入的文本
+                示例：
+                /echo Hello, world!
                 """;
     }
 

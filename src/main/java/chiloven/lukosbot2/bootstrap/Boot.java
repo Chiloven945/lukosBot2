@@ -1,7 +1,10 @@
 package chiloven.lukosbot2.bootstrap;
 
 import chiloven.lukosbot2.commands.*;
+import chiloven.lukosbot2.commands.bilibili.BilibiliCommand;
 import chiloven.lukosbot2.commands.github.GitHubCommand;
+import chiloven.lukosbot2.commands.wikis.McWikiCommand;
+import chiloven.lukosbot2.commands.wikis.WikiCommand;
 import chiloven.lukosbot2.config.AppProperties;
 import chiloven.lukosbot2.core.CommandProcessor;
 import chiloven.lukosbot2.core.CommandRegistry;

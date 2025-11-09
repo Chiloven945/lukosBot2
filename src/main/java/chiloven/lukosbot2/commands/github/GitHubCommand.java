@@ -9,13 +9,18 @@ import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 
 /**
- * /github 命令（user / repo / search）)<br>
- * - /github user <username><br>
- * - /github repo <owner>/<repo><br>
- * - /github search <keywords> [--top=3] [--lang=Java] [--sort=stars|updated] [--order=desc|asc]
+ * The /github command for GitHub queries. Allow querying user info, repo info, and searching repos.
+ *
+ * @author Chiloven945
  */
 public class GitHubCommand implements chiloven.lukosbot2.commands.BotCommand {
     private static final Logger log = LogManager.getLogger(GitHubCommand.class);
@@ -42,16 +47,21 @@ public class GitHubCommand implements chiloven.lukosbot2.commands.BotCommand {
 
     @Override
     public String description() {
-        return "GitHub 查询工具（user/repo/search）";
+        return "GitHub 查询工具";
     }
 
     @Override
     public String usage() {
         return """
                 用法：
-                /github user <用户名>
-                /github repo <owner>/<repo>
-                /github search <关键词> [--top=3] [--lang=Java] [--sort=stars|updated] [--order=desc|asc]""";
+                `/github user <username>`     # 查询用户信息
+                `/github repo <owner>/<repo>` # 查询仓库信息
+                `/github search <keyword> [--top=<num>] [--lang=<lang>] [--sort=stars|updated] [--order=desc|asc]` - 搜索仓库
+                示例：
+                `/github user GitHub`
+                `/github repo Chiloven945/lukosbot2`
+                `/github search lukosbot --top=5 --lang=java --sort=stars --order=desc`
+                """;
     }
 
     @Override
@@ -189,34 +199,28 @@ public class GitHubCommand implements chiloven.lukosbot2.commands.BotCommand {
         }
 
         static Params parse(String input) {
-            String[] toks = input.trim().split("\\s+");
-            StringBuilder kw = new StringBuilder();
+            ArrayList<String> toks = new ArrayList<>(Arrays.asList(input.trim().split("\\s+")));
+
+            Map<String, String> opts = toks.stream()
+                    .filter(t -> t.startsWith("--"))
+                    .map(t -> {
+                        int eq = t.indexOf('=');
+                        return (eq > 2) ? new String[]{t.substring(2, eq), t.substring(eq + 1)} : null;
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toMap(a -> a[0], a -> a[1], (a, b) -> b));
+
+            String keywords = toks.stream()
+                    .filter(t -> !t.startsWith("--") || t.indexOf('=') <= 2)
+                    .collect(Collectors.joining(" "));
+
             int top = 3;
-            String lang = null, sort = null, order = null;
-            for (String t : toks) {
-                if (t.startsWith("--top=")) {
-                    try {
-                        top = Integer.parseInt(t.substring(6));
-                    } catch (Exception ignored) {
-                    }
-                    continue;
-                }
-                if (t.startsWith("--lang=")) {
-                    lang = t.substring(7);
-                    continue;
-                }
-                if (t.startsWith("--sort=")) {
-                    sort = t.substring(7);
-                    continue;
-                }
-                if (t.startsWith("--order=")) {
-                    order = t.substring(8);
-                    continue;
-                }
-                if (!kw.isEmpty()) kw.append(' ');
-                kw.append(t);
+            try {
+                if (opts.containsKey("top")) top = Integer.parseInt(opts.get("top"));
+            } catch (Exception ignored) {
             }
-            return new Params(kw.toString().trim(), top, lang, sort, order);
+
+            return new Params(keywords, top, opts.get("lang"), opts.get("sort"), opts.get("order"));
         }
     }
 }

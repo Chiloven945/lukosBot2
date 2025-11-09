@@ -21,6 +21,7 @@ import java.util.concurrent.ExecutorService;
  * so callers don’t manage sender lookups or concurrency themselves.
  */
 public class MessageSenderHub {
+    public static final StringUtils SU = new StringUtils();
     private static final Logger log = LogManager.getLogger(MessageSenderHub.class);
     private final Map<ChatPlatform, Sender> routes = new EnumMap<>(ChatPlatform.class);
 
@@ -45,12 +46,11 @@ public class MessageSenderHub {
      *
      * @param out the outgoing message to deliver; must not be {@code null} and must contain a valid address with
      *            platform and chat ID
-     * @return nothing
      */
     public void send(MessageOut out) {
         int att = (out.attachments() == null) ? 0 : out.attachments().size();
         log.info("OUT -> [{}] to chat={} text=\"{}\" attachments={}",
-                out.addr().platform(), out.addr().chatId(), StringUtils.oneLine(out.text()), att);
+                out.addr().platform(), out.addr().chatId(), SU.truncate(out.text()), att);
         Sender s = routes.get(out.addr().platform());
         if (s == null) {
             log.warn("No Sender for platform: {}", out.addr().platform());
