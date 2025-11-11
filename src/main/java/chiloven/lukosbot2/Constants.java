@@ -12,7 +12,7 @@ public class Constants {
     public final String springVersion = SpringVersion.getVersion();
     public final String tgVersion = "9.2.0";
     public final String jdaVersion = getImplVersion("net.dv8tion.jda.api.JDA");
-    public final String shiroVersion = "2.4.9";
+    public final String shiroVersion = "2.5.0";
 
     public Constants() {
     }
