@@ -20,6 +20,15 @@ lukos:
 
   github:
     token: "${GITHUB_TOKEN:}"
+  
+  music:
+    spotify:
+      enabled: true
+      client-id: ""
+      client-secret: ""
+    soundcloud:
+      enabled: true
+      client-id: ""
 
   telegram:
     enabled: false

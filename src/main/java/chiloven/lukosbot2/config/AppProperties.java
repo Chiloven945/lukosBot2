@@ -20,14 +20,38 @@ public class AppProperties {
 
     private Telegram telegram = new Telegram();
     private OneBot onebot = new OneBot();
-    private GitHub github = new GitHub();
     private Discord discord = new Discord();
+
+    private GitHub github = new GitHub();
+    private Music music = new Music();
 
     /// GitHub related properties.
     @Data
     public static class GitHub {
         /// The personal access token for GitHub API, default is empty. Can be applied to increase rate limit.
         private String token = "";
+    }
+
+    /// Music related properties.
+    @Data
+    public static class Music {
+        private Spotify spotify = new Spotify();
+        private SoundCloud soundcloud = new SoundCloud();
+
+        @Data
+        public static class Spotify {
+            /// Whether to enable Spotify provider.
+            private boolean enabled = false;
+            private String clientId = "";
+            private String clientSecret = "";
+        }
+
+        @Data
+        public static class SoundCloud {
+            /// Whether to enable SoundCloud provider.
+            private boolean enabled = false;
+            private String clientId = "";
+        }
     }
 
     ///  Properties dealing with the Telegram bot.

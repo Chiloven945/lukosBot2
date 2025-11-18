@@ -1,8 +1,11 @@
 package chiloven.lukosbot2.bootstrap;
 
-import chiloven.lukosbot2.commands.*;
+import chiloven.lukosbot2.commands.EchoCommand;
+import chiloven.lukosbot2.commands.HelpCommand;
+import chiloven.lukosbot2.commands.PingCommand;
 import chiloven.lukosbot2.commands.bilibili.BilibiliCommand;
 import chiloven.lukosbot2.commands.github.GitHubCommand;
+import chiloven.lukosbot2.commands.music.MusicCommand;
 import chiloven.lukosbot2.commands.wikis.McWikiCommand;
 import chiloven.lukosbot2.commands.wikis.WikiCommand;
 import chiloven.lukosbot2.config.AppProperties;
@@ -28,6 +31,7 @@ public final class Boot {
                             new EchoCommand(),
                             new GitHubCommand(props.getGithub().getToken()),
                             new McWikiCommand(),
+                            new MusicCommand(props.getMusic()),
                             new PingCommand(),
                             new WikiCommand()
                     );
