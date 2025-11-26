@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * highly concurrent I/O or blocking tasks and a named daemon platform-thread factory for
  * single-threaded lanes; this is a non-instantiable helper class.
  */
-final class Execs {
+public final class Execs {
     private Execs() {
     }
 
@@ -23,7 +23,7 @@ final class Execs {
      *                by a monotonically increasing index starting at 1
      * @return a per-task executor that creates named virtual threads for each submitted task
      */
-    static ExecutorService newVirtualExecutor(String pattern) {
+    public static ExecutorService newVirtualExecutor(String pattern) {
         java.util.concurrent.atomic.AtomicLong seq = new java.util.concurrent.atomic.AtomicLong(1);
         ThreadFactory vf = Thread.ofVirtual()
                 .name(pattern, seq.getAndIncrement())
@@ -37,7 +37,7 @@ final class Execs {
      *
      * @return a per-task executor that creates named virtual threads using the default pattern
      */
-    static ExecutorService newVirtualExecutor() {
+    public static ExecutorService newVirtualExecutor() {
         return newVirtualExecutor("v-%02d");
     }
 
@@ -49,7 +49,7 @@ final class Execs {
      * @param pattern the thread name pattern, optionally including {@code %d} for an index
      * @return a thread factory producing named daemon platform threads
      */
-    static ThreadFactory platformNamedFactory(String pattern) {
+    public static ThreadFactory platformNamedFactory(String pattern) {
         AtomicLong seq = new AtomicLong(1);
         return r -> {
             long n = seq.getAndIncrement();

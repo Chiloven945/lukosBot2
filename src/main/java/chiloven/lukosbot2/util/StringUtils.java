@@ -1,5 +1,8 @@
 package chiloven.lukosbot2.util;
 
+import java.net.URLEncoder;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -105,5 +108,13 @@ public final class StringUtils {
     public String formatTime(long millis, String pattern) {
         if (millis <= 0) return "-";
         return new SimpleDateFormat(pattern).format(new Date(millis));
+    }
+
+    public String encodeTo(String str, Charset sc) {
+        return URLEncoder.encode(str, sc);
+    }
+
+    public String encodeTo(String str) {
+        return encodeTo(str, StandardCharsets.UTF_8);
     }
 }

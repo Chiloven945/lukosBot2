@@ -33,17 +33,20 @@ The bot currently supports the following commands:
     - `<message>` - The message to echo.
 - `/wiki` - Get Wikipedia information.
   - `*empty*` - Get a screenshot of the page.
-  - `md` - Get a markdown file of the page, transforming from html.
+  - `md` - Get a Markdown file of the page, transforming from HTML.
 - `/mcwiki` - Get Minecraft Wikipedia information.
   - `*empty*` - Get a brief introduction about the article.
-  - `md` - Get a markdown file of the page, transforming from html.
+  - `md` - Get a Markdown file of the page, transforming from HTML.
   - `ss` - Get a screenshot of the page.
+- `/music` - Get music information.
+  - `<query>` - Return the query soundtrack information.
+  - `<platform> <query>` - Return the information on a specific platform, only `spotify` and `soundcloud` is supported.
+  - `link <link>` - Return the soundtrack information by its link.
 
 ## Planned Features
 
 - `/weather` - Get weather information for a specific location.
 - `/translate` - Translate text between languages.
-- `/music` - Search and play music.
 - `/cave` - Echo cave...
 
 ## Contributing

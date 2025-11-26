@@ -169,6 +169,24 @@
             <artifactId>webdrivermanager</artifactId>
             <version>6.3.3</version>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- docker-java 核心 -->
+        <dependency>
+            <groupId>com.github.docker-java</groupId>
+            <artifactId>docker-java</artifactId>
+            <version>3.7.0</version>
+        </dependency>
+
+        <!-- 使用 Apache HttpClient 作为 Docker HTTP 传输实现 -->
+        <dependency>
+            <groupId>com.github.docker-java</groupId>
+            <artifactId>docker-java-transport-httpclient5</artifactId>
+            <version>3.7.0</version>
+        </dependency>
     </dependencies>
 
     <build>
