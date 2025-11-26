@@ -18,18 +18,6 @@ lukos:
       - "10.*"
       - "192.168.*"
 
-  github:
-    token: "${GITHUB_TOKEN:}"
-  
-  music:
-    spotify:
-      enabled: true
-      client-id: ""
-      client-secret: ""
-    soundcloud:
-      enabled: true
-      client-id: ""
-
   telegram:
     enabled: false
     bot-token: "${TELEGRAM_BOT_TOKEN:}"
@@ -43,6 +31,22 @@ lukos:
   discord:
     enabled: false
     token: "${DISCORD_TOKEN:}"
+
+  commands:
+    github:
+      token: "${GITHUB_TOKEN:}"
+
+    music:
+      spotify:
+        enabled: true
+        client-id: ""
+        client-secret: ""
+      soundcloud:
+        enabled: true
+        client-id: ""
+
+    translate:
+      default-lang: "zh-Hans"
 
 shiro:
   ws:

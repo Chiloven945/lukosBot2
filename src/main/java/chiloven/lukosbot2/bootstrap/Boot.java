@@ -9,6 +9,7 @@ import chiloven.lukosbot2.commands.music.MusicCommand;
 import chiloven.lukosbot2.commands.wikis.McWikiCommand;
 import chiloven.lukosbot2.commands.wikis.WikiCommand;
 import chiloven.lukosbot2.config.AppProperties;
+import chiloven.lukosbot2.config.CommandConfig;
 import chiloven.lukosbot2.core.CommandProcessor;
 import chiloven.lukosbot2.core.CommandRegistry;
 import chiloven.lukosbot2.core.PipelineProcessor;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Component;
 public final class Boot {
 
     private final AppProperties props;
+    private final CommandConfig config;
 
     ///  Register commands; return the command registry
     public CommandRegistry buildCommands() {
@@ -29,9 +31,9 @@ public final class Boot {
                     .add(
                             new BilibiliCommand(),
                             new EchoCommand(),
-                            new GitHubCommand(props.getGithub().getToken()),
+                            new GitHubCommand(config.getGitHub().getToken()),
                             new McWikiCommand(),
-                            new MusicCommand(props.getMusic()),
+                            new MusicCommand(config.getMusic()),
                             new PingCommand(),
                             new WikiCommand()
                     );
