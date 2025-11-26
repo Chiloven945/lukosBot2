@@ -4,12 +4,15 @@ import chiloven.lukosbot2.commands.BotCommand;
 import chiloven.lukosbot2.commands.music.provider.MusicProvider;
 import chiloven.lukosbot2.commands.music.provider.SoundCloudMusicProvider;
 import chiloven.lukosbot2.commands.music.provider.SpotifyMusicProvider;
-import chiloven.lukosbot2.config.AppProperties;
+import chiloven.lukosbot2.commands.wikis.WikiCommand;
+import chiloven.lukosbot2.config.CommandConfig;
 import chiloven.lukosbot2.core.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.List;
 import java.util.function.Predicate;
@@ -20,16 +23,17 @@ import java.util.function.Predicate;
  * @author Chiloven945
  */
 public class MusicCommand implements BotCommand {
+    private static final Logger log = LogManager.getLogger(MusicCommand.class);
     private final MusicProvider spotify;
     private final MusicProvider soundCloud;
 
-    public MusicCommand(AppProperties.Music music) {
-        AppProperties.Music.Spotify sp = music.getSpotify();
+    public MusicCommand(CommandConfig.Music music) {
+        CommandConfig.Music.Spotify sp = music.getSpotify();
         this.spotify = sp.isEnabled() && sp.getClientId() != null && !sp.getClientId().isBlank() && sp.getClientSecret() != null && !sp.getClientSecret().isBlank()
                 ? new SpotifyMusicProvider(sp.getClientId(), sp.getClientSecret())
                 : null;
 
-        AppProperties.Music.SoundCloud sc = music.getSoundcloud();
+        CommandConfig.Music.SoundCloud sc = music.getSoundcloud();
         this.soundCloud = (sc.isEnabled() && sc.getClientId() != null && !sc.getClientId().isBlank())
                 ? new SoundCloudMusicProvider(sc.getClientId())
                 : null;
@@ -129,6 +133,7 @@ public class MusicCommand implements BotCommand {
             return 1;
         } catch (Exception e) {
             src.reply("查询失败：" + e.getMessage());
+            log.warn("Music search failed: query='{}', platform='{}'", query, platformName, e);
             return 0;
         }
     }
@@ -149,6 +154,7 @@ public class MusicCommand implements BotCommand {
             return 1;
         } catch (Exception e) {
             src.reply("解析链接失败：" + e.getMessage());
+            log.warn("Music link failed: query='{}', platform='{}'", link, link, e);
             return 0;
         }
     }
