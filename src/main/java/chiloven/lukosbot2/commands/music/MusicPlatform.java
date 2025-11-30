@@ -3,7 +3,7 @@ package chiloven.lukosbot2.commands.music;
 import lombok.Getter;
 
 /**
- * Music platforms supported
+ * Music platform supported
  */
 @Getter
 public enum MusicPlatform {

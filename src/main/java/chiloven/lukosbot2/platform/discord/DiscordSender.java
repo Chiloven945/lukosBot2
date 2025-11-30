@@ -1,9 +1,9 @@
-package chiloven.lukosbot2.platforms.discord;
+package chiloven.lukosbot2.platform.discord;
 
 import chiloven.lukosbot2.model.Attachment;
 import chiloven.lukosbot2.model.MessageOut;
 import chiloven.lukosbot2.model.OutContentType;
-import chiloven.lukosbot2.platforms.Sender;
+import chiloven.lukosbot2.platform.Sender;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.User;

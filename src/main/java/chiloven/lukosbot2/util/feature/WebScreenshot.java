@@ -1,8 +1,9 @@
-package chiloven.lukosbot2.util;
+package chiloven.lukosbot2.util.feature;
 
 import chiloven.lukosbot2.config.ProxyConfig;
 import chiloven.lukosbot2.model.ContentData;
 import chiloven.lukosbot2.support.SpringBeans;
+import chiloven.lukosbot2.util.ImageUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jsoup.Jsoup;

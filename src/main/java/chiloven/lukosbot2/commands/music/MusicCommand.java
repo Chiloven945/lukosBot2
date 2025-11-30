@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.function.Predicate;
 
 /**
- * The music command for querying music info from streaming platforms.
+ * The music command for querying music info from streaming platform.
  *
  * @author Chiloven945
  */

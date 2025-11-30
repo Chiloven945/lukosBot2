@@ -1,4 +1,4 @@
-package chiloven.lukosbot2.platforms.telegram;
+package chiloven.lukosbot2.platform.telegram;
 
 import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;

@@ -1,9 +1,9 @@
 // TelegramSender.java
-package chiloven.lukosbot2.platforms.telegram;
+package chiloven.lukosbot2.platform.telegram;
 
 import chiloven.lukosbot2.model.Attachment;
 import chiloven.lukosbot2.model.MessageOut;
-import chiloven.lukosbot2.platforms.Sender;
+import chiloven.lukosbot2.platform.Sender;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;

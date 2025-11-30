@@ -1,9 +1,9 @@
-package chiloven.lukosbot2.platforms.onebot;
+package chiloven.lukosbot2.platform.onebot;
 
 import chiloven.lukosbot2.model.Attachment;
 import chiloven.lukosbot2.model.MessageOut;
 import chiloven.lukosbot2.model.OutContentType;
-import chiloven.lukosbot2.platforms.Sender;
+import chiloven.lukosbot2.platform.Sender;
 import chiloven.lukosbot2.support.SpringBeans;
 import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.core.Bot;

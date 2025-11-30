@@ -1,8 +1,8 @@
-package chiloven.lukosbot2.platforms.onebot;
+package chiloven.lukosbot2.platform.onebot;
 
 import chiloven.lukosbot2.model.Address;
 import chiloven.lukosbot2.model.MessageIn;
-import chiloven.lukosbot2.platforms.ChatPlatform;
+import chiloven.lukosbot2.platform.ChatPlatform;
 import com.mikuac.shiro.annotation.GroupMessageHandler;
 import com.mikuac.shiro.annotation.PrivateMessageHandler;
 import com.mikuac.shiro.annotation.common.Shiro;

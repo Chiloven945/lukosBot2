@@ -1,9 +1,9 @@
 // TelegramBot.java
-package chiloven.lukosbot2.platforms.telegram;
+package chiloven.lukosbot2.platform.telegram;
 
 import chiloven.lukosbot2.model.Address;
 import chiloven.lukosbot2.model.MessageIn;
-import chiloven.lukosbot2.platforms.ChatPlatform;
+import chiloven.lukosbot2.platform.ChatPlatform;
 import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateConsumer;
 import org.telegram.telegrambots.meta.api.objects.Update;
 

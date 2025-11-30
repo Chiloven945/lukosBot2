@@ -1,7 +1,7 @@
 package chiloven.lukosbot2.commands;
 
 import chiloven.lukosbot2.core.CommandSource;
-import chiloven.lukosbot2.util.MojangApi;
+import chiloven.lukosbot2.util.feature.MojangApi;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;

@@ -3,7 +3,8 @@ package chiloven.lukosbot2.commands.wikis;
 import chiloven.lukosbot2.core.CommandSource;
 import chiloven.lukosbot2.model.Attachment;
 import chiloven.lukosbot2.model.MessageOut;
-import chiloven.lukosbot2.util.WebToMarkdown;
+import chiloven.lukosbot2.util.feature.WebToMarkdown;
+import chiloven.lukosbot2.util.feature.WebScreenshot;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -224,7 +225,7 @@ public class McWikiCommand implements WikiishCommand {
                 return;
             }
 
-            var cd = chiloven.lukosbot2.util.WebScreenshot.screenshotMcWiki(url);
+            var cd = WebScreenshot.screenshotMcWiki(url);
 
             MessageOut out = MessageOut.text(src.in().addr(), "截图如下：")
                     .with(Attachment.imageBytes(cd.filename(), cd.bytes(), cd.mime()));

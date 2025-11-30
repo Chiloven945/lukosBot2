@@ -1,10 +1,10 @@
-package chiloven.lukosbot2.platforms.discord;
+package chiloven.lukosbot2.platform.discord;
 
 import chiloven.lukosbot2.config.ProxyConfig;
 import chiloven.lukosbot2.model.Address;
 import chiloven.lukosbot2.model.MessageIn;
 import chiloven.lukosbot2.model.MessageOut;
-import chiloven.lukosbot2.platforms.ChatPlatform;
+import chiloven.lukosbot2.platform.ChatPlatform;
 import chiloven.lukosbot2.support.SpringBeans;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;

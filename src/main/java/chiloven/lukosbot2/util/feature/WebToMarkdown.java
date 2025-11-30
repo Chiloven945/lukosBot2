@@ -1,4 +1,4 @@
-package chiloven.lukosbot2.util;
+package chiloven.lukosbot2.util.feature;
 
 import chiloven.lukosbot2.config.ProxyConfig;
 import chiloven.lukosbot2.model.ContentData;

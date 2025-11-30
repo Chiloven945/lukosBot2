@@ -24,7 +24,7 @@ public final class ImageUtils {
      * @return the JPG image bytes
      * @throws IOException if conversion fails
      */
-    static byte[] pngToJpg(byte[] pngBytes, float quality) throws IOException {
+    public static byte[] pngToJpg(byte[] pngBytes, float quality) throws IOException {
         var src = ImageIO.read(new ByteArrayInputStream(pngBytes));
         if (src == null) throw new IllegalArgumentException("Invalid screenshot image");
         BufferedImage rgb = new BufferedImage(src.getWidth(), src.getHeight(), BufferedImage.TYPE_INT_RGB);
@@ -59,7 +59,7 @@ public final class ImageUtils {
      * @return the JPG image bytes
      * @throws IOException if conversion fails
      */
-    static byte[] pngToJpg(byte[] pngBytes) throws IOException {
+    public static byte[] pngToJpg(byte[] pngBytes) throws IOException {
         return pngToJpg(pngBytes, 0.9f);
     }
 }

@@ -1,4 +1,4 @@
-package chiloven.lukosbot2.platforms.onebot;
+package chiloven.lukosbot2.platform.onebot;
 
 import java.net.URI;
 import java.net.http.HttpClient;

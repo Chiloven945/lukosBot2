@@ -1,5 +1,8 @@
-package chiloven.lukosbot2.util;
+package chiloven.lukosbot2.util.feature;
 
+import chiloven.lukosbot2.util.HttpJson;
+import chiloven.lukosbot2.util.JsonUtils;
+import chiloven.lukosbot2.util.SafeStringBuilder;
 import com.google.gson.JsonObject;
 import org.jspecify.annotations.NonNull;
 

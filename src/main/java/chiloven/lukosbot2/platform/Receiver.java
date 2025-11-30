@@ -1,4 +1,4 @@
-package chiloven.lukosbot2.platforms;
+package chiloven.lukosbot2.platform;
 
 import chiloven.lukosbot2.model.MessageIn;
 

@@ -1,8 +1,8 @@
 package chiloven.lukosbot2.core;
 
 import chiloven.lukosbot2.model.MessageOut;
-import chiloven.lukosbot2.platforms.ChatPlatform;
-import chiloven.lukosbot2.platforms.Sender;
+import chiloven.lukosbot2.platform.ChatPlatform;
+import chiloven.lukosbot2.platform.Sender;
 import chiloven.lukosbot2.util.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -16,7 +16,7 @@ import java.util.concurrent.ExecutorService;
 
 /**
  * Central hub for routing and delivering {@link chiloven.lukosbot2.model.MessageOut} messages to platform-specific
- * {@link chiloven.lukosbot2.platforms.Sender}s, supporting synchronous sends, asynchronous sends backed by a
+ * {@link chiloven.lukosbot2.platform.Sender}s, supporting synchronous sends, asynchronous sends backed by a
  * virtual-thread executor, and batch delivery with optional order preservation; acts as the single egress point
  * so callers don’t manage sender lookups or concurrency themselves.
  */
@@ -28,8 +28,8 @@ public class MessageSenderHub {
     private final ExecutorService sendPool = Execs.newVirtualExecutor("send-%02d");
 
     /**
-     * Registers (or replaces) the {@link chiloven.lukosbot2.platforms.Sender} responsible for delivering messages
-     * on the given {@link chiloven.lukosbot2.platforms.ChatPlatform}, enabling the hub to route outgoing messages
+     * Registers (or replaces) the {@link chiloven.lukosbot2.platform.Sender} responsible for delivering messages
+     * on the given {@link chiloven.lukosbot2.platform.ChatPlatform}, enabling the hub to route outgoing messages
      * by platform without callers holding sender references.
      *
      * @param p the chat platform whose messages should be handled by the provided sender; must not be {@code null}
@@ -41,7 +41,7 @@ public class MessageSenderHub {
 
     /**
      * Sends a single {@link chiloven.lukosbot2.model.MessageOut} synchronously by routing it to the registered
-     * {@link chiloven.lukosbot2.platforms.Sender} for its platform, logging basic metadata and swallowing
+     * {@link chiloven.lukosbot2.platform.Sender} for its platform, logging basic metadata and swallowing
      * delivery exceptions to prevent failures from propagating to the caller.
      *
      * @param out the outgoing message to deliver; must not be {@code null} and must contain a valid address with
