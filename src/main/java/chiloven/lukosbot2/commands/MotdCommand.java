@@ -39,7 +39,7 @@ public class MotdCommand implements BotCommand {
     public String usage() {
         return """
                 用法：
-                /motd <address[:port]>
+                /motd <address[:port]> # 查询 Java 版服务器 MOTD 信息
                 示例：
                 /motd play.example.com
                 /motd play.example.com:25565
