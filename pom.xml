@@ -62,6 +62,20 @@
             <version>3.12.0</version>
         </dependency>
 
+        <!-- Docker Java -->
+        <dependency>
+            <groupId>com.github.docker-java</groupId>
+            <artifactId>docker-java</artifactId>
+            <version>3.7.0</version>
+        </dependency>
+
+        <!-- Docker Java Transport HttpClient5 -->
+        <dependency>
+            <groupId>com.github.docker-java</groupId>
+            <artifactId>docker-java-transport-httpclient5</artifactId>
+            <version>3.7.0</version>
+        </dependency>
+
         <!-- Flexmark -->
         <dependency>
             <groupId>com.vladsch.flexmark</groupId>
@@ -127,17 +141,18 @@
             <version>4.38.0</version>
         </dependency>
 
+        <!-- Shiro -->
+        <dependency>
+            <groupId>com.mikuac</groupId>
+            <artifactId>shiro</artifactId>
+            <version>2.5.0</version>
+        </dependency>
+
         <!-- SnakeYAML -->
         <dependency>
             <groupId>org.yaml</groupId>
             <artifactId>snakeyaml</artifactId>
             <version>2.5</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.mikuac</groupId>
-            <artifactId>shiro</artifactId>
-            <version>2.5.0</version>
         </dependency>
 
         <!-- Spring Boot -->
@@ -180,25 +195,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
-
-        <!-- docker-java 核心 -->
-        <dependency>
-            <groupId>com.github.docker-java</groupId>
-            <artifactId>docker-java</artifactId>
-            <version>3.7.0</version>
-        </dependency>
-
-        <!-- 使用 Apache HttpClient 作为 Docker HTTP 传输实现 -->
-        <dependency>
-            <groupId>com.github.docker-java</groupId>
-            <artifactId>docker-java-transport-httpclient5</artifactId>
-            <version>3.7.0</version>
-        </dependency>
     </dependencies>
 
     <build>
         <plugins>
-            <!-- 可执行 Jar -->
+            <!-- Executable Jar -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
