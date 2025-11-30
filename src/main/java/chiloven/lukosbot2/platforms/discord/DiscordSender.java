@@ -8,6 +8,7 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.utils.FileUpload;
 
 import java.io.ByteArrayInputStream;
@@ -45,43 +46,77 @@ public final class DiscordSender implements Sender {
 
         if (out.attachments() != null) {
             for (Attachment a : out.attachments()) {
-                // 1) 有字节 → 走文件上传
+                // 1) Attachment with bytes -> upload as file
                 if (a.bytes() != null) {
                     String name = (a.name() == null || a.name().isBlank())
                             ? (a.type() == OutContentType.IMAGE ? "image.bin" : "file.bin")
                             : a.name();
                     uploads.add(FileUpload.fromData(new ByteArrayInputStream(a.bytes()), name));
                 } else if (a.type() == OutContentType.IMAGE && a.url() != null && !a.url().isBlank()) {
-                    // 2) 只有URL的图片 → 作为 Embed 图片发送
+                    // 2) Image URL -> embed image
                     embeds.add(new EmbedBuilder().setImage(a.url()).build());
                 }
             }
         }
 
-        String content = buildContent(out, /* includeImageUrls */ false);
+        String content = buildContent(out, false);
 
         if (out.addr().group()) {
             TextChannel ch = stack.jda.getTextChannelById(out.addr().chatId());
             if (ch == null) return;
 
-            if (uploads.isEmpty()) {
-                // 只有文字 + embeds
-                ch.sendMessage(content).setEmbeds(embeds).queue();
-            } else {
-                // 文件 + 文字 + embeds
-                ch.sendFiles(uploads).setContent(content).setEmbeds(embeds).queue();
-            }
+            sendToChannel(ch, uploads, embeds, content);
+
         } else {
             long userId = out.addr().chatId();
             stack.jda.retrieveUserById(userId)
                     .flatMap(User::openPrivateChannel)
                     .flatMap(pc -> {
-                        if (uploads.isEmpty()) {
-                            return pc.sendMessage(content).setEmbeds(embeds);
-                        } else {
-                            return pc.sendFiles(uploads).setContent(content).setEmbeds(embeds);
-                        }
+                        sendToChannel(pc, uploads, embeds, content);
+                        return pc.sendMessage(""); // dummy return, actual send done inside
                     }).queue();
+        }
+    }
+
+    private void sendToChannel(MessageChannel ch,
+                               List<FileUpload> uploads,
+                               List<MessageEmbed> embeds,
+                               String content) {
+
+        final int MAX_CONTENT = 2000;
+        final int MAX_EMBED_DESC = 4096;
+
+        if (content == null) content = "";
+
+        if (content.length() <= MAX_CONTENT) {
+            // Normal send with content
+            if (uploads.isEmpty()) {
+                ch.sendMessage(content).setEmbeds(embeds).queue();
+            } else {
+                ch.sendFiles(uploads).setContent(content).setEmbeds(embeds).queue();
+            }
+            return;
+        }
+
+        // Content too long -> put text into one/multiple embeds
+        List<MessageEmbed> mergedEmbeds = new ArrayList<>(embeds);
+
+        int start = 0;
+        while (start < content.length()) {
+            int end = Math.min(content.length(), start + MAX_EMBED_DESC);
+            String part = content.substring(start, end);
+
+            EmbedBuilder eb = new EmbedBuilder().setDescription(part);
+
+            mergedEmbeds.add(eb.build());
+            start = end;
+        }
+
+        // Send without content (avoid 2000 limit), only embeds + optional files
+        if (uploads.isEmpty()) {
+            ch.sendMessage("").setEmbeds(mergedEmbeds).queue();
+        } else {
+            ch.sendFiles(uploads).setContent("").setEmbeds(mergedEmbeds).queue();
         }
     }
 }

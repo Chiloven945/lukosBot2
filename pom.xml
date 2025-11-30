@@ -55,6 +55,13 @@
             <version>1.0.500</version>
         </dependency>
 
+        <!-- Commons Net -->
+        <dependency>
+            <groupId>commons-net</groupId>
+            <artifactId>commons-net</artifactId>
+            <version>3.12.0</version>
+        </dependency>
+
         <!-- Flexmark -->
         <dependency>
             <groupId>com.vladsch.flexmark</groupId>
