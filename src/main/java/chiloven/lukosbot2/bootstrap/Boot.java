@@ -1,9 +1,6 @@
 package chiloven.lukosbot2.bootstrap;
 
-import chiloven.lukosbot2.commands.EchoCommand;
-import chiloven.lukosbot2.commands.HelpCommand;
-import chiloven.lukosbot2.commands.MotdCommand;
-import chiloven.lukosbot2.commands.PingCommand;
+import chiloven.lukosbot2.commands.*;
 import chiloven.lukosbot2.commands.bilibili.BilibiliCommand;
 import chiloven.lukosbot2.commands.github.GitHubCommand;
 import chiloven.lukosbot2.commands.music.MusicCommand;
@@ -28,18 +25,31 @@ public final class Boot {
     ///  Register commands; return the command registry
     public CommandRegistry buildCommands() {
         try {
-            CommandRegistry registry = new CommandRegistry()
-                    .add(
-                            new BilibiliCommand(),
-                            new EchoCommand(),
-                            new GitHubCommand(config.getGitHub().getToken()),
-                            new McWikiCommand(),
-                            new MotdCommand(),
-                            new MusicCommand(config.getMusic()),
-                            new PingCommand(),
-                            new WikiCommand()
-                    );
+            CommandRegistry registry = new CommandRegistry();
+
+            // Commands to be displayed in the /help command.
+            registry.add(
+                    new BilibiliCommand(),
+                    new EchoCommand(),
+                    new GitHubCommand(config.getGitHub().getToken()),
+                    new IpCommand(),
+                    new McWikiCommand(),
+                    new MotdCommand(),
+                    new MusicCommand(config.getMusic()),
+                    new PingCommand(),
+                    new PlayerCommand(),
+                    new WikiCommand(),
+                    new WhoisCommand()
+            );
+
+            // Pass the registry.
             registry.add(new HelpCommand(registry, props.getPrefix()));
+
+            // Commands that should not be displayed.
+            registry.add(
+                    new StartCommand()
+            );
+
             return registry;
         } catch (Exception e) {
             throw new BootStepException(2, "Failed to register commands", e);
@@ -50,8 +60,7 @@ public final class Boot {
     public PipelineProcessor buildPipeline(CommandRegistry registry) {
         try {
             CommandProcessor cmd = new CommandProcessor(props.getPrefix(), registry);
-            return new PipelineProcessor(PipelineProcessor.Mode.STOP_ON_FIRST)
-                    .add(cmd);
+            return new PipelineProcessor(PipelineProcessor.Mode.STOP_ON_FIRST).add(cmd);
         } catch (Exception e) {
             throw new BootStepException(3, "Failed to build the message processing pipeline", e);
         }

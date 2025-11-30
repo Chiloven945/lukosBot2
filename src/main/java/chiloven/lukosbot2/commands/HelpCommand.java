@@ -42,13 +42,14 @@ public class HelpCommand implements BotCommand {
                         // /help
                         .executes(ctx -> {
                             StringBuilder sb = new StringBuilder("可用命令：\n");
-                            registry.all().forEach(c ->
-                                    sb.append(prefix)
+                            registry.all().stream()
+                                    .filter(BotCommand::isVisible)
+                                    .forEach(c -> sb.append(prefix)
                                             .append(c.name())
                                             .append(" - ")
                                             .append(c.description())
                                             .append("\n")
-                            );
+                                    );
                             sb.append("使用 `/help <command>` 查看具体命令的用法。");
                             ctx.getSource().reply(sb.toString().trim());
                             return 1;
@@ -58,10 +59,13 @@ public class HelpCommand implements BotCommand {
                                 .executes(ctx -> {
                                     String cmdName = StringArgumentType.getString(ctx, "command");
                                     BotCommand cmd = registry.get(cmdName);
-                                    if (cmd != null) {
+
+                                    if (cmd != null && cmd.isVisible()) {
                                         ctx.getSource().reply(cmd.usage().trim());
                                     } else {
-                                        ctx.getSource().reply("未知的命令: %s\n使用 `/help` 查看可用命令列表。".formatted(cmdName));
+                                        ctx.getSource().reply(
+                                                "未知的命令: %s\n使用 `/help` 查看可用命令列表。".formatted(cmdName)
+                                        );
                                     }
                                     return 1;
                                 })

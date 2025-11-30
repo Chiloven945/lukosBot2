@@ -30,4 +30,13 @@ public interface BotCommand {
      * @param dispatcher The command dispatcher
      */
     void register(CommandDispatcher<CommandSource> dispatcher);
+
+    /**
+     * Choose the command whether to be displayed in the help command.
+     *
+     * @return A boolean value represent the visibility
+     */
+    default boolean isVisible() {
+        return true;
+    }
 }
