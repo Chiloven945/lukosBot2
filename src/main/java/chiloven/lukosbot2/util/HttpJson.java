@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.StringJoiner;
 
 public final class HttpJson {
-    private HttpJson() {
+    public HttpJson() {
     }
 
     /**
@@ -27,10 +27,10 @@ public final class HttpJson {
      * @return the parsed JSON object
      * @throws IOException if an I/O error occurs or the response code is >= 400
      */
-    public static JsonObject get(String url,
-                                 Map<String, String> headers,
-                                 int connectTimeoutMs,
-                                 int readTimeoutMs) throws IOException {
+    public JsonObject get(String url,
+                          Map<String, String> headers,
+                          int connectTimeoutMs,
+                          int readTimeoutMs) throws IOException {
         HttpURLConnection conn = (HttpURLConnection) URI.create(url).toURL().openConnection();
         conn.setRequestMethod("GET");
         conn.setRequestProperty("Accept", "application/json");
@@ -62,7 +62,7 @@ public final class HttpJson {
      * @param q the map of query parameters
      * @return the query string starting with '?'
      */
-    public static String qs(Map<String, String> q) {
+    public String buildQuery(Map<String, String> q) {
         if (q == null || q.isEmpty()) return "";
         StringJoiner sj = new StringJoiner("&", "?", "");
         for (var e : q.entrySet()) {
@@ -77,7 +77,7 @@ public final class HttpJson {
      * @param s the string to encode
      * @return the encoded string
      */
-    private static String encode(String s) {
+    private String encode(String s) {
         return URLEncoder.encode(s, StandardCharsets.UTF_8);
     }
 }

@@ -9,25 +9,15 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.StringJoiner;
 
 public final class GitHubApi {
+    public static final HttpJson HJ = new HttpJson();
     private static final String BASE = "https://api.github.com";
-    private final int connTimeoutMs = 6000, readTimeoutMs = 10000;
-    private final Gson gson = new Gson();
+    private static final int connTimeoutMs = 6000, readTimeoutMs = 10000;
     private final String token; // 可为 null
 
     public GitHubApi(String token) {
         this.token = (token == null || token.isBlank()) ? null : token;
-    }
-
-    private static String buildQuery(Map<String, String> q) {
-        if (q == null || q.isEmpty()) return "";
-        StringJoiner sj = new StringJoiner("&", "?", "");
-        for (var e : q.entrySet()) {
-            sj.add(encode(e.getKey()) + "=" + encode(e.getValue()));
-        }
-        return sj.toString();
     }
 
     private static String encode(String s) {
@@ -75,10 +65,10 @@ public final class GitHubApi {
      * @throws IOException if the request fails or there is a network error
      */
     private JsonObject get(String path, Map<String, String> query) throws IOException {
-        String url = BASE + path + HttpJson.qs(query);
+        String url = BASE + path + HJ.buildQuery(query);
         Map<String, String> headers = new java.util.LinkedHashMap<>();
         headers.put("Accept", "application/vnd.github.v3+json");
         if (token != null) headers.put("Authorization", "Bearer " + token);
-        return HttpJson.get(url, headers, connTimeoutMs, readTimeoutMs);
+        return HJ.get(url, headers, connTimeoutMs, readTimeoutMs);
     }
 }
