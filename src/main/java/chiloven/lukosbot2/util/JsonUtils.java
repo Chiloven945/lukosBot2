@@ -280,4 +280,114 @@ public final class JsonUtils {
     public JsonObject getObj(JsonObject obj, String key) {
         return (obj != null && obj.has(key) && obj.get(key).isJsonObject()) ? obj.getAsJsonObject(key) : null;
     }
+
+    /**
+     * Get a JsonArray from a JsonObject by key, or null if missing / not array.
+     */
+    public JsonArray getArray(JsonObject obj, String key) {
+        return (obj != null && obj.has(key) && obj.get(key).isJsonArray())
+                ? obj.getAsJsonArray(key)
+                : null;
+    }
+
+    /**
+     * Get a JsonElement from a JsonObject by key, or null if missing.
+     */
+    public JsonElement getElement(JsonObject obj, String key) {
+        return (obj != null && obj.has(key) && !obj.get(key).isJsonNull())
+                ? obj.get(key)
+                : null;
+    }
+
+    /**
+     * Get a string from an array of objects:
+     * e.g. key="properties", index=0, subKey="value"
+     */
+    public String getStringFromArrayObj(JsonObject obj, String arrayKey, int index, String subKey, String def) {
+        if (obj == null || arrayKey == null || subKey == null) return def;
+
+        JsonArray arr = getArray(obj, arrayKey);
+        if (arr == null || index < 0 || index >= arr.size()) return def;
+
+        JsonElement el = arr.get(index);
+        if (el == null || !el.isJsonObject()) return def;
+
+        return getString(el.getAsJsonObject(), subKey, def);
+    }
+
+    /**
+     * Find first object in array where matchKey==matchValue, then return its targetKey as String.
+     * e.g. arrayKey="properties", matchKey="name", matchValue="textures", targetKey="value"
+     */
+    public String findStringInArrayByKey(JsonObject obj,
+                                         String arrayKey,
+                                         String matchKey,
+                                         String matchValue,
+                                         String targetKey,
+                                         String def) {
+        if (obj == null) return def;
+
+        JsonArray arr = getArray(obj, arrayKey);
+        if (arr == null) return def;
+
+        for (JsonElement e : arr) {
+            if (e == null || !e.isJsonObject()) continue;
+            JsonObject item = e.getAsJsonObject();
+
+            String mk = getString(item, matchKey, null);
+            if (mk != null && mk.equals(matchValue)) {
+                return getString(item, targetKey, def);
+            }
+        }
+        return def;
+    }
+
+    /**
+     * Get JsonElement by simple path like: "properties[0].value" or "a.b.c"
+     */
+    public JsonElement getByPath(JsonObject obj, String path) {
+        if (obj == null || path == null || path.isEmpty()) return null;
+
+        JsonElement current = obj;
+        String[] parts = path.split("\\.");
+
+        for (String part : parts) {
+            if (current == null || current.isJsonNull()) return null;
+
+            // Handle something like "properties[0]"
+            int lb = part.indexOf('[');
+            if (lb >= 0) {
+                String key = part.substring(0, lb);
+                int rb = part.indexOf(']', lb);
+                if (rb < 0) return null;
+
+                String idxStr = part.substring(lb + 1, rb);
+                int idx;
+                try {
+                    idx = Integer.parseInt(idxStr);
+                } catch (NumberFormatException ex) {
+                    return null;
+                }
+
+                if (!current.isJsonObject()) return null;
+                JsonObject curObj = current.getAsJsonObject();
+                JsonArray arr = getArray(curObj, key);
+                if (arr == null || idx < 0 || idx >= arr.size()) return null;
+
+                current = arr.get(idx);
+            } else {
+                if (!current.isJsonObject()) return null;
+                current = current.getAsJsonObject().get(part);
+            }
+        }
+        return (current == null || current.isJsonNull()) ? null : current;
+    }
+
+    /**
+     * Get String by path with default.
+     */
+    public String getStringByPath(JsonObject obj, String path, String def) {
+        JsonElement el = getByPath(obj, path);
+        return (el != null && el.isJsonPrimitive()) ? el.getAsString() : def;
+    }
 }
