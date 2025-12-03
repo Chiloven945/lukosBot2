@@ -6,12 +6,14 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
+import org.springframework.stereotype.Service;
 
 /**
  * Query command for Minecraft: Java Edition players.
  *
  * @author Chiloven945
  */
+@Service
 public class PlayerCommand implements BotCommand {
     public static final MojangApi MAPI = new MojangApi();
 

@@ -1,19 +1,63 @@
 package chiloven.lukosbot2.commands;
 
+import chiloven.lukosbot2.config.AppProperties;
 import chiloven.lukosbot2.core.CommandRegistry;
 import chiloven.lukosbot2.core.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.stereotype.Service;
 
+@Service
 public class HelpCommand implements BotCommand {
-    private final CommandRegistry registry;
-    private final String prefix;
 
-    public HelpCommand(CommandRegistry registry, String prefix) {
-        this.registry = registry;
-        this.prefix = prefix;
+    private final ObjectProvider<CommandRegistry> registryProvider;
+    private final AppProperties appProperties;
+
+    public HelpCommand(ObjectProvider<CommandRegistry> registryProvider, AppProperties appProperties) {
+        this.registryProvider = registryProvider;
+        this.appProperties = appProperties;
+    }
+
+    @Override
+    public void register(CommandDispatcher<CommandSource> dispatcher) {
+        dispatcher.register(
+                LiteralArgumentBuilder.<CommandSource>literal(name())
+                        // /help
+                        .executes(ctx -> {
+                            StringBuilder sb = new StringBuilder("可用命令：\n");
+                            registry().all().stream()
+                                    .filter(BotCommand::isVisible)
+                                    .forEach(c -> sb.append(appProperties.getPrefix())
+                                            .append(c.name())
+                                            .append(" - ")
+                                            .append(c.description())
+                                            .append("\n")
+                                    );
+                            sb.append("\n使用 `/help <command>` 查看具体命令的用法。");
+                            ctx.getSource().reply(sb.toString().trim());
+                            return 1;
+                        })
+                        // /help <command>
+                        .then(RequiredArgumentBuilder.<CommandSource, String>argument("command", StringArgumentType.word())
+                                .executes(ctx -> {
+                                    String cmdName = StringArgumentType.getString(ctx, "command");
+                                    var cmd = registry().get(cmdName);
+
+                                    if (cmd != null && cmd.isVisible()) {
+                                        ctx.getSource().reply(cmd.usage().trim());
+                                    } else {
+                                        ctx.getSource().reply(
+                                                "未知的命令: %s\n使用 `/help` 查看可用命令列表。"
+                                                        .formatted(cmdName)
+                                        );
+                                    }
+                                    return 1;
+                                })
+                        )
+        );
     }
 
     @Override
@@ -35,41 +79,7 @@ public class HelpCommand implements BotCommand {
                 """;
     }
 
-    @Override
-    public void register(CommandDispatcher<CommandSource> dispatcher) {
-        dispatcher.register(
-                LiteralArgumentBuilder.<CommandSource>literal(name())
-                        // /help
-                        .executes(ctx -> {
-                            StringBuilder sb = new StringBuilder("可用命令：\n");
-                            registry.all().stream()
-                                    .filter(BotCommand::isVisible)
-                                    .forEach(c -> sb.append(prefix)
-                                            .append(c.name())
-                                            .append(" - ")
-                                            .append(c.description())
-                                            .append("\n")
-                                    );
-                            sb.append("使用 `/help <command>` 查看具体命令的用法。");
-                            ctx.getSource().reply(sb.toString().trim());
-                            return 1;
-                        })
-                        // /help <command>
-                        .then(RequiredArgumentBuilder.<CommandSource, String>argument("command", StringArgumentType.word())
-                                .executes(ctx -> {
-                                    String cmdName = StringArgumentType.getString(ctx, "command");
-                                    BotCommand cmd = registry.get(cmdName);
-
-                                    if (cmd != null && cmd.isVisible()) {
-                                        ctx.getSource().reply(cmd.usage().trim());
-                                    } else {
-                                        ctx.getSource().reply(
-                                                "未知的命令: %s\n使用 `/help` 查看可用命令列表。".formatted(cmdName)
-                                        );
-                                    }
-                                    return 1;
-                                })
-                        )
-        );
+    private CommandRegistry registry() {
+        return registryProvider.getObject();
     }
 }

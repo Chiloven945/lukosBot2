@@ -5,6 +5,7 @@ import chiloven.lukosbot2.core.MessageDispatcher;
 import chiloven.lukosbot2.core.MessageSenderHub;
 import chiloven.lukosbot2.platform.ChatPlatform;
 import chiloven.lukosbot2.platform.onebot.OneBotReceiver;
+import com.mikuac.shiro.core.BotContainer;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -25,21 +26,19 @@ public class OneBotLifecycle implements SmartLifecycle, PlatformAdapter {
     private final MessageDispatcher md;
     private final MessageSenderHub msh;
     private final AppProperties props;
+    private final BotContainer botContainer;
+
     private final BaseCloseable closeable = new BaseCloseable();
     private volatile boolean running = false;
 
     @Override
     public List<AutoCloseable> start(MessageDispatcher md, MessageSenderHub msh) throws Exception {
-        OneBotReceiver ob = new OneBotReceiver(
-                props.getOnebot().getWsUrl(),
-                props.getOnebot().getAccessToken()
-        );
-        ob.bind(md::receive);
+        OneBotReceiver ob = new OneBotReceiver(botContainer);
         ob.start();
         msh.register(ChatPlatform.ONEBOT, ob.sender());
         closeable.add(ob);
 
-        log.info("OneBot (Shiro) ready at {}", props.getOnebot().getWsUrl());
+        log.info("OneBot (Shiro) ready (wsUrl={})", props.getOnebot().getWsUrl());
         return List.of(closeable);
     }
 

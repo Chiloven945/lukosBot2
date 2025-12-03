@@ -1,5 +1,6 @@
 package chiloven.lukosbot2.commands.github;
 
+import chiloven.lukosbot2.config.CommandConfig;
 import chiloven.lukosbot2.core.CommandSource;
 import com.google.gson.JsonObject;
 import com.mojang.brigadier.CommandDispatcher;
@@ -8,6 +9,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,12 +24,14 @@ import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
  *
  * @author Chiloven945
  */
+@Service
 public class GitHubCommand implements chiloven.lukosbot2.commands.BotCommand {
     private static final Logger log = LogManager.getLogger(GitHubCommand.class);
+
     private final GitHubApi api;
 
-    public GitHubCommand(String token) {
-        this.api = new GitHubApi(token);
+    public GitHubCommand(CommandConfig commandConfig) {
+        this.api = new GitHubApi(commandConfig.getGitHub().getToken());
     }
 
     private static String get(JsonObject obj, String k) {

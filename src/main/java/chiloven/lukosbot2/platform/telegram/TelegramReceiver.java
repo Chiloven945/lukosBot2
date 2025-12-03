@@ -8,7 +8,7 @@ import chiloven.lukosbot2.platform.Sender;
 import java.util.function.Consumer;
 
 public final class TelegramReceiver implements Receiver {
-    private final TelegramStack stack;                 // ← 内部持有
+    private final TelegramStack stack;
     private Consumer<MessageIn> sink = __ -> {
     };
 
@@ -21,11 +21,6 @@ public final class TelegramReceiver implements Receiver {
         return ChatPlatform.TELEGRAM;
     }
 
-    /**
-     * Bind message handler
-     *
-     * @param sink message handler, usually bound to MessageDispatcher::receive
-     */
     @Override
     public void bind(Consumer<MessageIn> sink) {
         this.sink = (sink != null) ? sink : __ -> {
@@ -33,11 +28,6 @@ public final class TelegramReceiver implements Receiver {
         if (stack.bot != null) stack.bot.setSink(this.sink);
     }
 
-    /**
-     * Start the receiver
-     *
-     * @throws Exception on failure
-     */
     @Override
     public void start() throws Exception {
         stack.ensureStarted();
@@ -47,11 +37,8 @@ public final class TelegramReceiver implements Receiver {
     @Override
     public void stop() { /* Telegram SDK 无显式 stop，可忽略 */ }
 
-    /**
-     * Reuse the same connection to return a Sender (avoid Main touching Stack)
-     */
     public Sender sender() throws Exception {
         start();                           // 确保已启动（幂等）
-        return new TelegramSender(stack);  // TelegramSender 已使用同一个 stack.bot 发送
+        return new TelegramSender(stack);  // TelegramSender 复用同一个 stack.bot 发送
     }
 }

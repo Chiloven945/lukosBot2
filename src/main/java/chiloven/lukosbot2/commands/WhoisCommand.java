@@ -8,20 +8,18 @@ import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import org.apache.commons.net.whois.WhoisClient;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Service
 public class WhoisCommand implements BotCommand {
     private static final Logger log = LogManager.getLogger(WhoisCommand.class);
 
     private final Map<String, String> whoisServerMap = new HashMap<>();
-
-    public WhoisCommand() {
-        initWhoisServers();
-    }
 
     @Override
     public String name() {

@@ -1,6 +1,6 @@
 package chiloven.lukosbot2.lifecycle.platform;
 
-import chiloven.lukosbot2.bootstrap.BootStepException;
+import chiloven.lukosbot2.core.BootStepException;
 
 /**
  * Thrown when no chat/message platform is enabled during bootstrap; this is a typed

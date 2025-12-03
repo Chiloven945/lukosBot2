@@ -1,5 +1,6 @@
 package chiloven.lukosbot2.platform.onebot;
 
+import chiloven.lukosbot2.core.MessageDispatcher;
 import chiloven.lukosbot2.model.Address;
 import chiloven.lukosbot2.model.MessageIn;
 import chiloven.lukosbot2.platform.ChatPlatform;
@@ -9,26 +10,15 @@ import com.mikuac.shiro.annotation.common.Shiro;
 import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.event.message.GroupMessageEvent;
 import com.mikuac.shiro.dto.event.message.PrivateMessageEvent;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-
-import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 
 @Shiro
 @Component
+@RequiredArgsConstructor
 public class ShiroBridge {
 
-    private static final AtomicReference<Consumer<MessageIn>> SINK = new AtomicReference<>(__ -> {
-    });
-
-    /**
-     * 由 OneBotReceiver.bind(...) 注入
-     */
-    public static void setSink(Consumer<MessageIn> sink) {
-        SINK.set(Objects.requireNonNullElse(sink, __ -> {
-        }));
-    }
+    private final MessageDispatcher dispatcher;
 
     @PrivateMessageHandler
     public void onPrivate(Bot bot, PrivateMessageEvent e) {
@@ -37,7 +27,7 @@ public class ShiroBridge {
                 e.getUserId(),
                 e.getMessage() == null ? "" : e.getMessage()
         );
-        SINK.get().accept(in);
+        dispatcher.receive(in);
     }
 
     @GroupMessageHandler
@@ -47,6 +37,6 @@ public class ShiroBridge {
                 e.getUserId(),
                 e.getMessage() == null ? "" : e.getMessage()
         );
-        SINK.get().accept(in);
+        dispatcher.receive(in);
     }
 }

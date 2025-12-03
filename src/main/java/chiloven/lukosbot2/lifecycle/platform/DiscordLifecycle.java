@@ -1,6 +1,7 @@
 package chiloven.lukosbot2.lifecycle.platform;
 
 import chiloven.lukosbot2.config.AppProperties;
+import chiloven.lukosbot2.config.ProxyConfig;
 import chiloven.lukosbot2.core.MessageDispatcher;
 import chiloven.lukosbot2.core.MessageSenderHub;
 import chiloven.lukosbot2.platform.ChatPlatform;
@@ -25,12 +26,14 @@ public class DiscordLifecycle implements SmartLifecycle, PlatformAdapter {
     private final MessageDispatcher md;
     private final MessageSenderHub msh;
     private final AppProperties props;
+    private final ProxyConfig proxyConfig;
+
     private final BaseCloseable closeable = new BaseCloseable();
     private volatile boolean running = false;
 
     @Override
     public List<AutoCloseable> start(MessageDispatcher md, MessageSenderHub msh) throws Exception {
-        DiscordReceiver dc = new DiscordReceiver(props.getDiscord().getToken());
+        DiscordReceiver dc = new DiscordReceiver(props.getDiscord().getToken(), proxyConfig);
         dc.bind(md::receive);
         dc.start();
         msh.register(ChatPlatform.DISCORD, dc.sender());
@@ -38,7 +41,6 @@ public class DiscordLifecycle implements SmartLifecycle, PlatformAdapter {
         log.info("Discord ready");
         return List.of(closeable);
     }
-
 
     @Override
     public String name() {

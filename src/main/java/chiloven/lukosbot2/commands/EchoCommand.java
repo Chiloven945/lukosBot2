@@ -5,9 +5,11 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
+import org.springframework.stereotype.Service;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 
+@Service
 public class EchoCommand implements BotCommand {
     @Override
     public String name() {

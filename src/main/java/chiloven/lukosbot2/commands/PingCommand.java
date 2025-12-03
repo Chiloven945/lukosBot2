@@ -4,6 +4,7 @@ import chiloven.lukosbot2.Constants;
 import chiloven.lukosbot2.core.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import org.springframework.stereotype.Service;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
@@ -12,6 +13,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
+@Service
 public class PingCommand implements BotCommand {
     private static final Constants CONST = new Constants();
     @Override
@@ -25,7 +27,7 @@ public class PingCommand implements BotCommand {
      * @param seconds uptime in seconds
      * @return formatted uptime string
      */
-    private static String formatUptime(long seconds) {
+    private String formatUptime(long seconds) {
         long days = seconds / 86400;
         long hours = (seconds % 86400) / 3600;
         long minutes = (seconds % 3600) / 60;

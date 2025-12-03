@@ -1,5 +1,6 @@
 package chiloven.lukosbot2.platform.discord;
 
+import chiloven.lukosbot2.config.ProxyConfig;
 import chiloven.lukosbot2.model.MessageIn;
 import chiloven.lukosbot2.platform.ChatPlatform;
 import chiloven.lukosbot2.platform.Receiver;
@@ -8,12 +9,13 @@ import chiloven.lukosbot2.platform.Sender;
 import java.util.function.Consumer;
 
 public final class DiscordReceiver implements Receiver {
+
     private final DiscordStack stack;
     private Consumer<MessageIn> sink = __ -> {
     };
 
-    public DiscordReceiver(String token) {
-        this.stack = new DiscordStack(token);
+    public DiscordReceiver(String token, ProxyConfig proxyConfig) {
+        this.stack = new DiscordStack(token, proxyConfig);
     }
 
     @Override
@@ -21,11 +23,6 @@ public final class DiscordReceiver implements Receiver {
         return ChatPlatform.DISCORD;
     }
 
-    /**
-     * Bind message handler
-     *
-     * @param sink message handler, usually bound to MessageDispatcher::receive
-     */
     @Override
     public void bind(Consumer<MessageIn> sink) {
         this.sink = (sink != null) ? sink : __ -> {
@@ -33,15 +30,9 @@ public final class DiscordReceiver implements Receiver {
         stack.setSink(this.sink);
     }
 
-    /**
-     * Start the receiver
-     *
-     * @throws Exception on failure
-     */
-    @Override
-    public void start() throws Exception {
-        stack.ensureStarted();
-        stack.setSink(sink); // 确保 listener 引用的是最终 sink
+    public Sender sender() throws Exception {
+        start(); // idempotent
+        return new DiscordSender(stack);
     }
 
     @Override
@@ -49,14 +40,9 @@ public final class DiscordReceiver implements Receiver {
         stack.close();
     }
 
-    /**
-     * Reuse the same connection to return a Sender (avoid Main touching Stack)
-     *
-     * @return a Sender using the same Discord bot instance
-     * @throws Exception on failure
-     */
-    public Sender sender() throws Exception {
-        start();
-        return new DiscordSender(stack);
+    @Override
+    public void start() throws Exception {
+        stack.ensureStarted();
+        stack.setSink(sink);
     }
 }

@@ -2,7 +2,7 @@ package chiloven.lukosbot2.commands;
 
 import chiloven.lukosbot2.config.ProxyConfig;
 import chiloven.lukosbot2.core.CommandSource;
-import chiloven.lukosbot2.support.SpringBeans;
+import chiloven.lukosbot2.util.SpringBeans;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -12,6 +12,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.stereotype.Service;
 
 import java.io.*;
 import java.net.InetSocketAddress;
@@ -22,6 +23,7 @@ import java.util.Base64;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Service
 public class MotdCommand implements BotCommand {
     private static final Logger log = LogManager.getLogger(MotdCommand.class);
 

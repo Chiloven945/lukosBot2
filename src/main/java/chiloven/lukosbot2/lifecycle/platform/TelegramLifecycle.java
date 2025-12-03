@@ -87,5 +87,5 @@ public class TelegramLifecycle implements SmartLifecycle, PlatformAdapter {
     @Override
     public int getPhase() {
         return 0;
-    } // 如需严格控制顺序可调此值
+    }
 }

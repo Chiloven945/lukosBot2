@@ -4,7 +4,6 @@ import chiloven.lukosbot2.commands.BotCommand;
 import chiloven.lukosbot2.commands.music.provider.MusicProvider;
 import chiloven.lukosbot2.commands.music.provider.SoundCloudMusicProvider;
 import chiloven.lukosbot2.commands.music.provider.SpotifyMusicProvider;
-import chiloven.lukosbot2.commands.wikis.WikiCommand;
 import chiloven.lukosbot2.config.CommandConfig;
 import chiloven.lukosbot2.core.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
@@ -13,6 +12,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.function.Predicate;
@@ -22,18 +22,19 @@ import java.util.function.Predicate;
  *
  * @author Chiloven945
  */
+@Service
 public class MusicCommand implements BotCommand {
     private static final Logger log = LogManager.getLogger(MusicCommand.class);
     private final MusicProvider spotify;
     private final MusicProvider soundCloud;
 
-    public MusicCommand(CommandConfig.Music music) {
-        CommandConfig.Music.Spotify sp = music.getSpotify();
+    public MusicCommand(CommandConfig commandConfig) {
+        CommandConfig.Music.Spotify sp = commandConfig.getMusic().getSpotify();
         this.spotify = sp.isEnabled() && sp.getClientId() != null && !sp.getClientId().isBlank() && sp.getClientSecret() != null && !sp.getClientSecret().isBlank()
                 ? new SpotifyMusicProvider(sp.getClientId(), sp.getClientSecret())
                 : null;
 
-        CommandConfig.Music.SoundCloud sc = music.getSoundcloud();
+        CommandConfig.Music.SoundCloud sc = commandConfig.getMusic().getSoundcloud();
         this.soundCloud = (sc.isEnabled() && sc.getClientId() != null && !sc.getClientId().isBlank())
                 ? new SoundCloudMusicProvider(sc.getClientId())
                 : null;

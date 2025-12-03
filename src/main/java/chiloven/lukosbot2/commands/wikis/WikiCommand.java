@@ -11,6 +11,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.stereotype.Service;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 
@@ -19,6 +20,7 @@ import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
  *
  * @author Chiloven945
  */
+@Service
 public class WikiCommand implements WikiishCommand {
     private static final Logger log = LogManager.getLogger(WikiCommand.class);
 

@@ -1,4 +1,4 @@
-package chiloven.lukosbot2.bootstrap;
+package chiloven.lukosbot2.core;
 
 public class BootStepException extends RuntimeException {
     private final int code;

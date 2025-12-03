@@ -1,25 +1,36 @@
 package chiloven.lukosbot2.core;
 
+import chiloven.lukosbot2.config.AppProperties;
 import chiloven.lukosbot2.model.MessageIn;
 import chiloven.lukosbot2.model.MessageOut;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import jakarta.annotation.PostConstruct;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@Service
 public class CommandProcessor implements Processor {
     private static final Logger log = LogManager.getLogger(CommandProcessor.class);
 
-    private final String prefix;
+    private final AppProperties props;
+    private final CommandRegistry registry;
     private final CommandDispatcher<CommandSource> dispatcher = new CommandDispatcher<>();
 
-    public CommandProcessor(String prefix, CommandRegistry registry) {
-        this.prefix = prefix;
+    public CommandProcessor(AppProperties props, CommandRegistry registry) {
+        this.props = props;
+        this.registry = registry;
+    }
+
+    @PostConstruct
+    void init() {
         registry.registerAll(dispatcher);
-        log.info("Brigadier registered {} commands", registry.all().size());
+        log.info("Brigadier registered {} commands: {}",
+                registry.all().size(), registry.listCommands());
     }
 
     /**
@@ -30,6 +41,7 @@ public class CommandProcessor implements Processor {
      */
     @Override
     public List<MessageOut> handle(MessageIn in) {
+        String prefix = props.getPrefix();
         String t = in.text() == null ? "" : in.text().trim();
         if (!t.startsWith(prefix)) return List.of();
 

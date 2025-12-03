@@ -11,12 +11,10 @@
             </Filters>
         </Console>
 
-        <RollingFile name="RollingFile"
-                     fileName="logs/latest.log"
-                     filePattern="logs/%d{yyyy-MM-dd}-%i.log.gz"
+        <RollingFile name="RollingFile" fileName="logs/latest.log" filePattern="logs/%d{yyyy-MM-dd}-%i.log.gz"
                      append="true">
             <PatternLayout
-                    pattern="[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%t/%logger/%highlight{%level}]: %msg%n"/>
+                    pattern="[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%t/%logger/%level]: %msg%n"/>
             <Filters>
                 <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY"/>
             </Filters>
@@ -33,7 +31,6 @@
         </File>
     </Appenders>
 
-    <!-- 保持 Root 为 trace，这样 TraceFile 还能拿到 TRACE -->
     <Loggers>
         <Root level="debug">
             <AppenderRef ref="Console"/>

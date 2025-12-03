@@ -3,8 +3,8 @@ package chiloven.lukosbot2.commands.wikis;
 import chiloven.lukosbot2.core.CommandSource;
 import chiloven.lukosbot2.model.Attachment;
 import chiloven.lukosbot2.model.MessageOut;
-import chiloven.lukosbot2.util.feature.WebToMarkdown;
 import chiloven.lukosbot2.util.feature.WebScreenshot;
+import chiloven.lukosbot2.util.feature.WebToMarkdown;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -15,6 +15,7 @@ import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.springframework.stereotype.Service;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 
@@ -23,6 +24,7 @@ import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
  *
  * @author Chiloven945
  */
+@Service
 public class McWikiCommand implements WikiishCommand {
     private static final Logger log = LogManager.getLogger(McWikiCommand.class);
 

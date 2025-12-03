@@ -1,4 +1,4 @@
-package chiloven.lukosbot2.support;
+package chiloven.lukosbot2.util;
 
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.BeansException;

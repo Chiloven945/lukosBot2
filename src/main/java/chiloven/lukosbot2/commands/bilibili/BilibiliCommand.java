@@ -11,6 +11,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.stereotype.Service;
 
 import java.net.URI;
 import java.net.URLEncoder;
@@ -33,6 +34,7 @@ import java.util.regex.Pattern;
  *
  * @author Chiloven945
  */
+@Service
 public class BilibiliCommand implements BotCommand {
 
     public static final StringUtils SU = new StringUtils();

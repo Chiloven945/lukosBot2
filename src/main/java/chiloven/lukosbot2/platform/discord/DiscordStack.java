@@ -5,7 +5,6 @@ import chiloven.lukosbot2.model.Address;
 import chiloven.lukosbot2.model.MessageIn;
 import chiloven.lukosbot2.model.MessageOut;
 import chiloven.lukosbot2.platform.ChatPlatform;
-import chiloven.lukosbot2.support.SpringBeans;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.User;
@@ -20,12 +19,15 @@ import java.util.function.Consumer;
 
 final class DiscordStack implements AutoCloseable {
     private final String token;
+    private final ProxyConfig proxyConfig;
+
     JDA jda;
     private Consumer<MessageIn> sink = __ -> {
     };
 
-    DiscordStack(String token) {
+    DiscordStack(String token, ProxyConfig proxyConfig) {
         this.token = token;
+        this.proxyConfig = proxyConfig;
     }
 
     void setSink(Consumer<MessageIn> sink) {
@@ -45,9 +47,8 @@ final class DiscordStack implements AutoCloseable {
         JDABuilder builder = JDABuilder.createLight(token, intents)
                 .addEventListeners(new Listener());
 
-        ProxyConfig proxy = SpringBeans.getBean(ProxyConfig.class);
         OkHttpClient.Builder http = new OkHttpClient.Builder();
-        proxy.applyTo(http);
+        proxyConfig.applyTo(http);
         builder.setHttpClientBuilder(http);
 
         jda = builder.build().awaitReady();

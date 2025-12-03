@@ -4,7 +4,10 @@ import chiloven.lukosbot2.core.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
 
 /**
- * Bot command interface
+ * Bot command interface.
+ * An annotation of {@link org.springframework.stereotype.Service} need to be used to register the command.
+ *
+ * @author Chiloven945
  */
 public interface BotCommand {
     /**

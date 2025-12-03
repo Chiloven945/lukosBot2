@@ -4,8 +4,10 @@ import chiloven.lukosbot2.model.MessageOut;
 import chiloven.lukosbot2.platform.ChatPlatform;
 import chiloven.lukosbot2.platform.Sender;
 import chiloven.lukosbot2.util.StringUtils;
+import jakarta.annotation.PreDestroy;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.stereotype.Service;
 
 import java.util.EnumMap;
 import java.util.List;
@@ -20,6 +22,7 @@ import java.util.concurrent.ExecutorService;
  * virtual-thread executor, and batch delivery with optional order preservation; acts as the single egress point
  * so callers don’t manage sender lookups or concurrency themselves.
  */
+@Service
 public class MessageSenderHub {
     public static final StringUtils SU = new StringUtils();
     private static final Logger log = LogManager.getLogger(MessageSenderHub.class);
@@ -94,5 +97,10 @@ public class MessageSenderHub {
             CompletableFuture<?>[] fs = outs.stream().map(this::sendAsync).toArray(CompletableFuture[]::new);
             CompletableFuture.allOf(fs).join();
         }
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        sendPool.shutdown();
     }
 }

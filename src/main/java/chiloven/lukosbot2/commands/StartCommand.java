@@ -3,7 +3,9 @@ package chiloven.lukosbot2.commands;
 import chiloven.lukosbot2.core.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import org.springframework.stereotype.Service;
 
+@Service
 public class StartCommand implements BotCommand {
     @Override
     public String name() {

@@ -1,10 +1,14 @@
 package chiloven.lukosbot2.core;
 
+import chiloven.lukosbot2.config.AppProperties;
 import chiloven.lukosbot2.model.MessageIn;
 import chiloven.lukosbot2.model.MessageOut;
 import chiloven.lukosbot2.util.StringUtils;
+import jakarta.annotation.PreDestroy;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Objects;
@@ -19,9 +23,11 @@ import java.util.concurrent.TimeUnit;
  * serialize per chat, messages from the same chat are sent in order, otherwise batches may be sent
  * concurrently without ordering guarantees.
  */
+@Service
 public class MessageDispatcher implements AutoCloseable {
     public static final StringUtils SU = new StringUtils();
     private static final Logger log = LogManager.getLogger(MessageDispatcher.class);
+
     private final Processor pipeline;
     private final MessageSenderHub msh;
     private final StripedExecutor lanes;
@@ -34,33 +40,22 @@ public class MessageDispatcher implements AutoCloseable {
      * {@code max(2, CPU*2)} for per-chat serialization, and ordered batch sending—suitable for most
      * deployments without additional tuning.
      *
-     * @param pipeline the processing pipeline that transforms a {@link chiloven.lukosbot2.model.MessageIn}
-     *                 into zero or more {@link chiloven.lukosbot2.model.MessageOut} instances
+     * @param pipeline the processing pipeline that transforms a {@link MessageIn}
+     *                 into zero or more {@link MessageOut} instances
      * @param msh      the hub responsible for routing and transmitting produced messages to platform senders
      */
-    public MessageDispatcher(Processor pipeline, MessageSenderHub msh) {
-        this(pipeline, msh, null, Math.max(2, Runtime.getRuntime().availableProcessors() * 2), true);
-    }
-
-    /**
-     * Constructs a dispatcher with explicit prefix filtering, stripe count, and per-chat serialization
-     * behavior; messages not starting with the given prefix (when non-{@code null}) are dropped early,
-     * processing runs on a virtual-thread pool, and results are delivered on striped lanes either in
-     * order per chat or concurrently depending on {@code serializePerChat}.
-     *
-     * @param pipeline         the processing pipeline that handles inbound messages
-     * @param msh              the hub that performs the actual sending of produced messages
-     * @param prefix           the required message prefix for fast filtering; {@code null} disables the check
-     * @param stripes          the number of striped single-thread lanes used for delivery
-     * @param serializePerChat whether to preserve per-chat send order ({@code true}) or allow
-     *                         concurrent, out-of-order sending within a chat ({@code false})
-     */
-    public MessageDispatcher(Processor pipeline, MessageSenderHub msh, String prefix, int stripes, boolean serializePerChat) {
+    public MessageDispatcher(
+            PipelineProcessor pipeline,
+            @Qualifier("messageSenderHub") MessageSenderHub msh,
+            AppProperties props
+    ) {
         this.pipeline = Objects.requireNonNull(pipeline);
         this.msh = Objects.requireNonNull(msh);
-        this.prefix = prefix;
-        this.serializePerChat = serializePerChat;
-        this.lanes = new StripedExecutor(Math.max(1, stripes), "lane-%02d");
+        this.prefix = props.getPrefix();
+        this.serializePerChat = true;
+
+        int stripes = Math.max(2, Runtime.getRuntime().availableProcessors() * 2);
+        this.lanes = new StripedExecutor(stripes, "lane-%02d");
         this.procPool = Execs.newVirtualExecutor("proc-%02d");
     }
 
@@ -92,7 +87,7 @@ public class MessageDispatcher implements AutoCloseable {
             log.info("PIPELINE result: {} message(s) ({} ms)", outs.size(), costMs);
 
             if (serializePerChat) {
-                Object key = in.addr().chatId(); // 同一 chat 保序发送
+                Object key = in.addr().chatId();
                 lanes.submit(key, () -> msh.sendBatch(outs, true));
             } else {
                 Object key = ThreadLocalRandom.current().nextLong();
@@ -106,6 +101,7 @@ public class MessageDispatcher implements AutoCloseable {
      * virtual-thread processing pool so no new tasks are accepted and in-flight tasks can complete.
      */
     @Override
+    @PreDestroy
     public void close() {
         try {
             lanes.close();

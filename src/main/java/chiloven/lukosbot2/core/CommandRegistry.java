@@ -2,51 +2,35 @@ package chiloven.lukosbot2.core;
 
 import chiloven.lukosbot2.commands.BotCommand;
 import com.mojang.brigadier.CommandDispatcher;
+import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+@Service
 public class CommandRegistry {
-    private final List<BotCommand> list = new ArrayList<>();
+    private final List<BotCommand> commands;
 
-    /**
-     * Add a command to the registry
-     *
-     * @param c the command to add
-     * @return this registry for chaining
-     */
-    public CommandRegistry add(BotCommand c) {
-        list.add(c);
-        return this;
-    }
-
-    /**
-     * Add multiple commands to the registry
-     *
-     * @param c the commands to add
-     * @return this registry for chaining
-     */
-    public CommandRegistry add(BotCommand... c){
-        Collections.addAll(list, c);
-        return this;
+    public CommandRegistry(List<BotCommand> commands) {
+        this.commands = commands;
     }
 
     public List<BotCommand> all() {
-        return Collections.unmodifiableList(list);
+        return Collections.unmodifiableList(commands);
     }
 
     public void registerAll(CommandDispatcher<CommandSource> dispatcher) {
-        for (BotCommand c : list) c.register(dispatcher);
+        for (BotCommand c : commands) {
+            c.register(dispatcher);
+        }
     }
 
     public String listCommands() {
         StringBuilder sb = new StringBuilder();
-        for (BotCommand c : list) {
-            sb.append(c.name());
-            sb.append(" ");
+        for (BotCommand c : commands) {
+            sb.append(c.name()).append(' ');
         }
-        return sb.toString();
+        return sb.toString().trim();
     }
 
     /**
@@ -57,7 +41,7 @@ public class CommandRegistry {
      */
     public BotCommand get(String name) {
         if (name == null) return null;
-        for (BotCommand c : list) {
+        for (BotCommand c : commands) {
             if (c.name().equalsIgnoreCase(name)) {
                 return c;
             }
