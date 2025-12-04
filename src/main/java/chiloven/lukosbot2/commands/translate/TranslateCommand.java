@@ -5,12 +5,13 @@ import chiloven.lukosbot2.config.CommandConfig.Translate;
 import chiloven.lukosbot2.core.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 
 import java.util.Arrays;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import static chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
+import static chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
 
 public class TranslateCommand implements BotCommand {
     public final TranslationService ts;
@@ -49,15 +50,14 @@ public class TranslateCommand implements BotCommand {
 
     @Override
     public void register(CommandDispatcher<CommandSource> dispatcher) {
-
         dispatcher.register(
-                LiteralArgumentBuilder.<CommandSource>literal(name())
+                literal(name())
                         .executes(ctx -> {
                             ctx.getSource().reply(usage());
                             return 0;
                         })
 
-                        .then(RequiredArgumentBuilder.<CommandSource, String>argument("args", StringArgumentType.greedyString())
+                        .then(argument("args", StringArgumentType.greedyString())
                                 .executes(ctx -> {
                                     try {
                                         CommandSource src = ctx.getSource();

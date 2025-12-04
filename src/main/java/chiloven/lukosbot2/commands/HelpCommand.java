@@ -5,10 +5,11 @@ import chiloven.lukosbot2.core.CommandRegistry;
 import chiloven.lukosbot2.core.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
+
+import static chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
+import static chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
 
 @Service
 public class HelpCommand implements BotCommand {
@@ -24,7 +25,7 @@ public class HelpCommand implements BotCommand {
     @Override
     public void register(CommandDispatcher<CommandSource> dispatcher) {
         dispatcher.register(
-                LiteralArgumentBuilder.<CommandSource>literal(name())
+                literal(name())
                         // /help
                         .executes(ctx -> {
                             StringBuilder sb = new StringBuilder("可用命令：\n");
@@ -41,7 +42,7 @@ public class HelpCommand implements BotCommand {
                             return 1;
                         })
                         // /help <command>
-                        .then(RequiredArgumentBuilder.<CommandSource, String>argument("command", StringArgumentType.word())
+                        .then(argument("command", StringArgumentType.word())
                                 .executes(ctx -> {
                                     String cmdName = StringArgumentType.getString(ctx, "command");
                                     var cmd = registry().get(cmdName);

@@ -4,13 +4,14 @@ import chiloven.lukosbot2.core.CommandSource;
 import chiloven.lukosbot2.util.feature.IpService;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+
+import static chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
+import static chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
 
 @Service
 public class IpCommand implements BotCommand {
@@ -41,12 +42,12 @@ public class IpCommand implements BotCommand {
     @Override
     public void register(CommandDispatcher<CommandSource> dispatcher) {
         dispatcher.register(
-                LiteralArgumentBuilder.<CommandSource>literal(name())
+                literal(name())
                         .executes(ctx -> {
                             ctx.getSource().reply(usage());
                             return 1;
                         })
-                        .then(RequiredArgumentBuilder.<CommandSource, String>argument("ip", StringArgumentType.greedyString())
+                        .then(argument("ip", StringArgumentType.greedyString())
                                 .executes(ctx -> {
                                     try {
                                         ctx.getSource().reply(

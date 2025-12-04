@@ -5,8 +5,6 @@ import chiloven.lukosbot2.core.CommandSource;
 import com.google.gson.JsonObject;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
@@ -17,7 +15,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
+import static chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
+import static chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
 
 /**
  * The /github command for GitHub queries. Allow querying user info, repo info, and searching repos.
@@ -71,9 +70,9 @@ public class GitHubCommand implements chiloven.lukosbot2.commands.BotCommand {
     @Override
     public void register(CommandDispatcher<CommandSource> dispatcher) {
         dispatcher.register(
-                LiteralArgumentBuilder.<CommandSource>literal(name())
-                        .then(LiteralArgumentBuilder.<CommandSource>literal("user")
-                                .then(RequiredArgumentBuilder.<CommandSource, String>argument("username", greedyString())
+                literal(name())
+                        .then(literal("user")
+                                .then(argument("username", StringArgumentType.greedyString())
                                         .executes(ctx -> {
                                             String username = StringArgumentType.getString(ctx, "username");
                                             ctx.getSource().reply(handleUser(username));
@@ -81,8 +80,8 @@ public class GitHubCommand implements chiloven.lukosbot2.commands.BotCommand {
                                         })
                                 )
                         )
-                        .then(LiteralArgumentBuilder.<CommandSource>literal("repo")
-                                .then(RequiredArgumentBuilder.<CommandSource, String>argument("repo", greedyString())
+                        .then(literal("repo")
+                                .then(argument("repo", StringArgumentType.greedyString())
                                         .executes(ctx -> {
                                             String repoArg = StringArgumentType.getString(ctx, "repo");
                                             ctx.getSource().reply(handleRepo(repoArg));
@@ -90,8 +89,8 @@ public class GitHubCommand implements chiloven.lukosbot2.commands.BotCommand {
                                         })
                                 )
                         )
-                        .then(LiteralArgumentBuilder.<CommandSource>literal("search")
-                                .then(RequiredArgumentBuilder.<CommandSource, String>argument("query", greedyString())
+                        .then(literal("search")
+                                .then(argument("query", StringArgumentType.greedyString())
                                         .executes(ctx -> {
                                             String query = StringArgumentType.getString(ctx, "query");
                                             ctx.getSource().reply(handleSearch(query));
@@ -121,7 +120,7 @@ public class GitHubCommand implements chiloven.lukosbot2.commands.BotCommand {
                             公开仓库: %d | 粉丝: %d | 关注: %d
                             """,
                     (name == null || name.isBlank()) ? login : name, login, url, repos, followers, following
-            ); // 参考旧版 User#toString。&#8203;:contentReference[oaicite:5]{index=5}
+            );
         } catch (Exception e) {
             log.warn("github user 查询失败: {}", username, e);
             return "找不到用户或请求失败：" + username;

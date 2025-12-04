@@ -7,8 +7,6 @@ import chiloven.lukosbot2.util.StringUtils;
 import com.google.gson.JsonObject;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
@@ -28,6 +26,9 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
+import static chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
 
 /**
  * The /bilibili command for fetching Bilibili video info by AV/BV ID or b23 short link.
@@ -382,13 +383,13 @@ public class BilibiliCommand implements BotCommand {
     @Override
     public void register(CommandDispatcher<CommandSource> dispatcher) {
         dispatcher.register(
-                LiteralArgumentBuilder.<CommandSource>literal("bilibili")
-                        .then(RequiredArgumentBuilder.<CommandSource, String>argument("id", StringArgumentType.greedyString())
+                literal("bilibili")
+                        .then(argument("id", StringArgumentType.greedyString())
                                 .executes(ctx -> {
                                     String raw = StringArgumentType.getString(ctx, "id");
                                     return run(ctx.getSource(), raw, false);
                                 })
-                                .then(LiteralArgumentBuilder.<CommandSource>literal("-i")
+                                .then(literal("-i")
                                         .executes(ctx -> {
                                             String raw = StringArgumentType.getString(ctx, "id");
                                             return run(ctx.getSource(), raw, true);

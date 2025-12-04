@@ -3,8 +3,6 @@ package chiloven.lukosbot2.commands;
 import chiloven.lukosbot2.core.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import org.apache.commons.net.whois.WhoisClient;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -14,6 +12,9 @@ import java.io.IOException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
+import static chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
 
 @Service
 public class WhoisCommand implements BotCommand {
@@ -45,12 +46,12 @@ public class WhoisCommand implements BotCommand {
     @Override
     public void register(CommandDispatcher<CommandSource> dispatcher) {
         dispatcher.register(
-                LiteralArgumentBuilder.<CommandSource>literal(name())
+                literal(name())
                         .executes(ctx -> {
                             ctx.getSource().reply(usage());
                             return 1;
                         })
-                        .then(RequiredArgumentBuilder.<CommandSource, String>argument("domain", StringArgumentType.greedyString())
+                        .then(argument("domain", StringArgumentType.greedyString())
                                 .executes(ctx -> {
                                     ctx.getSource().reply(runQuery(StringArgumentType.getString(ctx, "domain")));
                                     return 1;

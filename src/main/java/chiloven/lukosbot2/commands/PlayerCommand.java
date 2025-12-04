@@ -4,9 +4,10 @@ import chiloven.lukosbot2.core.CommandSource;
 import chiloven.lukosbot2.util.feature.MojangApi;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import org.springframework.stereotype.Service;
+
+import static chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
+import static chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
 
 /**
  * Query command for Minecraft: Java Edition players.
@@ -43,13 +44,13 @@ public class PlayerCommand implements BotCommand {
     @Override
     public void register(CommandDispatcher<CommandSource> dispatcher) {
         dispatcher.register(
-                LiteralArgumentBuilder.<CommandSource>literal(name())
+                literal(name())
                         .executes(ctx -> {
                             ctx.getSource().reply(usage());
                             return 1;
                         })
                         // /player <name|uuid>
-                        .then(RequiredArgumentBuilder.<CommandSource, String>argument("data", StringArgumentType.word())
+                        .then(argument("data", StringArgumentType.word())
                                 .executes(ctx -> {
                                     CommandSource src = ctx.getSource();
                                     String data = StringArgumentType.getString(ctx, "data");
@@ -57,7 +58,7 @@ public class PlayerCommand implements BotCommand {
                                     return 1;
                                 })
                                 // /player <data> <param>
-                                .then(RequiredArgumentBuilder.<CommandSource, String>argument("param", StringArgumentType.word())
+                                .then(argument("param", StringArgumentType.word())
                                         .executes(ctx -> {
                                             CommandSource src = ctx.getSource();
                                             String data = StringArgumentType.getString(ctx, "data");

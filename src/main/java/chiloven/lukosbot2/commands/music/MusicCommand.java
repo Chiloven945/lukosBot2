@@ -8,14 +8,15 @@ import chiloven.lukosbot2.config.CommandConfig;
 import chiloven.lukosbot2.core.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.function.Predicate;
+
+import static chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
+import static chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
 
 /**
  * The music command for querying music info from streaming platform.
@@ -67,16 +68,15 @@ public class MusicCommand implements BotCommand {
     @Override
     public void register(CommandDispatcher<CommandSource> dispatcher) {
         dispatcher.register(
-                LiteralArgumentBuilder.<CommandSource>literal(name())
+                literal(name())
                         // /music
                         .executes(ctx -> {
                             ctx.getSource().reply(usage());
                             return 1;
                         })
                         // /music link <link>
-                        .then(LiteralArgumentBuilder.<CommandSource>literal("link")
-                                .then(RequiredArgumentBuilder
-                                        .<CommandSource, String>argument("link", StringArgumentType.greedyString())
+                        .then(literal("link")
+                                .then(argument("link", StringArgumentType.greedyString())
                                         .executes(ctx -> runLink(
                                                 ctx.getSource(),
                                                 StringArgumentType.getString(ctx, "link")
@@ -85,8 +85,7 @@ public class MusicCommand implements BotCommand {
                         )
                         // /music <query>
                         // /music <platform> <query>
-                        .then(RequiredArgumentBuilder
-                                .<CommandSource, String>argument("first", StringArgumentType.word())
+                        .then(argument("first", StringArgumentType.word())
                                 // Only one argument: treat as query
                                 .executes(ctx -> runSearch(
                                         ctx.getSource(),
@@ -94,8 +93,7 @@ public class MusicCommand implements BotCommand {
                                         null
                                 ))
                                 // The second argument eats the rest: could be `<platform> <query>` or just a multi-word query
-                                .then(RequiredArgumentBuilder
-                                        .<CommandSource, String>argument("rest", StringArgumentType.greedyString())
+                                .then(argument("rest", StringArgumentType.greedyString())
                                         .executes(ctx -> {
                                             CommandSource src = ctx.getSource();
                                             String first = StringArgumentType.getString(ctx, "first");

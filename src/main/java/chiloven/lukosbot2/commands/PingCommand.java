@@ -3,7 +3,6 @@ package chiloven.lukosbot2.commands;
 import chiloven.lukosbot2.Constants;
 import chiloven.lukosbot2.core.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import org.springframework.stereotype.Service;
 
 import java.lang.management.ManagementFactory;
@@ -12,6 +11,8 @@ import java.lang.management.RuntimeMXBean;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+
+import static chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
 
 @Service
 public class PingCommand implements BotCommand {
@@ -53,7 +54,7 @@ public class PingCommand implements BotCommand {
     @Override
     public void register(CommandDispatcher<CommandSource> dispatcher) {
         dispatcher.register(
-                LiteralArgumentBuilder.<CommandSource>literal(name())
+                literal(name())
                         .executes(ctx -> {
                             ctx.getSource().reply(buildStatus());
                             return 1;

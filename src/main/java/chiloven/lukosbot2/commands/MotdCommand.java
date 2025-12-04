@@ -8,8 +8,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
@@ -22,6 +20,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
+import static chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
 
 @Service
 public class MotdCommand implements BotCommand {
@@ -51,13 +52,12 @@ public class MotdCommand implements BotCommand {
     @Override
     public void register(CommandDispatcher<CommandSource> dispatcher) {
         dispatcher.register(
-                LiteralArgumentBuilder.<CommandSource>literal(name())
+                literal(name())
                         .executes(ctx -> {
                             ctx.getSource().reply(usage());
                             return 0;
                         })
-                        .then(RequiredArgumentBuilder
-                                .<CommandSource, String>argument("address", StringArgumentType.greedyString())
+                        .then(argument("address", StringArgumentType.greedyString())
                                 .executes(ctx -> {
                                     CommandSource src = ctx.getSource();
                                     String address = StringArgumentType.getString(ctx, "address");

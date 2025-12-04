@@ -3,10 +3,10 @@ package chiloven.lukosbot2.commands;
 import chiloven.lukosbot2.core.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import org.springframework.stereotype.Service;
 
+import static chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
+import static chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 
 @Service
@@ -34,8 +34,12 @@ public class EchoCommand implements BotCommand {
     @Override
     public void register(CommandDispatcher<CommandSource> dispatcher) {
         dispatcher.register(
-                LiteralArgumentBuilder.<CommandSource>literal(name())
-                        .then(RequiredArgumentBuilder.<CommandSource, String>argument("text", greedyString())
+                literal(name())
+                        .executes(ctx -> {
+                            ctx.getSource().reply(usage());
+                            return 1;
+                        })
+                        .then(argument("text", greedyString())
                                 .executes(ctx -> {
                                     String text = StringArgumentType.getString(ctx, "text");
                                     ctx.getSource().reply(text);
