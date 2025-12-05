@@ -4,6 +4,7 @@ import chiloven.lukosbot2.core.CommandSource;
 import chiloven.lukosbot2.util.feature.MojangApi;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import static chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
@@ -15,6 +16,12 @@ import static chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.
  * @author Chiloven945
  */
 @Service
+@ConditionalOnProperty(
+        prefix = "lukos.commands.switch",
+        name = "player",
+        havingValue = "true",
+        matchIfMissing = true
+)
 public class PlayerCommand implements BotCommand {
     public static final MojangApi MAPI = new MojangApi();
 

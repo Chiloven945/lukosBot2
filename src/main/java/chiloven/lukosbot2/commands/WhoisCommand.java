@@ -6,6 +6,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import org.apache.commons.net.whois.WhoisClient;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -17,6 +18,12 @@ import static chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.l
 import static chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
 
 @Service
+@ConditionalOnProperty(
+        prefix = "lukos.commands.switch",
+        name = "whois",
+        havingValue = "true",
+        matchIfMissing = true
+)
 public class WhoisCommand implements BotCommand {
     private static final Logger log = LogManager.getLogger(WhoisCommand.class);
 

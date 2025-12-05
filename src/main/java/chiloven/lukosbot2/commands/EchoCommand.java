@@ -3,6 +3,7 @@ package chiloven.lukosbot2.commands;
 import chiloven.lukosbot2.core.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import static chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
@@ -10,6 +11,12 @@ import static chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 
 @Service
+@ConditionalOnProperty(
+        prefix = "lukos.commands.switch",
+        name = "echo",
+        havingValue = "true",
+        matchIfMissing = true
+)
 public class EchoCommand implements BotCommand {
     @Override
     public String name() {

@@ -8,9 +8,15 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ConfigurationProperties(prefix = "lukos.commands")
 public class CommandConfig {
+    private Control control = new Control();
     private GitHub gitHub = new GitHub();
     private Music music = new Music();
     private Translate translate = new Translate();
+
+    /// The control class for enabling/disabling the commands
+    public static class Control {
+
+    }
 
     /// GitHub related configurations.
     @Data
@@ -25,6 +31,7 @@ public class CommandConfig {
         private Spotify spotify = new Spotify();
         private SoundCloud soundcloud = new SoundCloud();
 
+        /// Setting related to the platform Spotify
         @Data
         public static class Spotify {
             /// Whether to enable Spotify provider.
@@ -35,6 +42,7 @@ public class CommandConfig {
             private String clientSecret = "";
         }
 
+        /// Setting related to the platform SoundCloud
         @Data
         public static class SoundCloud {
             /// Whether to enable SoundCloud provider.
@@ -48,6 +56,7 @@ public class CommandConfig {
     public static class Translate {
         /// The default language to translate, without a specific language code.
         private String defaultLang = "zh-CN";
+        /// The URL of the translating server
         private String url = "";
     }
 }

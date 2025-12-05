@@ -10,6 +10,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -24,6 +25,12 @@ import static chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.
  * @author Chiloven945
  */
 @Service
+@ConditionalOnProperty(
+        prefix = "lukos.commands.switch",
+        name = "music",
+        havingValue = "true",
+        matchIfMissing = true
+)
 public class MusicCommand implements BotCommand {
     private static final Logger log = LogManager.getLogger(MusicCommand.class);
     private final MusicProvider spotify;

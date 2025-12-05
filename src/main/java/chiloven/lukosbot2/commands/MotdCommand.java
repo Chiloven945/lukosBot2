@@ -2,7 +2,7 @@ package chiloven.lukosbot2.commands;
 
 import chiloven.lukosbot2.config.ProxyConfig;
 import chiloven.lukosbot2.core.CommandSource;
-import chiloven.lukosbot2.util.SpringBeans;
+import chiloven.lukosbot2.util.spring.SpringBeans;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -10,6 +10,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
@@ -25,6 +26,12 @@ import static chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.l
 import static chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
 
 @Service
+@ConditionalOnProperty(
+        prefix = "lukos.commands.switch",
+        name = "motd",
+        havingValue = "true",
+        matchIfMissing = true
+)
 public class MotdCommand implements BotCommand {
     private static final Logger log = LogManager.getLogger(MotdCommand.class);
 

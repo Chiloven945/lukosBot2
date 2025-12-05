@@ -10,6 +10,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import static chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
@@ -21,6 +22,12 @@ import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
  * @author Chiloven945
  */
 @Service
+@ConditionalOnProperty(
+        prefix = "lukos.commands.switch",
+        name = "wiki",
+        havingValue = "true",
+        matchIfMissing = true
+)
 public class WikiCommand implements WikiishCommand {
     private static final Logger log = LogManager.getLogger(WikiCommand.class);
 

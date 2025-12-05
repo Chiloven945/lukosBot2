@@ -3,6 +3,7 @@ package chiloven.lukosbot2.commands;
 import chiloven.lukosbot2.Constants;
 import chiloven.lukosbot2.core.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.lang.management.ManagementFactory;
@@ -15,6 +16,12 @@ import java.time.format.DateTimeFormatter;
 import static chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
 
 @Service
+@ConditionalOnProperty(
+        prefix = "lukos.commands.switch",
+        name = "ping",
+        havingValue = "true",
+        matchIfMissing = true
+)
 public class PingCommand implements BotCommand {
     private static final Constants CONST = new Constants();
     @Override

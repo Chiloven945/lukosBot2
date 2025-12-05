@@ -1,10 +1,13 @@
 package chiloven.lukosbot2.commands.translate;
 
 import chiloven.lukosbot2.commands.BotCommand;
+import chiloven.lukosbot2.config.CommandConfig;
 import chiloven.lukosbot2.config.CommandConfig.Translate;
 import chiloven.lukosbot2.core.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
 import java.util.regex.Pattern;
@@ -13,12 +16,19 @@ import java.util.stream.Collectors;
 import static chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
 import static chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
 
+@Service
+@ConditionalOnProperty(
+        prefix = "lukos.commands.switch",
+        name = "translate",
+        havingValue = "true",
+        matchIfMissing = true
+)
 public class TranslateCommand implements BotCommand {
     public final TranslationService ts;
     private final Translate translate;
 
-    public TranslateCommand(Translate translate) {
-        this.translate = translate;
+    public TranslateCommand(CommandConfig commandConfig) {
+        this.translate = commandConfig.getTranslate();
         this.ts = new TranslationService(translate);
     }
 

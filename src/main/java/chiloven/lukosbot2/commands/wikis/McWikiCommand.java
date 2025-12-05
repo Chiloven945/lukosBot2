@@ -14,6 +14,7 @@ import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import static chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
@@ -26,6 +27,12 @@ import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
  * @author Chiloven945
  */
 @Service
+@ConditionalOnProperty(
+        prefix = "lukos.commands.switch",
+        name = "mcwiki",
+        havingValue = "true",
+        matchIfMissing = true
+)
 public class McWikiCommand implements WikiishCommand {
     private static final Logger log = LogManager.getLogger(McWikiCommand.class);
 
