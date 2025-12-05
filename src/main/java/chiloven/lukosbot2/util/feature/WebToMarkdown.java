@@ -2,7 +2,7 @@ package chiloven.lukosbot2.util.feature;
 
 import chiloven.lukosbot2.config.ProxyConfig;
 import chiloven.lukosbot2.model.ContentData;
-import chiloven.lukosbot2.util.SpringBeans;
+import chiloven.lukosbot2.util.spring.SpringBeans;
 import com.vladsch.flexmark.html2md.converter.FlexmarkHtmlConverter;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
