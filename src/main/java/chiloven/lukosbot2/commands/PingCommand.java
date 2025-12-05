@@ -17,7 +17,7 @@ import static chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.l
 
 @Service
 @ConditionalOnProperty(
-        prefix = "lukos.commands.switch",
+        prefix = "lukos.commands.control",
         name = "ping",
         havingValue = "true",
         matchIfMissing = true

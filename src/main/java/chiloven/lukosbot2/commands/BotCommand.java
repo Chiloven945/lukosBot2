@@ -24,7 +24,7 @@ import com.mojang.brigadier.CommandDispatcher;
  * <pre>{@code
  * @Service
  * @ConditionalOnProperty(
- *         prefix = "lukos.commands.switch",
+ *         prefix = "lukos.commands.control",
  *         name = "my-command",
  *         havingValue = "true",
  *         matchIfMissing = true
@@ -38,7 +38,7 @@ import com.mojang.brigadier.CommandDispatcher;
  * disabled by setting:</p>
  *
  * <pre><code>
- * lukos.commands.switch.my-command=false
+ * lukos.commands.control.my-command=false
  * </code></pre>
  *
  * <h2>Naming and visibility</h2>

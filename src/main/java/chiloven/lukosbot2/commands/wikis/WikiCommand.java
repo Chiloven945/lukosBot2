@@ -23,7 +23,7 @@ import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
  */
 @Service
 @ConditionalOnProperty(
-        prefix = "lukos.commands.switch",
+        prefix = "lukos.commands.control",
         name = "wiki",
         havingValue = "true",
         matchIfMissing = true

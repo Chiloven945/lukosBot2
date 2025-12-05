@@ -36,6 +36,7 @@ lukos:
     switch:
       weather: false
       translate: false
+
     github:
       token: "${GITHUB_TOKEN:}"
 

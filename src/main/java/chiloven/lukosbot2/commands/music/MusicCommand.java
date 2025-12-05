@@ -26,7 +26,7 @@ import static chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.
  */
 @Service
 @ConditionalOnProperty(
-        prefix = "lukos.commands.switch",
+        prefix = "lukos.commands.control",
         name = "music",
         havingValue = "true",
         matchIfMissing = true

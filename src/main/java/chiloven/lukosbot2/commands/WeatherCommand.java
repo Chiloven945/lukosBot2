@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @ConditionalOnProperty(
-        prefix = "lukos.commands.switch",
+        prefix = "lukos.commands.control",
         name = "weather",
         havingValue = "true",
         matchIfMissing = true
