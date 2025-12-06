@@ -28,18 +28,28 @@ public class CoinCommand implements BotCommand {
     private static final Logger log = LogManager.getLogger(CoinCommand.class);
     private static final MathUtils MU = new MathUtils();
 
-    private String runCoin(long times) {
-        try {
-            long[] r = MU.approximateMultinomial(times, 0.499999999999d, 0.499999999999d, 0.000000000002d);
-
-            return """
-                    你抛了 %d 个硬币。
-                    在这些硬币中，有 %d 个是正面，%d 个是反面……
-                    还有 %d 个立起来了！
-                    """.formatted(times, r[0], r[1], r[2]);
-        } catch (IllegalArgumentException e) {
-            return e.getMessage();
-        }
+    @Override
+    public void register(CommandDispatcher<CommandSource> dispatcher) {
+        dispatcher.register(literal(name())
+                .executes(ctx -> {
+                    ctx.getSource().reply(usage());
+                    return 1;
+                })
+                .then(argument("count", StringArgumentType.greedyString())
+                        .executes(ctx -> {
+                            try {
+                                ctx.getSource().reply(
+                                        runCoin(Long.parseLong(StringArgumentType.getString(ctx, "count")))
+                                );
+                                return 1;
+                            } catch (NumberFormatException e) {
+                                ctx.getSource().reply("请输入一个有效的整数作为抛硬币的数量。\n" + usage());
+                                log.warn("Received an invalid count, expected to be a long.", e);
+                                return 0;
+                            }
+                        })
+                )
+        );
     }
 
     @Override
@@ -62,27 +72,21 @@ public class CoinCommand implements BotCommand {
                 """;
     }
 
-    @Override
-    public void register(CommandDispatcher<CommandSource> dispatcher) {
-        dispatcher.register(literal(name())
-                .executes(ctx -> {
-                    ctx.getSource().reply(usage());
-                    return 1;
-                })
-                .then(argument("count", StringArgumentType.greedyString())
-                        .executes(ctx -> {
-                            try {
-                                ctx.getSource().reply(
-                                        runCoin(Long.parseLong(StringArgumentType.getString(ctx, "count")))
-                                );
-                                return 1;
-                            } catch (NumberFormatException e) {
-                                ctx.getSource().reply("请输入一个有效的整数作为抛硬币的数量。");
-                                log.warn("Received an invalid count, expected to be a long.", e);
-                                return 0;
-                            }
-                        })
-                )
-        );
+    private String runCoin(long times) {
+        if (times <= 0) {
+            return "硬币数量必须是一个正整数。\n" + usage();
+        }
+
+        try {
+            long[] r = MU.approximateMultinomial(times, 0.499999999999d, 0.499999999999d, 0.000000000002d);
+
+            return """
+                    你抛了 %d 个硬币。
+                    在这些硬币中，有 %d 个是正面，%d 个是反面……
+                    还有 %d 个立起来了！
+                    """.formatted(times, r[0], r[1], r[2]);
+        } catch (IllegalArgumentException e) {
+            return e.getMessage();
+        }
     }
 }
