@@ -1,8 +1,10 @@
 package chiloven.lukosbot2.core;
 
+import chiloven.lukosbot2.model.Address;
 import chiloven.lukosbot2.model.Attachment;
 import chiloven.lukosbot2.model.MessageIn;
 import chiloven.lukosbot2.model.MessageOut;
+import chiloven.lukosbot2.platform.ChatPlatform;
 
 import java.util.function.Consumer;
 
@@ -18,6 +20,8 @@ public class CommandSource {
     public MessageIn in() {
         return in;
     }
+
+    // ===== Reply =====
 
     /**
      * Reply with a simple text message (no attachments).
@@ -36,8 +40,6 @@ public class CommandSource {
     public void reply(MessageOut out) {
         sink.accept(out);
     }
-
-    // ==== 便捷附件方法（基于当前会话地址 in.addr()） ====
 
     /**
      * Reply with an image from a URL.
@@ -79,4 +81,42 @@ public class CommandSource {
     public void replyFileBytes(String name, byte[] bytes, String mime) {
         sink.accept(MessageOut.text(in.addr(), null).with(Attachment.fileBytes(name, bytes, mime)));
     }
+
+    // ===== Getters =====
+
+    /**
+     * ID of the user who sent this message.
+     */
+    public long userId() {
+        return in.userId();
+    }
+
+    /**
+     * Chat ID (group ID or private chat ID) of this message.
+     */
+    public long chatId() {
+        return in.addr().chatId();
+    }
+
+    /**
+     * Platform of this message (TELEGRAM / DISCORD / ONEBOT ...).
+     */
+    public ChatPlatform platform() {
+        return in.addr().platform();
+    }
+
+    /**
+     * Full address object of this message.
+     */
+    public Address addr() {
+        return in.addr();
+    }
+
+    /**
+     * Raw text content of this message.
+     */
+    public String text() {
+        return in.text();
+    }
+
 }

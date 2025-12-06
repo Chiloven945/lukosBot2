@@ -1,5 +1,6 @@
 package chiloven.lukosbot2.util;
 
+import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class MathUtils {
@@ -95,5 +96,45 @@ public class MathUtils {
         double u1 = rnd.nextDouble();
         double u2 = rnd.nextDouble();
         return Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+    }
+
+    /**
+     * Generate a stable pseudo-random integer in [min, max] based on the given seed objects.
+     * <p>
+     * For the same (min, max, seeds...) this method always returns the same value.
+     * Different seeds are very likely to produce different values.
+     *
+     * @param min   inclusive lower bound
+     * @param max   inclusive upper bound
+     * @param seeds seed objects, may include nulls
+     * @return an integer in [min, max] deterministically derived from the seeds
+     */
+    public int stableRandom(int min, int max, Object... seeds) throws IllegalArgumentException {
+        if (min > max) {
+            throw new IllegalArgumentException("min must be <= max");
+        }
+        if (seeds == null || seeds.length == 0) {
+            throw new IllegalArgumentException("seeds must not be null or empty");
+        }
+
+        // 1) combine all seeds into a 64-bit value
+        long hash = 0x9E3779B97F4A7C15L; // arbitrary non-zero base
+        for (Object seed : seeds) {
+            int h = (seed == null) ? 0 : Objects.hashCode(seed);
+            hash ^= h + 0x9E3779B97F4A7C15L + (hash << 6) + (hash >>> 2);
+        }
+
+        // 2) further (similar to SplitMix64)
+        hash ^= (hash >>> 30);
+        hash *= 0xBF58476D1CE4E5B9L;
+        hash ^= (hash >>> 27);
+        hash *= 0x94D049BB133111EBL;
+        hash ^= (hash >>> 31);
+
+        // 3) map to [min, max]
+        int nonNegative = (int) (hash & 0x7FFFFFFF);
+        long range = (long) max - (long) min + 1L;
+        int offset = (int) (nonNegative % range);
+        return min + offset;
     }
 }
