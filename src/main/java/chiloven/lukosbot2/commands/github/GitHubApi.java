@@ -27,6 +27,22 @@ public final class GitHubApi {
         return get("/users/" + username, Map.of());
     }
 
+    /**
+     * The get method to make HTTP GET requests to GitHub API.
+     *
+     * @param path  API path, e.g. "/users/{username}"
+     * @param query Query parameters as a map
+     * @return JsonObject containing the response
+     * @throws IOException if the request fails or there is a network error
+     */
+    private JsonObject get(String path, Map<String, String> query) throws IOException {
+        String url = BASE + path + hj.buildQuery(query);
+        Map<String, String> headers = new java.util.LinkedHashMap<>();
+        headers.put("Accept", "application/vnd.github.v3+json");
+        if (token != null) headers.put("Authorization", "Bearer " + token);
+        return hj.get(url, headers, connTimeoutMs, readTimeoutMs);
+    }
+
     public JsonObject getRepo(String owner, String repo) throws IOException {
         return get("/repos/" + owner + "/" + repo, Map.of());
     }
@@ -53,21 +69,5 @@ public final class GitHubApi {
         if (perPage > 0) q.put("per_page", String.valueOf(Math.min(perPage, 10)));
 
         return get("/search/repositories", q);
-    }
-
-    /**
-     * The get method to make HTTP GET requests to GitHub API.
-     *
-     * @param path  API path, e.g. "/users/{username}"
-     * @param query Query parameters as a map
-     * @return JsonObject containing the response
-     * @throws IOException if the request fails or there is a network error
-     */
-    private JsonObject get(String path, Map<String, String> query) throws IOException {
-        String url = BASE + path + hj.buildQuery(query);
-        Map<String, String> headers = new java.util.LinkedHashMap<>();
-        headers.put("Accept", "application/vnd.github.v3+json");
-        if (token != null) headers.put("Authorization", "Bearer " + token);
-        return hj.get(url, headers, connTimeoutMs, readTimeoutMs);
     }
 }

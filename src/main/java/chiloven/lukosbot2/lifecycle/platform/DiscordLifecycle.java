@@ -7,8 +7,7 @@ import chiloven.lukosbot2.core.MessageSenderHub;
 import chiloven.lukosbot2.platform.ChatPlatform;
 import chiloven.lukosbot2.platform.discord.DiscordReceiver;
 import lombok.RequiredArgsConstructor;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.SmartLifecycle;
@@ -19,9 +18,8 @@ import java.util.List;
 @Component
 @ConditionalOnProperty(prefix = "lukos.discord", name = "enabled", havingValue = "true")
 @RequiredArgsConstructor
+@Log4j2
 public class DiscordLifecycle implements SmartLifecycle, PlatformAdapter {
-
-    private static final Logger log = LogManager.getLogger(DiscordLifecycle.class);
 
     private final MessageDispatcher md;
     private final MessageSenderHub msh;

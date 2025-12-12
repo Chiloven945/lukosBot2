@@ -5,8 +5,7 @@ import chiloven.lukosbot2.core.CommandSource;
 import com.google.gson.JsonObject;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
@@ -31,13 +30,56 @@ import static chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.
         havingValue = "true",
         matchIfMissing = true
 )
+@Log4j2
 public class GitHubCommand implements chiloven.lukosbot2.commands.BotCommand {
-    private static final Logger log = LogManager.getLogger(GitHubCommand.class);
-
     private final GitHubApi api;
 
     public GitHubCommand(CommandConfig commandConfig) {
         this.api = new GitHubApi(commandConfig.getGitHub().getToken());
+    }
+
+    /**
+     * Parsed parameters for /github search
+     *
+     * @param keywords search keywords
+     * @param top      number of results to return (max 10)
+     * @param language programming language filter
+     * @param sort     sort field (stars, updated)
+     * @param order    sort order (desc, asc)
+     */
+    private record Params(String keywords, int top, String language, String sort, String order) {
+        private Params(String keywords, int top, String language, String sort, String order) {
+            this.keywords = keywords.isBlank() ? "java" : keywords;
+            this.top = (top <= 0) ? 3 : Math.min(top, 10);
+            this.language = language;
+            this.sort = sort;
+            this.order = order;
+        }
+
+        static Params parse(String input) {
+            ArrayList<String> toks = new ArrayList<>(Arrays.asList(input.trim().split("\\s+")));
+
+            Map<String, String> opts = toks.stream()
+                    .filter(t -> t.startsWith("--"))
+                    .map(t -> {
+                        int eq = t.indexOf('=');
+                        return (eq > 2) ? new String[]{t.substring(2, eq), t.substring(eq + 1)} : null;
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toMap(a -> a[0], a -> a[1], (a, b) -> b));
+
+            String keywords = toks.stream()
+                    .filter(t -> !t.startsWith("--") || t.indexOf('=') <= 2)
+                    .collect(Collectors.joining(" "));
+
+            int top = 3;
+            try {
+                if (opts.containsKey("top")) top = Integer.parseInt(opts.get("top"));
+            } catch (Exception ignored) {
+            }
+
+            return new Params(keywords, top, opts.get("lang"), opts.get("sort"), opts.get("order"));
+        }
     }
 
     private static String get(JsonObject obj, String k) {
@@ -187,50 +229,6 @@ public class GitHubCommand implements chiloven.lukosbot2.commands.BotCommand {
         } catch (Exception e) {
             log.warn("github search 失败: {}", q, e);
             return "搜索失败：" + e.getMessage();
-        }
-    }
-
-    /**
-     * Parsed parameters for /github search
-     *
-     * @param keywords search keywords
-     * @param top      number of results to return (max 10)
-     * @param language programming language filter
-     * @param sort     sort field (stars, updated)
-     * @param order    sort order (desc, asc)
-     */
-    private record Params(String keywords, int top, String language, String sort, String order) {
-        private Params(String keywords, int top, String language, String sort, String order) {
-            this.keywords = keywords.isBlank() ? "java" : keywords;
-            this.top = (top <= 0) ? 3 : Math.min(top, 10);
-            this.language = language;
-            this.sort = sort;
-            this.order = order;
-        }
-
-        static Params parse(String input) {
-            ArrayList<String> toks = new ArrayList<>(Arrays.asList(input.trim().split("\\s+")));
-
-            Map<String, String> opts = toks.stream()
-                    .filter(t -> t.startsWith("--"))
-                    .map(t -> {
-                        int eq = t.indexOf('=');
-                        return (eq > 2) ? new String[]{t.substring(2, eq), t.substring(eq + 1)} : null;
-                    })
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toMap(a -> a[0], a -> a[1], (a, b) -> b));
-
-            String keywords = toks.stream()
-                    .filter(t -> !t.startsWith("--") || t.indexOf('=') <= 2)
-                    .collect(Collectors.joining(" "));
-
-            int top = 3;
-            try {
-                if (opts.containsKey("top")) top = Integer.parseInt(opts.get("top"));
-            } catch (Exception ignored) {
-            }
-
-            return new Params(keywords, top, opts.get("lang"), opts.get("sort"), opts.get("order"));
         }
     }
 }

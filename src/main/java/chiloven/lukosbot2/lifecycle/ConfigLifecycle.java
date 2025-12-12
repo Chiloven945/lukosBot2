@@ -1,7 +1,6 @@
 package chiloven.lukosbot2.lifecycle;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
@@ -17,9 +16,9 @@ import java.util.List;
 import java.util.Map;
 
 @Component
+@Log4j2
 public class ConfigLifecycle implements SmartLifecycle {
 
-    private static final Logger log = LogManager.getLogger(ConfigLifecycle.class);
     private static final String TEMPLATE_CLASSPATH = "application-template.yml";
     private static final Path CONFIG_DIR = Paths.get("config");
     private static final Path CONFIG_FILE = CONFIG_DIR.resolve("application.yml");

@@ -6,16 +6,15 @@ import chiloven.lukosbot2.model.MessageOut;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import jakarta.annotation.PostConstruct;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@Log4j2
 public class CommandProcessor implements Processor {
-    private static final Logger log = LogManager.getLogger(CommandProcessor.class);
 
     private final AppProperties props;
     private final CommandRegistry registry;

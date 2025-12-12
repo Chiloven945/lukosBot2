@@ -7,8 +7,7 @@ import chiloven.lukosbot2.util.feature.WebScreenshot;
 import chiloven.lukosbot2.util.feature.WebToMarkdown;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -32,8 +31,8 @@ import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
         havingValue = "true",
         matchIfMissing = true
 )
+@Log4j2
 public class McWikiCommand implements WikiishCommand {
-    private static final Logger log = LogManager.getLogger(McWikiCommand.class);
 
     /**
      * Fetch title and lead paragraph(s) from a Minecraft Wiki article.

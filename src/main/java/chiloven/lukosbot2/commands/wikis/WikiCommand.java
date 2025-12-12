@@ -7,8 +7,7 @@ import chiloven.lukosbot2.util.feature.WebScreenshot;
 import chiloven.lukosbot2.util.feature.WebToMarkdown;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
@@ -28,8 +27,8 @@ import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
         havingValue = "true",
         matchIfMissing = true
 )
+@Log4j2
 public class WikiCommand implements WikiishCommand {
-    private static final Logger log = LogManager.getLogger(WikiCommand.class);
 
     @Override
     public String defaultLang() {

@@ -4,8 +4,7 @@ package chiloven.lukosbot2.platform.telegram;
 import chiloven.lukosbot2.model.Attachment;
 import chiloven.lukosbot2.model.MessageOut;
 import chiloven.lukosbot2.platform.Sender;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -15,8 +14,8 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 import java.io.ByteArrayInputStream;
 
+@Log4j2
 public final class TelegramSender implements Sender {
-    private static final Logger log = LogManager.getLogger(TelegramSender.class);
     private final TelegramClient client;
 
     TelegramSender(TelegramStack stack) {

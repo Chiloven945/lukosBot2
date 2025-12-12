@@ -5,8 +5,7 @@ import chiloven.lukosbot2.platform.ChatPlatform;
 import chiloven.lukosbot2.platform.Sender;
 import chiloven.lukosbot2.util.StringUtils;
 import jakarta.annotation.PreDestroy;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
 import java.util.EnumMap;
@@ -23,9 +22,9 @@ import java.util.concurrent.ExecutorService;
  * so callers don’t manage sender lookups or concurrency themselves.
  */
 @Service
+@Log4j2
 public class MessageSenderHub {
     public static final StringUtils su = StringUtils.getStringUtils();
-    private static final Logger log = LogManager.getLogger(MessageSenderHub.class);
     private final Map<ChatPlatform, Sender> routes = new EnumMap<>(ChatPlatform.class);
 
     private final ExecutorService sendPool = Execs.newVirtualExecutor("send-%02d");

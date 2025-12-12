@@ -4,8 +4,7 @@ import chiloven.lukosbot2.config.ProxyConfig;
 import chiloven.lukosbot2.model.ContentData;
 import chiloven.lukosbot2.util.ImageUtils;
 import chiloven.lukosbot2.util.spring.SpringBeans;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 import org.jsoup.Jsoup;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -22,8 +21,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+@Log4j2
 public final class WebScreenshot {
-    private static final Logger log = LogManager.getLogger(WebScreenshot.class);
     private static final ImageUtils iu = ImageUtils.getImageUtils();
 
     private WebScreenshot() {
