@@ -12,6 +12,7 @@ public class CommandConfig {
     private GitHub gitHub = new GitHub();
     private Music music = new Music();
     private Translate translate = new Translate();
+    private TwentyFour twentyFour = new TwentyFour();
 
     /// The control class for enabling/disabling the commands
     public static class Control {
@@ -58,5 +59,11 @@ public class CommandConfig {
         private String defaultLang = "zh-CN";
         /// The URL of the translating server
         private String url = "";
+    }
+
+    /// TwentyFour game related configurations
+    @Data
+    public static final class TwentyFour {
+        private long timeLimit = 300000;
     }
 }

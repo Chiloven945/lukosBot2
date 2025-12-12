@@ -52,6 +52,9 @@ lukos:
     translate:
       default-lang: "zh-Hans"
 
+    twenty-four:
+      time-limit: 300000
+
 shiro:
   ws:
     client:
