@@ -1,6 +1,6 @@
 package chiloven.lukosbot2.util;
 
-public class SafeStringBuilder {
+public final class SafeStringBuilder {
     private final StringBuilder sb = new StringBuilder();
 
     /**

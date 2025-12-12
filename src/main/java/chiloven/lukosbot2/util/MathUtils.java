@@ -3,8 +3,12 @@ package chiloven.lukosbot2.util;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class MathUtils {
-    public MathUtils() {
+public final class MathUtils {
+    private MathUtils() {
+    }
+
+    public static MathUtils getMathUtils() {
+        return new MathUtils();
     }
 
     /**

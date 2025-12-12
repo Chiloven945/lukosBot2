@@ -24,7 +24,7 @@ import java.util.concurrent.ExecutorService;
  */
 @Service
 public class MessageSenderHub {
-    public static final StringUtils SU = new StringUtils();
+    public static final StringUtils su = StringUtils.getStringUtils();
     private static final Logger log = LogManager.getLogger(MessageSenderHub.class);
     private final Map<ChatPlatform, Sender> routes = new EnumMap<>(ChatPlatform.class);
 
@@ -53,7 +53,7 @@ public class MessageSenderHub {
     public void send(MessageOut out) {
         int att = (out.attachments() == null) ? 0 : out.attachments().size();
         log.info("OUT -> [{}] to chat={} text=\"{}\" attachments={}",
-                out.addr().platform(), out.addr().chatId(), SU.truncate(out.text()), att);
+                out.addr().platform(), out.addr().chatId(), su.truncate(out.text()), att);
         Sender s = routes.get(out.addr().platform());
         if (s == null) {
             log.warn("No Sender for platform: {}", out.addr().platform());

@@ -9,15 +9,15 @@ import org.jspecify.annotations.NonNull;
 import java.io.IOException;
 
 public final class IpService {
-    public static final HttpJson HJ = new HttpJson();
-    public static final JsonUtils JU = new JsonUtils();
+    public static final HttpJson hj = HttpJson.getHttpJson();
+    public static final JsonUtils ju = JsonUtils.getJsonUtils();
 
     public IpService() {
     }
 
     public IpInfo getIpInfo(String ip) throws IOException {
         try {
-            JsonObject result = HJ.get(
+            JsonObject result = hj.get(
                     "https://api.ip.sb/geoip/" + ip,
                     null,
                     6000,
@@ -25,18 +25,18 @@ public final class IpService {
             );
 
             return new IpInfo(
-                    JU.getString(result, "ip", null),
-                    JU.getString(result, "country", null),
-                    JU.getString(result, "country_code", null),
-                    JU.getString(result, "region", null),
-                    JU.getString(result, "region_code", null),
-                    JU.getString(result, "city", null),
-                    JU.getString(result, "postal_code", null),
-                    JU.getString(result, "latitude", null),
-                    JU.getString(result, "longitude", null),
-                    JU.getString(result, "organization", null),
-                    JU.getString(result, "timezone", null),
-                    JU.getString(result, "asn", null)
+                    ju.getString(result, "ip", null),
+                    ju.getString(result, "country", null),
+                    ju.getString(result, "country_code", null),
+                    ju.getString(result, "region", null),
+                    ju.getString(result, "region_code", null),
+                    ju.getString(result, "city", null),
+                    ju.getString(result, "postal_code", null),
+                    ju.getString(result, "latitude", null),
+                    ju.getString(result, "longitude", null),
+                    ju.getString(result, "organization", null),
+                    ju.getString(result, "timezone", null),
+                    ju.getString(result, "asn", null)
             );
         } catch (IOException e) {
             throw new IOException(e);

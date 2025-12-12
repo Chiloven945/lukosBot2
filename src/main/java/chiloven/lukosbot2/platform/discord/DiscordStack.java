@@ -1,22 +1,32 @@
 package chiloven.lukosbot2.platform.discord;
 
+import chiloven.lukosbot2.commands.BotCommand;
 import chiloven.lukosbot2.config.ProxyConfig;
+import chiloven.lukosbot2.core.CommandRegistry;
 import chiloven.lukosbot2.model.Address;
 import chiloven.lukosbot2.model.MessageIn;
 import chiloven.lukosbot2.model.MessageOut;
 import chiloven.lukosbot2.platform.ChatPlatform;
+import chiloven.lukosbot2.util.spring.SpringBeans;
+import lombok.extern.log4j.Log4j2;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import okhttp3.OkHttpClient;
 
 import java.util.EnumSet;
+import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 
+@Log4j2
 final class DiscordStack implements AutoCloseable {
     private final String token;
     private final ProxyConfig proxyConfig;
@@ -47,11 +57,44 @@ final class DiscordStack implements AutoCloseable {
         JDABuilder builder = JDABuilder.createLight(token, intents)
                 .addEventListeners(new Listener());
 
+        ProxyConfig proxy = SpringBeans.getBean(ProxyConfig.class);
         OkHttpClient.Builder http = new OkHttpClient.Builder();
-        proxyConfig.applyTo(http);
+        proxy.applyTo(http);
         builder.setHttpClientBuilder(http);
 
         jda = builder.build().awaitReady();
+
+        try {
+            CommandRegistry registry = SpringBeans.getBean(CommandRegistry.class);
+
+            List<SlashCommandData> slashCommands = registry.all().stream()
+                    .filter(BotCommand::isVisible)
+                    .map(cmd -> {
+                        String name = cmd.name();
+                        if (name == null) {
+                            return null;
+                        }
+                        String slashName = name.toLowerCase();
+                        if (!slashName.matches("^[a-z0-9_-]{1,32}$")) {
+                            return null;
+                        }
+                        String desc = cmd.description();
+                        if (desc == null || desc.isBlank()) {
+                            desc = "No description provided.";
+                        }
+                        return Commands.slash(slashName, desc);
+                    })
+                    .filter(Objects::nonNull)
+                    .toList();
+
+            if (!slashCommands.isEmpty()) {
+                var action = jda.updateCommands();
+                slashCommands.forEach(action::addCommands);
+                action.queue();
+            }
+        } catch (Exception e) {
+            log.error(e.getMessage());
+        }
     }
 
     @Override
@@ -74,6 +117,26 @@ final class DiscordStack implements AutoCloseable {
 
     private final class Listener extends ListenerAdapter {
         @Override
+        public void onSlashCommandInteraction(SlashCommandInteractionEvent e) {
+            if (e.getUser().isBot()) return;
+
+            boolean isGuild = e.isFromGuild();
+            long chatId = isGuild ? e.getChannel().getIdLong() : e.getUser().getIdLong();
+            long userId = e.getUser().getIdLong();
+
+            StringBuilder sb = new StringBuilder();
+            sb.append('/').append(e.getName());
+            e.getOptions().forEach(opt -> sb.append(' ').append(opt.getAsString()));
+
+            String text = sb.toString();
+
+            Address addr = new Address(ChatPlatform.DISCORD, chatId, isGuild);
+            sink.accept(new MessageIn(addr, userId, text));
+
+            e.reply("（推荐直接发送消息）").queue();
+        }
+
+        @Override
         public void onMessageReceived(MessageReceivedEvent e) {
             if (e.getAuthor().isBot()) return;
             String text = e.getMessage().getContentRaw();
@@ -81,7 +144,7 @@ final class DiscordStack implements AutoCloseable {
 
             boolean isGuild = e.isFromGuild();
             long chatId = isGuild ? e.getChannel().getIdLong() : e.getAuthor().getIdLong();
-            Long userId = e.getAuthor().getIdLong();
+            long userId = e.getAuthor().getIdLong();
 
             Address addr = new Address(ChatPlatform.DISCORD, chatId, isGuild);
             sink.accept(new MessageIn(addr, userId, text));

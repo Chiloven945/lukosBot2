@@ -7,7 +7,6 @@ import chiloven.lukosbot2.util.feature.WebScreenshot;
 import chiloven.lukosbot2.util.feature.WebToMarkdown;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jsoup.Connection;
@@ -135,7 +134,7 @@ public class McWikiCommand implements WikiishCommand {
                                 })
                         )
                         // /mcwiki md <link>
-                        .then(LiteralArgumentBuilder.<CommandSource>literal("md")
+                        .then(literal("md")
                                 .then(argument("link", greedyString())
                                         .executes(ctx -> {
                                             String link = StringArgumentType.getString(ctx, "link").trim();
@@ -145,7 +144,7 @@ public class McWikiCommand implements WikiishCommand {
                                 )
                         )
                         // /mcwiki ss <link>
-                        .then(LiteralArgumentBuilder.<CommandSource>literal("ss")
+                        .then(literal("ss")
                                 .then(argument("link", greedyString())
                                         .executes(ctx -> {
                                             String link = StringArgumentType.getString(ctx, "link").trim();

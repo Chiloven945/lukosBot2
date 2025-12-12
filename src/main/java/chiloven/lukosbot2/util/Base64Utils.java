@@ -36,18 +36,11 @@ public final class Base64Utils {
     private final Base64.Decoder mimeDecoder;
 
     /**
-     * Create a Base64Utils with UTF-8 as default charset.
-     */
-    public Base64Utils() {
-        this(StandardCharsets.UTF_8);
-    }
-
-    /**
      * Create a Base64Utils with a custom default charset.
      *
      * @param defaultCharset default charset for String conversions; UTF-8 if null
      */
-    public Base64Utils(Charset defaultCharset) {
+    private Base64Utils(Charset defaultCharset) {
         this.defaultCharset = (defaultCharset != null) ? defaultCharset : StandardCharsets.UTF_8;
         this.encoder = Base64.getEncoder();
         this.decoder = Base64.getDecoder();
@@ -55,6 +48,25 @@ public final class Base64Utils {
         this.urlDecoder = Base64.getUrlDecoder();
         this.mimeEncoder = Base64.getMimeEncoder();
         this.mimeDecoder = Base64.getMimeDecoder();
+    }
+
+    /**
+     * Get a Base64Utils with a UTF-8 charset.
+     *
+     * @return a Base64Utils instance
+     */
+    public static Base64Utils getBase64Utils() {
+        return new Base64Utils(StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Get a Base64Utils with a custom charset
+     *
+     * @param charset a charset
+     * @return a Base64Utils instance
+     */
+    public static Base64Utils getBase64Utils(Charset charset) {
+        return new Base64Utils(charset);
     }
 
     /* ===================== Basic: byte[] <-> byte[] ===================== */

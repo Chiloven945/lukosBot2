@@ -14,7 +14,11 @@ import java.util.Map;
 import java.util.StringJoiner;
 
 public final class HttpJson {
-    public HttpJson() {
+    private HttpJson() {
+    }
+
+    public static HttpJson getHttpJson() {
+        return new HttpJson();
     }
 
     /**

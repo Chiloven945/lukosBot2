@@ -9,13 +9,13 @@ import org.jspecify.annotations.NonNull;
 import java.io.IOException;
 
 public final class MojangApi {
-    public static final HttpJson HJ = new HttpJson();
-    public static final JsonUtils JU = new JsonUtils();
-    public static final Base64Utils B64 = new Base64Utils();
+    public static final HttpJson hj = HttpJson.getHttpJson();
+    public static final JsonUtils ju = JsonUtils.getJsonUtils();
+    public static final Base64Utils b64 = Base64Utils.getBase64Utils();
 
     public String getUuidFromName(String name) {
         try {
-            return HJ.get(
+            return hj.get(
                     "https://api.mojang.com/users/profiles/minecraft/" + name,
                     null,
                     6000,
@@ -28,7 +28,7 @@ public final class MojangApi {
 
     public String getNameFromUuid(String uuid) {
         try {
-            return HJ.get(
+            return hj.get(
                     "https://api.minecraftservices.com/minecraft/profile/lookup/" + uuid,
                     null,
                     6000,
@@ -43,22 +43,22 @@ public final class MojangApi {
         String uuid = (data.length() <= 16) ? getUuidFromName(data) : data;
 
         try {
-            JsonObject info = HJ.get(
+            JsonObject info = hj.get(
                     "https://sessionserver.mojang.com/session/minecraft/profile/" + uuid,
                     null,
                     6000,
                     10000
             );
 
-            JsonObject value = B64.decodeToJsonObject(
-                    JU.getStringByPath(info, "properties[0].value", "")
+            JsonObject value = b64.decodeToJsonObject(
+                    ju.getStringByPath(info, "properties[0].value", "")
             );
 
             return new McPlayer(
-                    JU.getString(info, "name", ""),
-                    JU.getString(info, "id", ""),
-                    JU.getStringByPath(value, "textures.SKIN.url", null),
-                    JU.getStringByPath(value, "textures.CAPE.url", null)
+                    ju.getString(info, "name", ""),
+                    ju.getString(info, "id", ""),
+                    ju.getStringByPath(value, "textures.SKIN.url", null),
+                    ju.getStringByPath(value, "textures.CAPE.url", null)
             );
         } catch (IOException e) {
             throw new RuntimeException(e);

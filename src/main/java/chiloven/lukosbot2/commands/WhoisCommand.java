@@ -3,6 +3,7 @@ package chiloven.lukosbot2.commands;
 import chiloven.lukosbot2.core.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import jakarta.annotation.PostConstruct;
 import org.apache.commons.net.whois.WhoisClient;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -239,6 +240,7 @@ public class WhoisCommand implements BotCommand {
         return domain.substring(lastDot + 1);
     }
 
+    @PostConstruct
     private void initWhoisServers() {
         whoisServerMap.put("com", WhoisClient.DEFAULT_HOST);
         whoisServerMap.put("net", WhoisClient.DEFAULT_HOST);

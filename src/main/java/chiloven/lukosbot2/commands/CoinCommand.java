@@ -26,7 +26,7 @@ import static chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.
 )
 public class CoinCommand implements BotCommand {
     private static final Logger log = LogManager.getLogger(CoinCommand.class);
-    private static final MathUtils MU = new MathUtils();
+    private static final MathUtils mu = MathUtils.getMathUtils();
 
     @Override
     public void register(CommandDispatcher<CommandSource> dispatcher) {
@@ -78,7 +78,7 @@ public class CoinCommand implements BotCommand {
         }
 
         try {
-            long[] r = MU.approximateMultinomial(times, 0.499999999999d, 0.499999999999d, 0.000000000002d);
+            long[] r = mu.approximateMultinomial(times, 0.499999999999d, 0.499999999999d, 0.000000000002d);
 
             return """
                     你抛了 %d 个硬币。

@@ -22,7 +22,7 @@ import static chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.
 )
 public class DiceCommand implements BotCommand {
 
-    private static final MathUtils MU = new MathUtils();
+    private static final MathUtils mu = MathUtils.getMathUtils();
 
     @Override
     public String name() {
@@ -74,7 +74,7 @@ public class DiceCommand implements BotCommand {
             return "骰子数量必须是一个正整数。\n" + usage();
         }
 
-        long[] faces = MU.approximateMultinomial(count,
+        long[] faces = mu.approximateMultinomial(count,
                 1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
 
         if (count == 1) {

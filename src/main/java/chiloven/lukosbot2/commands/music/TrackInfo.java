@@ -22,7 +22,7 @@ public record TrackInfo(
         String url,
         long durationMs
 ) {
-    public static final StringUtils SU = new StringUtils();
+    public static final StringUtils su = StringUtils.getStringUtils();
 
     /**
      * Format track info for display
@@ -38,7 +38,7 @@ public record TrackInfo(
             sb.append("专辑：").append(album).append('\n');
         }
         if (durationMs > 0) {
-            sb.append("时长：").append(SU.formatTime(durationMs, "mm:ss")).append('\n');
+            sb.append("时长：").append(su.formatTime(durationMs, "mm:ss")).append('\n');
         }
         if (url != null && !url.isBlank()) {
             sb.append("链接：").append(url).append('\n');

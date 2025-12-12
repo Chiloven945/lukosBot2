@@ -24,6 +24,7 @@ import java.util.Objects;
 
 public final class WebScreenshot {
     private static final Logger log = LogManager.getLogger(WebScreenshot.class);
+    private static final ImageUtils iu = ImageUtils.getImageUtils();
 
     private WebScreenshot() {
     }
@@ -114,7 +115,7 @@ public final class WebScreenshot {
             log.info("MediaWiki intro screenshot completed.");
             // Take PNG then convert to JPEG to reduce size (consistent with Wikipedia path)
             byte[] png = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
-            byte[] jpg = ImageUtils.pngToJpg(png);
+            byte[] jpg = iu.pngToJpg(png);
 
             // Try to fetch page title as filename; fallback to provided base
             String title = defaultFileBase;

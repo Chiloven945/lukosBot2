@@ -45,8 +45,8 @@ import static chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.
 )
 public class BilibiliCommand implements BotCommand {
 
-    public static final StringUtils SU = new StringUtils();
-    public static final JsonUtils JU = new JsonUtils();
+    public static final StringUtils su = StringUtils.getStringUtils();
+    public static final JsonUtils ju = JsonUtils.getJsonUtils();
     private static final Logger log = LogManager.getLogger(BilibiliCommand.class);
     private static final HttpClient HTTP = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(8))
@@ -146,9 +146,9 @@ public class BilibiliCommand implements BotCommand {
                 """.formatted(
                 link,
                 v.getTitle(),
-                SU.replaceNull(v.getTname()),
-                SU.replaceNull(v.getOwnerName()),
-                SU.formatTime(v.getPubDateMs())
+                su.replaceNull(v.getTname()),
+                su.replaceNull(v.getOwnerName()),
+                su.formatTime(v.getPubDateMs())
         );
     }
 
@@ -157,24 +157,24 @@ public class BilibiliCommand implements BotCommand {
         sb.append(link).append("\n");
         sb.append("标题：").append(v.getTitle());
         if (v.getPageCount() > 1) sb.append("（").append(v.getPageCount()).append("P）");
-        sb.append(" | 类型：").append(SU.replaceNull(v.getTname())).append("\n");
+        sb.append(" | 类型：").append(su.replaceNull(v.getTname())).append("\n");
 
-        sb.append("UP主：").append(SU.replaceNull(v.getOwnerName())).append(" | 粉丝：").append(SU.formatNum(v.getFans())).append("\n");
+        sb.append("UP主：").append(su.replaceNull(v.getOwnerName())).append(" | 粉丝：").append(su.formatNum(v.getFans())).append("\n");
 
         if (v.getDesc() != null && !v.getDesc().isBlank()) {
-            sb.append("简介：").append(SU.truncate(v.getDesc(), 160)).append("\n");
+            sb.append("简介：").append(su.truncate(v.getDesc(), 160)).append("\n");
         }
 
-        sb.append("观看：").append(SU.formatNum(v.getView()))
-                .append(" | 弹幕：").append(SU.formatNum(v.getDanmaku()))
-                .append(" | 评论：").append(SU.formatNum(v.getReply())).append("\n");
+        sb.append("观看：").append(su.formatNum(v.getView()))
+                .append(" | 弹幕：").append(su.formatNum(v.getDanmaku()))
+                .append(" | 评论：").append(su.formatNum(v.getReply())).append("\n");
 
-        sb.append("喜欢：").append(SU.formatNum(v.getLike()))
-                .append(" | 投币：").append(SU.formatNum(v.getCoin()))
-                .append(" | 收藏：").append(SU.formatNum(v.getFavorite()))
-                .append(" | 分享：").append(SU.formatNum(v.getShare())).append("\n");
+        sb.append("喜欢：").append(su.formatNum(v.getLike()))
+                .append(" | 投币：").append(su.formatNum(v.getCoin()))
+                .append(" | 收藏：").append(su.formatNum(v.getFavorite()))
+                .append(" | 分享：").append(su.formatNum(v.getShare())).append("\n");
 
-        sb.append("日期：").append(SU.formatTime(v.getPubDateMs()));
+        sb.append("日期：").append(su.formatTime(v.getPubDateMs()));
         return sb.toString();
     }
 
@@ -188,42 +188,42 @@ public class BilibiliCommand implements BotCommand {
             return null;
         }
 
-        final int code = JU.getInt(root, "code", -999);
-        final String message = JU.getString(root, "message", "");
+        final int code = ju.getInt(root, "code", -999);
+        final String message = ju.getString(root, "message", "");
         log.debug("API response code={}, message='{}' for {}", code, message, api);
         if (code != 0) {
             log.warn("Non-zero API code={} (message='{}') for {}", code, message, api);
             return null;
         }
 
-        final JsonObject data = JU.getObj(root, "data");
+        final JsonObject data = ju.getObj(root, "data");
         if (data == null) {
             log.warn("API response has no 'data' object for {}", api);
             return null;
         }
 
         final VideoInfo v = new VideoInfo();
-        v.setBvid(Objects.requireNonNullElse(JU.getString(data, "bvid", null), bvid));
-        v.setTitle(JU.getString(data, "title", ""));
-        v.setTname(JU.getString(data, "tname", ""));
-        v.setDesc(JU.getString(data, "desc", ""));
-        v.setCover(JU.getString(data, "pic", ""));
+        v.setBvid(Objects.requireNonNullElse(ju.getString(data, "bvid", null), bvid));
+        v.setTitle(ju.getString(data, "title", ""));
+        v.setTname(ju.getString(data, "tname", ""));
+        v.setDesc(ju.getString(data, "desc", ""));
+        v.setCover(ju.getString(data, "pic", ""));
         v.setPubDateMs(publishDateMs(data));
 
         // owner
-        final JsonObject owner = JU.getObj(data, "owner");
-        v.setOwnerName(JU.getString(owner, "name", ""));
-        v.setOwnerMid(JU.getLong(owner, "mid", 0L));
+        final JsonObject owner = ju.getObj(data, "owner");
+        v.setOwnerName(ju.getString(owner, "name", ""));
+        v.setOwnerMid(ju.getLong(owner, "mid", 0L));
 
         // stat
-        final JsonObject stat = JU.getObj(data, "stat");
-        v.setView(JU.getLong(stat, "view", 0L));
-        v.setDanmaku(JU.getLong(stat, "danmaku", 0L));
-        v.setReply(JU.getLong(stat, "reply", 0L));
-        v.setFavorite(JU.getLong(stat, "favorite", 0L));
-        v.setCoin(JU.getLong(stat, "coin", 0L));
-        v.setShare(JU.getLong(stat, "share", 0L));
-        v.setLike(JU.getLong(stat, "like", 0L));
+        final JsonObject stat = ju.getObj(data, "stat");
+        v.setView(ju.getLong(stat, "view", 0L));
+        v.setDanmaku(ju.getLong(stat, "danmaku", 0L));
+        v.setReply(ju.getLong(stat, "reply", 0L));
+        v.setFavorite(ju.getLong(stat, "favorite", 0L));
+        v.setCoin(ju.getLong(stat, "coin", 0L));
+        v.setShare(ju.getLong(stat, "share", 0L));
+        v.setLike(ju.getLong(stat, "like", 0L));
 
         // pages
         v.setPageCount(pageCount(data));
@@ -241,17 +241,17 @@ public class BilibiliCommand implements BotCommand {
             log.debug("Requesting follower stat: {}", relApi);
             try {
                 final JsonObject rel = getJson(relApi, 6);
-                if (rel != null && JU.getInt(rel, "code", -999) == 0) {
-                    final JsonObject d = JU.getObj(rel, "data");
+                if (rel != null && ju.getInt(rel, "code", -999) == 0) {
+                    final JsonObject d = ju.getObj(rel, "data");
                     if (d != null) {
-                        v.setFans(JU.getLong(d, "follower", 0L));
+                        v.setFans(ju.getLong(d, "follower", 0L));
                         log.info("Fetched follower count={} for mid={}", v.getFans(), v.getOwnerMid());
                     } else {
                         log.warn("'data' missing in follower API for mid={}", v.getOwnerMid());
                     }
                 } else {
                     log.warn("Follower API non-zero/invalid response for mid={}, url={}, message='{}'",
-                            v.getOwnerMid(), relApi, (rel == null ? "null" : JU.getString(rel, "message", "")));
+                            v.getOwnerMid(), relApi, (rel == null ? "null" : ju.getString(rel, "message", "")));
                 }
             } catch (Exception e) {
                 log.debug("Fetch fans failed: mid={}, err={}", v.getOwnerMid(), e.toString());
@@ -335,7 +335,7 @@ public class BilibiliCommand implements BotCommand {
         }
         log.debug("Received {} bytes from {}", resp.body().length(), url);
 
-        return JU.fromJsonString(resp.body(), JsonObject.class);
+        return ju.fromJsonString(resp.body(), JsonObject.class);
     }
 
     public static String buildViewApi(String bvid, Long aid) {
@@ -348,7 +348,7 @@ public class BilibiliCommand implements BotCommand {
      * pubdate: epoch seconds -> ms; missing => 0
      */
     public static long publishDateMs(JsonObject data) {
-        long sec = JU.getLong(data, "pubdate", 0L);
+        long sec = ju.getLong(data, "pubdate", 0L);
         return (sec <= 0) ? 0L : sec * 1000L;
     }
 
@@ -358,7 +358,7 @@ public class BilibiliCommand implements BotCommand {
     public static int pageCount(JsonObject data) {
         int byArray = (data != null && data.has("pages") && data.get("pages").isJsonArray())
                 ? data.getAsJsonArray("pages").size() : 0;
-        int byField = JU.getInt(data, "videos", 0);
+        int byField = ju.getInt(data, "videos", 0);
         int pages = Math.max(byArray, byField);
         return Math.max(1, pages);
     }

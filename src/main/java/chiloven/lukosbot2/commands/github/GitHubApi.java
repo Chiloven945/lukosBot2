@@ -1,7 +1,6 @@
 package chiloven.lukosbot2.commands.github;
 
 import chiloven.lukosbot2.util.HttpJson;
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
 import java.io.IOException;
@@ -11,7 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public final class GitHubApi {
-    public static final HttpJson HJ = new HttpJson();
+    public static final HttpJson hj = HttpJson.getHttpJson();
     private static final String BASE = "https://api.github.com";
     private static final int connTimeoutMs = 6000, readTimeoutMs = 10000;
     private final String token; // 可为 null
@@ -65,10 +64,10 @@ public final class GitHubApi {
      * @throws IOException if the request fails or there is a network error
      */
     private JsonObject get(String path, Map<String, String> query) throws IOException {
-        String url = BASE + path + HJ.buildQuery(query);
+        String url = BASE + path + hj.buildQuery(query);
         Map<String, String> headers = new java.util.LinkedHashMap<>();
         headers.put("Accept", "application/vnd.github.v3+json");
         if (token != null) headers.put("Authorization", "Bearer " + token);
-        return HJ.get(url, headers, connTimeoutMs, readTimeoutMs);
+        return hj.get(url, headers, connTimeoutMs, readTimeoutMs);
     }
 }

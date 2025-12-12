@@ -25,7 +25,11 @@ public final class JsonUtils {
 
     public static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
-    public JsonUtils() {
+    private JsonUtils() {
+    }
+
+    public static JsonUtils getJsonUtils() {
+        return new JsonUtils();
     }
 
     /* ===================== File ←→ Object ===================== */

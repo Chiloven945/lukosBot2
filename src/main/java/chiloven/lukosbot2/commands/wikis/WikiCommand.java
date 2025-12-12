@@ -7,13 +7,13 @@ import chiloven.lukosbot2.util.feature.WebScreenshot;
 import chiloven.lukosbot2.util.feature.WebToMarkdown;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import static chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
+import static chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 
 /**
@@ -73,7 +73,7 @@ public class WikiCommand implements WikiishCommand {
         dispatcher.register(
                 literal(name())
                         // /wiki <link>
-                        .then(RequiredArgumentBuilder.<CommandSource, String>argument("link", greedyString())
+                        .then(argument("link", greedyString())
                                 .executes(ctx -> {
                                     String link = StringArgumentType.getString(ctx, "link").trim();
                                     runScreenshot(ctx.getSource(), link);
@@ -82,7 +82,7 @@ public class WikiCommand implements WikiishCommand {
                         )
                         // /wiki md <link>
                         .then(literal("md")
-                                .then(RequiredArgumentBuilder.<CommandSource, String>argument("link", greedyString())
+                                .then(argument("link", greedyString())
                                         .executes(ctx -> {
                                             String link = StringArgumentType.getString(ctx, "link").trim();
                                             runMarkdown(ctx.getSource(), link);

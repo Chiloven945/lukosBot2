@@ -33,8 +33,8 @@ import java.util.List;
  * - 对外只暴露 translate(from, to, text)
  */
 public class TranslationService {
-    public static final StringUtils SU = new StringUtils();
-    public static final JsonUtils JU = new JsonUtils();
+    public static final StringUtils su = StringUtils.getStringUtils();
+    public static final JsonUtils ju = JsonUtils.getJsonUtils();
 
     private static final String IMAGE_NAME = "libretranslate/libretranslate:latest";
     private static final String CONTAINER_NAME = "lukos-libretranslate";
@@ -76,9 +76,9 @@ public class TranslationService {
         String tgt = (to == null || to.isBlank()) ? defaultLang : to;
 
         try {
-            String body = "q=" + SU.encodeTo(text)
-                    + "&source=" + SU.encodeTo(src)
-                    + "&target=" + SU.encodeTo(tgt)
+            String body = "q=" + su.encodeTo(text)
+                    + "&source=" + su.encodeTo(src)
+                    + "&target=" + su.encodeTo(tgt)
                     + "&format=text";
 
             HttpRequest req = HttpRequest.newBuilder()

@@ -14,7 +14,11 @@ import java.util.Date;
  */
 public final class StringUtils {
 
-    public StringUtils() {
+    private StringUtils() {
+    }
+
+    public static StringUtils getStringUtils() {
+        return new StringUtils();
     }
 
     /**

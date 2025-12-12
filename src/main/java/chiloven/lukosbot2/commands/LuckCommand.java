@@ -20,7 +20,7 @@ import static chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.l
         matchIfMissing = true
 )
 public class LuckCommand implements BotCommand {
-    public static final MathUtils MU = new MathUtils();
+    private static final MathUtils mu = MathUtils.getMathUtils();
 
     @Override
     public String name() {
@@ -48,7 +48,7 @@ public class LuckCommand implements BotCommand {
                 literal(name())
                         .executes(ctx -> {
                             try {
-                                int luck = MU.stableRandom(
+                                int luck = mu.stableRandom(
                                         0, 100,
                                         ctx.getSource().userId(),
                                         LocalDate.now()
