@@ -1,6 +1,6 @@
 package chiloven.lukosbot2.platform.discord;
 
-import chiloven.lukosbot2.config.ProxyConfig;
+import chiloven.lukosbot2.config.ProxyConfigProp;
 import chiloven.lukosbot2.model.MessageIn;
 import chiloven.lukosbot2.platform.ChatPlatform;
 import chiloven.lukosbot2.platform.Receiver;
@@ -14,8 +14,8 @@ public final class DiscordReceiver implements Receiver {
     private Consumer<MessageIn> sink = __ -> {
     };
 
-    public DiscordReceiver(String token, ProxyConfig proxyConfig) {
-        this.stack = new DiscordStack(token, proxyConfig);
+    public DiscordReceiver(String token, ProxyConfigProp proxyConfigProp) {
+        this.stack = new DiscordStack(token, proxyConfigProp);
     }
 
     @Override

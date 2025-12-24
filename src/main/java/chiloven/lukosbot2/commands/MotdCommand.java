@@ -1,7 +1,7 @@
 package chiloven.lukosbot2.commands;
 
-import chiloven.lukosbot2.config.ProxyConfig;
-import chiloven.lukosbot2.core.CommandSource;
+import chiloven.lukosbot2.config.ProxyConfigProp;
+import chiloven.lukosbot2.core.command.CommandSource;
 import chiloven.lukosbot2.util.spring.SpringBeans;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -121,8 +121,8 @@ public class MotdCommand implements BotCommand {
      * @since Minecraft 1.7
      */
     private MotdData ping(String host, int port) throws IOException {
-        ProxyConfig proxyConfig = SpringBeans.getBean(ProxyConfig.class);
-        Proxy javaProxy = proxyConfig.toJavaProxy();
+        ProxyConfigProp proxyConfigProp = SpringBeans.getBean(ProxyConfigProp.class);
+        Proxy javaProxy = proxyConfigProp.toJavaProxy();
         if (javaProxy == null || javaProxy == Proxy.NO_PROXY || javaProxy.type() != Proxy.Type.SOCKS) {
             javaProxy = Proxy.NO_PROXY;
         }

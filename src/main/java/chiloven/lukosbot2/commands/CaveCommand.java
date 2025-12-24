@@ -2,26 +2,21 @@ package chiloven.lukosbot2.commands;
 
 import chiloven.lukosbot2.core.command.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Service;
 
-@Service
-@ConditionalOnProperty(
-        prefix = "lukos.commands.control",
-        name = "weather",
-        havingValue = "true",
-        matchIfMissing = true
-)
-public class WeatherCommand implements BotCommand {
-
+/**
+ * Record and send message.
+ *
+ * @author Chiloven945
+ */
+public class CaveCommand implements BotCommand {
     @Override
     public String name() {
-        return "weather";
+        return "";
     }
 
     @Override
     public String description() {
-        return "查询天气";
+        return "";
     }
 
     @Override

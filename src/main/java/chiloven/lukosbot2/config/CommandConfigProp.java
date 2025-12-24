@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
 @Data
 @Configuration
 @ConfigurationProperties(prefix = "lukos.commands")
-public class CommandConfig {
+public class CommandConfigProp {
     private Control control = new Control();
     private GitHub gitHub = new GitHub();
     private Music music = new Music();

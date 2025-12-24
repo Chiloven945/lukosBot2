@@ -1,7 +1,7 @@
 package chiloven.lukosbot2.commands;
 
 import chiloven.lukosbot2.Constants;
-import chiloven.lukosbot2.core.CommandSource;
+import chiloven.lukosbot2.core.command.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;

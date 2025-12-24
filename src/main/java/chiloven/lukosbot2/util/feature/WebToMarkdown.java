@@ -1,6 +1,6 @@
 package chiloven.lukosbot2.util.feature;
 
-import chiloven.lukosbot2.config.ProxyConfig;
+import chiloven.lukosbot2.config.ProxyConfigProp;
 import chiloven.lukosbot2.model.ContentData;
 import chiloven.lukosbot2.util.spring.SpringBeans;
 import com.vladsch.flexmark.html2md.converter.FlexmarkHtmlConverter;
@@ -23,7 +23,7 @@ public final class WebToMarkdown {
             String contentSelectorsCsv,
             String defaultTitleBase
     ) throws Exception {
-        var proxy = SpringBeans.getBean(ProxyConfig.class);
+        var proxy = SpringBeans.getBean(ProxyConfigProp.class);
         var conn = Jsoup.connect(url)
                 .userAgent("Mozilla/5.0 (compatible; LukosBot/1.0)")
                 .timeout((int) Duration.ofSeconds(15).toMillis());

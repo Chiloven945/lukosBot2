@@ -1,6 +1,6 @@
 package chiloven.lukosbot2.commands;
 
-import chiloven.lukosbot2.core.CommandSource;
+import chiloven.lukosbot2.core.command.CommandSource;
 import chiloven.lukosbot2.util.feature.IpService;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;

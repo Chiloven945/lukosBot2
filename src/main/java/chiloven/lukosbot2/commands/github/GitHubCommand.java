@@ -1,7 +1,7 @@
 package chiloven.lukosbot2.commands.github;
 
-import chiloven.lukosbot2.config.CommandConfig;
-import chiloven.lukosbot2.core.CommandSource;
+import chiloven.lukosbot2.config.CommandConfigProp;
+import chiloven.lukosbot2.core.command.CommandSource;
 import com.google.gson.JsonObject;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -34,8 +34,8 @@ import static chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.
 public class GitHubCommand implements chiloven.lukosbot2.commands.BotCommand {
     private final GitHubApi api;
 
-    public GitHubCommand(CommandConfig commandConfig) {
-        this.api = new GitHubApi(commandConfig.getGitHub().getToken());
+    public GitHubCommand(CommandConfigProp ccp) {
+        this.api = new GitHubApi(ccp.getGitHub().getToken());
     }
 
     /**

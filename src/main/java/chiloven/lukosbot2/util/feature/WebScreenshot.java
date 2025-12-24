@@ -1,6 +1,6 @@
 package chiloven.lukosbot2.util.feature;
 
-import chiloven.lukosbot2.config.ProxyConfig;
+import chiloven.lukosbot2.config.ProxyConfigProp;
 import chiloven.lukosbot2.model.ContentData;
 import chiloven.lukosbot2.util.ImageUtils;
 import chiloven.lukosbot2.util.spring.SpringBeans;
@@ -157,7 +157,7 @@ public final class WebScreenshot {
 
     // ====== Internal Utils ======
     private static WebDriver createDriver() {
-        ProxyConfig proxy = SpringBeans.getBean(ProxyConfig.class);
+        ProxyConfigProp proxy = SpringBeans.getBean(ProxyConfigProp.class);
 
         // 清理“空字符串”的系统代理属性，避免 Selenium Manager 拼出 --proxy 但无值
         normalizeProxySystemProps();

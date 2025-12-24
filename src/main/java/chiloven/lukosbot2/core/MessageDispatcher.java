@@ -1,6 +1,7 @@
 package chiloven.lukosbot2.core;
 
 import chiloven.lukosbot2.config.AppProperties;
+import chiloven.lukosbot2.core.service.ServiceManager;
 import chiloven.lukosbot2.model.MessageIn;
 import chiloven.lukosbot2.model.MessageOut;
 import chiloven.lukosbot2.util.StringUtils;
@@ -30,6 +31,7 @@ public class MessageDispatcher implements AutoCloseable {
 
     private final Processor pipeline;
     private final MessageSenderHub msh;
+    private final ServiceManager services;
     private final StripedExecutor lanes;
     private final ExecutorService procPool;
     private final String prefix;
@@ -47,16 +49,18 @@ public class MessageDispatcher implements AutoCloseable {
     public MessageDispatcher(
             PipelineProcessor pipeline,
             @Qualifier("messageSenderHub") MessageSenderHub msh,
+            ServiceManager services,
             AppProperties props
     ) {
         this.pipeline = Objects.requireNonNull(pipeline);
         this.msh = Objects.requireNonNull(msh);
+        this.services = Objects.requireNonNull(services);
         this.prefix = props.getPrefix();
         this.serializePerChat = true;
 
         int stripes = Math.max(2, Runtime.getRuntime().availableProcessors() * 2);
-        this.lanes = new StripedExecutor(stripes, "lane-%02d");
-        this.procPool = Execs.newVirtualExecutor("proc-%02d");
+        this.lanes = new StripedExecutor(stripes, "lane-%d");
+        this.procPool = Execs.newVirtualExecutor("proc-");
     }
 
     /**
@@ -76,6 +80,14 @@ public class MessageDispatcher implements AutoCloseable {
         }
 
         procPool.submit(() -> {
+            // 0) trigger services first
+            try {
+                services.onMessage(in);
+            } catch (Exception e) {
+                log.warn("ServiceManager.onMessage failed", e);
+            }
+
+            // 1) pipeline
             long t0 = System.nanoTime();
             List<MessageOut> outs = pipeline.handle(in);
             long costMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - t0);

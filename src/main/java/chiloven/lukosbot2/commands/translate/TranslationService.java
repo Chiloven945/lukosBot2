@@ -1,6 +1,6 @@
 package chiloven.lukosbot2.commands.translate;
 
-import chiloven.lukosbot2.config.CommandConfig.Translate;
+import chiloven.lukosbot2.config.CommandConfigProp.Translate;
 import chiloven.lukosbot2.util.JsonUtils;
 import chiloven.lukosbot2.util.StringUtils;
 import com.github.dockerjava.api.DockerClient;

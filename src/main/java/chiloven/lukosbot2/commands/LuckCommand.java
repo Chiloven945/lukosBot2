@@ -1,6 +1,6 @@
 package chiloven.lukosbot2.commands;
 
-import chiloven.lukosbot2.core.CommandSource;
+import chiloven.lukosbot2.core.command.CommandSource;
 import chiloven.lukosbot2.util.MathUtils;
 import com.mojang.brigadier.CommandDispatcher;
 import lombok.extern.log4j.Log4j2;

@@ -1,6 +1,7 @@
-package chiloven.lukosbot2.core;
+package chiloven.lukosbot2.core.command;
 
 import chiloven.lukosbot2.config.AppProperties;
+import chiloven.lukosbot2.core.Processor;
 import chiloven.lukosbot2.model.MessageIn;
 import chiloven.lukosbot2.model.MessageOut;
 import com.mojang.brigadier.CommandDispatcher;

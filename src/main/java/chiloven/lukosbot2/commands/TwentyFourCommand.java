@@ -1,8 +1,8 @@
 package chiloven.lukosbot2.commands;
 
-import chiloven.lukosbot2.config.CommandConfig;
-import chiloven.lukosbot2.core.CommandSource;
+import chiloven.lukosbot2.config.CommandConfigProp;
 import chiloven.lukosbot2.core.MessageSenderHub;
+import chiloven.lukosbot2.core.command.CommandSource;
 import chiloven.lukosbot2.model.Address;
 import chiloven.lukosbot2.model.MessageOut;
 import com.mojang.brigadier.CommandDispatcher;
@@ -43,7 +43,7 @@ public class TwentyFourCommand implements BotCommand {
                 return t;
             });
 
-    public TwentyFourCommand(MessageSenderHub senderHub, CommandConfig config) {
+    public TwentyFourCommand(MessageSenderHub senderHub, CommandConfigProp config) {
         this.senderHub = senderHub;
         this.timeLimit = config.getTwentyFour().getTimeLimit();
     }
@@ -178,6 +178,8 @@ public class TwentyFourCommand implements BotCommand {
     }
 
     private void checkAnswer(CommandSource src, long userId, Session session, String expr) {
+        expr = stripBackslashes(expr);
+
         EvalResult eval;
         try {
             eval = evalExpression(expr);
@@ -342,6 +344,11 @@ public class TwentyFourCommand implements BotCommand {
         return null;
     }
 
+    private String stripBackslashes(String s) {
+        if (s == null || s.isEmpty()) return "";
+        return s.replace("\\", "");
+    }
+
     private EvalResult evalExpression(String expr) {
         List<String> tokens = tokenize(expr);
         List<Integer> numbers = new ArrayList<>();
@@ -364,7 +371,7 @@ public class TwentyFourCommand implements BotCommand {
                     throw new IllegalArgumentException("mismatched parentheses");
                 }
             } else if (isOp(c)) {
-                while (!ops.isEmpty() && precedence(ops.peek()) >= precedence(c)) {
+                while (!ops.isEmpty() && ops.peek() != '(' && precedence(ops.peek()) >= precedence(c)) {
                     applyOp(values, ops.pop());
                 }
                 ops.push(c);
@@ -416,6 +423,7 @@ public class TwentyFourCommand implements BotCommand {
     }
 
     private int precedence(char op) {
+        if (op == '(') return 0;
         return (op == '+' || op == '-') ? 1 : 2;
     }
 

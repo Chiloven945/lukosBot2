@@ -4,6 +4,8 @@ logs/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+!**/src/main/**/config/
+!**/src/test/**/config/
 
 ### IntelliJ IDEA ###
 .idea/modules.xml

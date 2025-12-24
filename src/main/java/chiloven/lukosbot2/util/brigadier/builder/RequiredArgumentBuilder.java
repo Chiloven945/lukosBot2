@@ -1,6 +1,6 @@
 package chiloven.lukosbot2.util.brigadier.builder;
 
-import chiloven.lukosbot2.core.CommandSource;
+import chiloven.lukosbot2.core.command.CommandSource;
 import com.mojang.brigadier.arguments.ArgumentType;
 
 /**

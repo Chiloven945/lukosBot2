@@ -1,7 +1,7 @@
 package chiloven.lukosbot2.commands.bilibili;
 
 import chiloven.lukosbot2.commands.BotCommand;
-import chiloven.lukosbot2.core.CommandSource;
+import chiloven.lukosbot2.core.command.CommandSource;
 import chiloven.lukosbot2.util.JsonUtils;
 import chiloven.lukosbot2.util.StringUtils;
 import com.google.gson.JsonObject;

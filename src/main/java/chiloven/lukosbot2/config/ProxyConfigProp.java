@@ -23,7 +23,7 @@ import java.util.List;
 @Data
 @Configuration
 @ConfigurationProperties(prefix = "lukos.proxy")
-public class ProxyConfig {
+public class ProxyConfigProp {
 
     ///  Whether to enable the proxy, default is false.
     private boolean enabled = false;

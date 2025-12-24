@@ -1,5 +1,6 @@
 package chiloven.lukosbot2.core;
 
+import chiloven.lukosbot2.core.command.CommandProcessor;
 import chiloven.lukosbot2.model.MessageIn;
 import chiloven.lukosbot2.model.MessageOut;
 import lombok.Getter;

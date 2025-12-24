@@ -1,6 +1,6 @@
 package chiloven.lukosbot2.commands.wikis;
 
-import chiloven.lukosbot2.core.CommandSource;
+import chiloven.lukosbot2.core.command.CommandSource;
 import chiloven.lukosbot2.model.Attachment;
 import chiloven.lukosbot2.model.MessageOut;
 import chiloven.lukosbot2.util.feature.WebScreenshot;

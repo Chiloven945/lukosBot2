@@ -1,4 +1,4 @@
-package chiloven.lukosbot2.core;
+package chiloven.lukosbot2.core.command;
 
 import chiloven.lukosbot2.model.Address;
 import chiloven.lukosbot2.model.Attachment;

@@ -27,7 +27,7 @@ public class MessageSenderHub {
     public static final StringUtils su = StringUtils.getStringUtils();
     private final Map<ChatPlatform, Sender> routes = new EnumMap<>(ChatPlatform.class);
 
-    private final ExecutorService sendPool = Execs.newVirtualExecutor("send-%02d");
+    private final ExecutorService sendPool = Execs.newVirtualExecutor("send-");
 
     /**
      * Registers (or replaces) the {@link chiloven.lukosbot2.platform.Sender} responsible for delivering messages

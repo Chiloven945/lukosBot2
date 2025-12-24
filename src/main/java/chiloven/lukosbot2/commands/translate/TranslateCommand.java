@@ -1,9 +1,9 @@
 package chiloven.lukosbot2.commands.translate;
 
 import chiloven.lukosbot2.commands.BotCommand;
-import chiloven.lukosbot2.config.CommandConfig;
-import chiloven.lukosbot2.config.CommandConfig.Translate;
-import chiloven.lukosbot2.core.CommandSource;
+import chiloven.lukosbot2.config.CommandConfigProp;
+import chiloven.lukosbot2.config.CommandConfigProp.Translate;
+import chiloven.lukosbot2.core.command.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -27,8 +27,8 @@ public class TranslateCommand implements BotCommand {
     public final TranslationService ts;
     private final Translate translate;
 
-    public TranslateCommand(CommandConfig commandConfig) {
-        this.translate = commandConfig.getTranslate();
+    public TranslateCommand(CommandConfigProp ccp) {
+        this.translate = ccp.getTranslate();
         this.ts = new TranslationService(translate);
     }
 

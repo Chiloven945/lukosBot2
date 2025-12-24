@@ -1,8 +1,8 @@
 package chiloven.lukosbot2.commands;
 
 import chiloven.lukosbot2.config.AppProperties;
-import chiloven.lukosbot2.core.CommandRegistry;
-import chiloven.lukosbot2.core.CommandSource;
+import chiloven.lukosbot2.core.command.CommandRegistry;
+import chiloven.lukosbot2.core.command.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import org.springframework.beans.factory.ObjectProvider;

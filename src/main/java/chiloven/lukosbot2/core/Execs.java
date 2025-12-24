@@ -15,6 +15,16 @@ public final class Execs {
     }
 
     /**
+     * Creates a virtual-thread-per-task {@link java.util.concurrent.ExecutorService} with a default naming
+     * pattern {@code "v-%02d"}, suitable when explicit naming is desired but a custom pattern is not needed.
+     *
+     * @return a per-task executor that creates named virtual threads using the default pattern
+     */
+    public static ExecutorService newVirtualExecutor() {
+        return newVirtualExecutor("v-");
+    }
+
+    /**
      * Creates a virtual-thread-per-task {@link java.util.concurrent.ExecutorService} whose threads are explicitly
      * named using the given printf-style pattern (e.g., {@code "proc-%02d"} or {@code "send-%02d"}), enabling
      * clearer logs and diagnostics while preserving the lightweight concurrency of virtual threads.
@@ -24,21 +34,11 @@ public final class Execs {
      * @return a per-task executor that creates named virtual threads for each submitted task
      */
     public static ExecutorService newVirtualExecutor(String pattern) {
-        java.util.concurrent.atomic.AtomicLong seq = new java.util.concurrent.atomic.AtomicLong(1);
+        AtomicLong seq = new AtomicLong(1);
         ThreadFactory vf = Thread.ofVirtual()
                 .name(pattern, seq.getAndIncrement())
                 .factory();
         return Executors.newThreadPerTaskExecutor(vf);
-    }
-
-    /**
-     * Creates a virtual-thread-per-task {@link java.util.concurrent.ExecutorService} with a default naming
-     * pattern {@code "v-%02d"}, suitable when explicit naming is desired but a custom pattern is not needed.
-     *
-     * @return a per-task executor that creates named virtual threads using the default pattern
-     */
-    public static ExecutorService newVirtualExecutor() {
-        return newVirtualExecutor("v-%02d");
     }
 
     /**
