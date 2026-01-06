@@ -10,7 +10,7 @@ public class Constants {
     public static final String APP_NAME = "lukosBot2";
     public final String javaVersion = System.getProperty("java.version");
     public final String springVersion = SpringVersion.getVersion();
-    public final String tgVersion = "9.2.0";
+    public final String tgVersion = "9.2.1";
     public final String jdaVersion = getImplVersion("net.dv8tion.jda.api.JDA");
     public final String shiroVersion = "2.5.0";
 
