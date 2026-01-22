@@ -4,9 +4,9 @@
          https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>chiloven.lukosbot2</groupId>
+    <groupId>top.chiloven</groupId>
     <artifactId>lukos-bot-2</artifactId>
-    <version>Alpha.0.0.1</version>
+    <version>Alpha.0.1.0</version>
     <name>lukosBot2</name>
 
     <properties>
@@ -204,7 +204,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>chiloven.lukosbot2.Main</mainClass>
+                    <mainClass>top.chiloven.lukosbot2.Main</mainClass>
                 </configuration>
             </plugin>
 
