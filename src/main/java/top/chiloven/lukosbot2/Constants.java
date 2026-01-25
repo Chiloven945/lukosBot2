@@ -1,6 +1,7 @@
 package top.chiloven.lukosbot2;
 
-import org.springframework.core.SpringVersion;
+import java.util.Optional;
+import java.util.Properties;
 
 /**
  * Constants class for holding application-wide constants.
@@ -8,11 +9,17 @@ import org.springframework.core.SpringVersion;
 public class Constants {
     public static final String VERSION = "Alpha.0.0.1";
     public static final String APP_NAME = "lukosBot2";
-    public final String javaVersion = System.getProperty("java.version");
-    public final String springVersion = SpringVersion.getVersion();
-    public final String tgVersion = "9.2.1";
-    public final String jdaVersion = getImplVersion("net.dv8tion.jda.api.JDA");
-    public final String shiroVersion = "2.5.0";
+
+    public final String javaVersion =
+            "%s (%s)".formatted(System.getProperty("java.version"), System.getProperty("java.vendor.version"));
+    public final String springBootVersion =
+            getImplVersion("org.springframework.boot.SpringApplication");
+    public final String tgVersion =
+            getMavenVersion("org.telegram", "telegrambots-client");
+    public final String jdaVersion =
+            getImplVersion("net.dv8tion.jda.api.JDA");
+    public final String shiroVersion =
+            getImplVersion("com.mikuac.shiro.boot.Shiro");
 
     public Constants() {
     }
@@ -27,5 +34,22 @@ public class Constants {
         } catch (ClassNotFoundException ignored) {
         }
         return "unknown";
+    }
+
+    private String getMavenVersion(String groupId, String artifactId) {
+        String path = String.format("META-INF/maven/%s/%s/pom.properties", groupId, artifactId);
+
+        return Optional.ofNullable(Thread.currentThread().getContextClassLoader().getResourceAsStream(path))
+                .map(in -> {
+                    try (in) {
+                        Properties p = new Properties();
+                        p.load(in);
+                        return p.getProperty("version");
+                    } catch (Exception e) {
+                        return null;
+                    }
+                })
+                .filter(version -> !version.isBlank())
+                .orElse("unknown");
     }
 }
