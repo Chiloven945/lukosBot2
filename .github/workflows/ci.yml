@@ -1,4 +1,4 @@
-name: Java CI with Maven
+name: lukosBot2 CI
 
 on:
   push:
@@ -26,29 +26,24 @@ jobs:
       - name: Set up JDK 25
         uses: actions/setup-java@v5
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: '25'
-          cache: 'maven'
+          cache: 'gradle'
 
-      - name: Validate Maven installation
-        run: mvn -v
+      - name: Validate Gradle installation
+        run: ./gradlew --version
 
-      - name: Cache local Maven repository
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
+      - name: Grant execute permission for Gradle wrapper
+        run: chmod +x gradlew
 
-      - name: Build with Maven
-        run: mvn clean package -DskipTests
+      - name: Build with Gradle (skip tests)
+        run: ./gradlew clean build -x test
 
       - name: Run tests
-        run: mvn test
+        run: ./gradlew test
 
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v5
         with:
           name: lukos-bot-2
-          path: target/*.jar
+          path: build/libs/*.jar

@@ -91,7 +91,7 @@ public class PingCommand implements BotCommand {
                         系统: %s %s
                         内存: 已用 %d MB / 总 %d MB (最大 %d MB)
                         线程数: %d
-                        Java: %s | Spring: %s
+                        Java: %s | SpringBoot: %s
                         TelegramBots: %s | JDA: %s | Shiro: %s
                         """,
                 time,
@@ -99,7 +99,7 @@ public class PingCommand implements BotCommand {
                 osBean.getName(), osBean.getVersion(),
                 (totalMem - freeMem), totalMem, maxMem,
                 Thread.activeCount(),
-                CONST.javaVersion, CONST.springVersion,
+                CONST.javaVersion, CONST.springBootVersion,
                 CONST.tgVersion, CONST.jdaVersion, CONST.shiroVersion
         );
     }
