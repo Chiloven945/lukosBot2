@@ -64,6 +64,10 @@ tasks.withType<JavaCompile>().configureEach {
     options.release.set(javaVersionInt)
 }
 
+tasks.test {
+    failOnNoDiscoveredTests = false
+}
+
 springBoot {
     mainClass.set("top.chiloven.lukosbot2.Main")
 }
