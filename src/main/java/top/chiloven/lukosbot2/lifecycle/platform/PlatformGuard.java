@@ -20,9 +20,9 @@ public class PlatformGuard implements SmartLifecycle {
     }
 
     @Override
-    public void start() throws NoPlatformEnabledException {
+    public void start() throws IllegalStateException {
         if (adapters.isEmpty()) {
-            throw new NoPlatformEnabledException();
+            throw new IllegalStateException("No platform enabled (set lukos.telegram/onebot/discord.enabled in application.yml)");
         }
         running = true;
     }
