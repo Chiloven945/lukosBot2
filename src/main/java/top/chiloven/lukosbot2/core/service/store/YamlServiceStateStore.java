@@ -1,11 +1,11 @@
 package top.chiloven.lukosbot2.core.service.store;
 
-import top.chiloven.lukosbot2.core.service.ServiceState;
-import top.chiloven.lukosbot2.model.ServiceStateDoc;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
+import top.chiloven.lukosbot2.core.service.ServiceState;
+import top.chiloven.lukosbot2.model.ServiceStateDoc;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -36,7 +36,6 @@ public class YamlServiceStateStore implements ServiceStateStore {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public ServiceStateDoc load() {
         try {
             if (Files.notExists(FILE)) {

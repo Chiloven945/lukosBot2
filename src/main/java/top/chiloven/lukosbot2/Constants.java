@@ -7,7 +7,7 @@ import java.util.Properties;
  * Constants class for holding application-wide constants.
  */
 public class Constants {
-    public static final String VERSION = "Alpha.0.0.1";
+    public static final String VERSION = "0.1.0-SNAPSHOT";
     public static final String APP_NAME = "lukosBot2";
 
     public final String javaVersion =
