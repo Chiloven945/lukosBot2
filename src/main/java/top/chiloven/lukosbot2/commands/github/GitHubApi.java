@@ -1,7 +1,7 @@
 package top.chiloven.lukosbot2.commands.github;
 
-import top.chiloven.lukosbot2.util.HttpJson;
 import com.google.gson.JsonObject;
+import top.chiloven.lukosbot2.util.HttpJson;
 
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -12,8 +12,7 @@ import java.util.Map;
 public final class GitHubApi {
     public static final HttpJson hj = HttpJson.getHttpJson();
     private static final String BASE = "https://api.github.com";
-    private static final int connTimeoutMs = 6000, readTimeoutMs = 10000;
-    private final String token; // 可为 null
+    private final String token;
 
     public GitHubApi(String token) {
         this.token = (token == null || token.isBlank()) ? null : token;
@@ -40,7 +39,7 @@ public final class GitHubApi {
         Map<String, String> headers = new java.util.LinkedHashMap<>();
         headers.put("Accept", "application/vnd.github.v3+json");
         if (token != null) headers.put("Authorization", "Bearer " + token);
-        return hj.get(url, headers, connTimeoutMs, readTimeoutMs);
+        return hj.getObject(url, headers, 10000);
     }
 
     public JsonObject getRepo(String owner, String repo) throws IOException {

@@ -1,10 +1,10 @@
 package top.chiloven.lukosbot2.util.feature;
 
+import com.google.gson.JsonObject;
+import org.jspecify.annotations.NonNull;
 import top.chiloven.lukosbot2.util.Base64Utils;
 import top.chiloven.lukosbot2.util.HttpJson;
 import top.chiloven.lukosbot2.util.JsonUtils;
-import com.google.gson.JsonObject;
-import org.jspecify.annotations.NonNull;
 
 import java.io.IOException;
 
@@ -15,11 +15,8 @@ public final class MojangApi {
 
     public String getUuidFromName(String name) {
         try {
-            return hj.get(
-                    "https://api.mojang.com/users/profiles/minecraft/" + name,
-                    null,
-                    6000,
-                    10000
+            return hj.getObject(
+                    "https://api.mojang.com/users/profiles/minecraft/" + name
             ).get("id").getAsString();
         } catch (IOException e) {
             return null;
@@ -28,11 +25,8 @@ public final class MojangApi {
 
     public String getNameFromUuid(String uuid) {
         try {
-            return hj.get(
-                    "https://api.minecraftservices.com/minecraft/profile/lookup/" + uuid,
-                    null,
-                    6000,
-                    10000
+            return hj.getObject(
+                    "https://api.minecraftservices.com/minecraft/profile/lookup/" + uuid
             ).get("name").getAsString();
         } catch (IOException e) {
             return null;
@@ -43,11 +37,8 @@ public final class MojangApi {
         String uuid = (data.length() <= 16) ? getUuidFromName(data) : data;
 
         try {
-            JsonObject info = hj.get(
-                    "https://sessionserver.mojang.com/session/minecraft/profile/" + uuid,
-                    null,
-                    6000,
-                    10000
+            JsonObject info = hj.getObject(
+                    "https://sessionserver.mojang.com/session/minecraft/profile/" + uuid
             );
 
             JsonObject value = b64.decodeToJsonObject(

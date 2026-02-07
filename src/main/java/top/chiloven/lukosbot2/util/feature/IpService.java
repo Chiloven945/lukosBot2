@@ -1,10 +1,10 @@
 package top.chiloven.lukosbot2.util.feature;
 
+import com.google.gson.JsonObject;
+import org.jspecify.annotations.NonNull;
 import top.chiloven.lukosbot2.util.HttpJson;
 import top.chiloven.lukosbot2.util.JsonUtils;
 import top.chiloven.lukosbot2.util.SafeStringBuilder;
-import com.google.gson.JsonObject;
-import org.jspecify.annotations.NonNull;
 
 import java.io.IOException;
 
@@ -17,11 +17,8 @@ public final class IpService {
 
     public IpInfo getIpInfo(String ip) throws IOException {
         try {
-            JsonObject result = hj.get(
-                    "https://api.ip.sb/geoip/" + ip,
-                    null,
-                    6000,
-                    10000
+            JsonObject result = hj.getObject(
+                    "https://api.ip.sb/geoip/" + ip
             );
 
             return new IpInfo(
