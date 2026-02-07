@@ -47,6 +47,7 @@ public class HelpCommand implements IBotCommand {
                                     String cmdName = StringArgumentType.getString(ctx, "command");
                                     var cmd = registry().get(cmdName);
 
+                                    // TODO: UsageNode or sth to enhance current usage display / image usages
                                     if (cmd != null && cmd.isVisible()) {
                                         ctx.getSource().reply(cmd.usage().trim());
                                     } else {
