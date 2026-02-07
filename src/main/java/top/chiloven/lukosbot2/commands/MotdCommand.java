@@ -1,8 +1,5 @@
 package top.chiloven.lukosbot2.commands;
 
-import top.chiloven.lukosbot2.config.ProxyConfigProp;
-import top.chiloven.lukosbot2.core.command.CommandSource;
-import top.chiloven.lukosbot2.util.spring.SpringBeans;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -11,6 +8,9 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.config.ProxyConfigProp;
+import top.chiloven.lukosbot2.core.command.CommandSource;
+import top.chiloven.lukosbot2.util.spring.SpringBeans;
 
 import java.io.*;
 import java.net.InetSocketAddress;
@@ -32,7 +32,7 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuil
         matchIfMissing = true
 )
 @Log4j2
-public class MotdCommand implements BotCommand {
+public class MotdCommand implements IBotCommand {
 
     @Override
     public String name() {

@@ -1,9 +1,6 @@
 // TelegramSender.java
 package top.chiloven.lukosbot2.platform.telegram;
 
-import top.chiloven.lukosbot2.model.Attachment;
-import top.chiloven.lukosbot2.model.MessageOut;
-import top.chiloven.lukosbot2.platform.Sender;
 import lombok.extern.log4j.Log4j2;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
@@ -11,11 +8,14 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
+import top.chiloven.lukosbot2.model.Attachment;
+import top.chiloven.lukosbot2.model.MessageOut;
+import top.chiloven.lukosbot2.platform.ISender;
 
 import java.io.ByteArrayInputStream;
 
 @Log4j2
-public final class TelegramSender implements Sender {
+public final class TelegramSender implements ISender {
     private final TelegramClient client;
 
     TelegramSender(TelegramStack stack) {

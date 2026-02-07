@@ -1,11 +1,11 @@
 package top.chiloven.lukosbot2.commands;
 
-import top.chiloven.lukosbot2.core.command.CommandSource;
-import top.chiloven.lukosbot2.util.feature.MojangApi;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.core.command.CommandSource;
+import top.chiloven.lukosbot2.util.feature.MojangApi;
 
 import static top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
 import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
@@ -22,7 +22,7 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuil
         havingValue = "true",
         matchIfMissing = true
 )
-public class PlayerCommand implements BotCommand {
+public class PlayerCommand implements IBotCommand {
     public static final MojangApi MAPI = new MojangApi();
 
     @Override

@@ -5,7 +5,7 @@ import top.chiloven.lukosbot2.model.ServiceStateDoc;
 /**
  * Persistent store for service states.
  */
-public interface ServiceStateStore {
+public interface IServiceStateStore {
     ServiceStateDoc load();
 
     void save(ServiceStateDoc doc);

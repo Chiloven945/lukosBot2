@@ -5,7 +5,7 @@ import top.chiloven.lukosbot2.commands.music.TrackInfo;
 
 import java.net.http.HttpClient;
 
-public interface MusicProvider {
+public interface IMusicProvider {
 
     /**
      * HTTP client instance

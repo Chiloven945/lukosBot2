@@ -1,10 +1,10 @@
 package top.chiloven.lukosbot2.commands.music.provider;
 
-import top.chiloven.lukosbot2.commands.music.MusicPlatform;
-import top.chiloven.lukosbot2.commands.music.TrackInfo;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import top.chiloven.lukosbot2.commands.music.MusicPlatform;
+import top.chiloven.lukosbot2.commands.music.TrackInfo;
 
 import java.net.URI;
 import java.net.URLEncoder;
@@ -15,7 +15,7 @@ import java.util.Base64;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class SpotifyMusicProvider implements MusicProvider {
+public class SpotifyMusicProvider implements IMusicProvider {
 
     private static final String TOKEN_URL = "https://accounts.spotify.com/api/token";
     private static final String API_BASE = "https://api.spotify.com/v1";

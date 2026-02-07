@@ -12,10 +12,10 @@ import java.util.List;
  */
 @Component
 public class PlatformGuard implements SmartLifecycle {
-    private final List<PlatformAdapter> adapters;
+    private final List<IPlatformAdapter> adapters;
     private volatile boolean running = false;
 
-    public PlatformGuard(ObjectProvider<List<PlatformAdapter>> provider) {
+    public PlatformGuard(ObjectProvider<List<IPlatformAdapter>> provider) {
         this.adapters = provider.getIfAvailable(List::of);
     }
 

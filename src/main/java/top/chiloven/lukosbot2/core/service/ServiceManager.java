@@ -1,15 +1,14 @@
 package top.chiloven.lukosbot2.core.service;
 
-import top.chiloven.lukosbot2.config.ServiceConfigProp;
-import top.chiloven.lukosbot2.core.MessageSenderHub;
-import top.chiloven.lukosbot2.core.service.store.ServiceStateStore;
-import top.chiloven.lukosbot2.model.*;
-import top.chiloven.lukosbot2.model.*;
-import top.chiloven.lukosbot2.platform.ChatPlatform;
-import top.chiloven.lukosbot2.services.BotService;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.config.ServiceConfigProp;
+import top.chiloven.lukosbot2.core.MessageSenderHub;
+import top.chiloven.lukosbot2.core.service.store.IServiceStateStore;
+import top.chiloven.lukosbot2.model.*;
+import top.chiloven.lukosbot2.platform.ChatPlatform;
+import top.chiloven.lukosbot2.services.IBotService;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -21,7 +20,7 @@ import java.util.concurrent.*;
 public class ServiceManager {
 
     private final ServiceRegistry registry;
-    private final ServiceStateStore store;
+    private final IServiceStateStore store;
     private final MessageSenderHub senderHub;
     private final ServiceConfigProp props;
 
@@ -48,7 +47,7 @@ public class ServiceManager {
     private final ConcurrentMap<String, ServiceState> defaultStates = new ConcurrentHashMap<>();
 
     public ServiceManager(ServiceRegistry registry,
-                          ServiceStateStore store,
+                          IServiceStateStore store,
                           MessageSenderHub senderHub,
                           ServiceConfigProp props) {
         this.registry = registry;
@@ -92,7 +91,7 @@ public class ServiceManager {
         boolean changed = false;
 
         // defaults
-        for (BotService s : registry.all()) {
+        for (IBotService s : registry.all()) {
             if (!props.isAllowed(s.name())) continue;
 
             if (!defaultStates.containsKey(s.name())) {
@@ -119,7 +118,7 @@ public class ServiceManager {
 
             ConcurrentMap<String, ServiceState> perChat = chatStates.get(chatKey);
 
-            for (BotService s : registry.all()) {
+            for (IBotService s : registry.all()) {
                 if (!props.isAllowed(s.name())) continue;
                 if (s.type() != ServiceType.TIME_BASED) continue;
 
@@ -140,7 +139,7 @@ public class ServiceManager {
     private boolean ensureDefaultsForChat(ConcurrentMap<String, ServiceState> perChat) {
         boolean changed = false;
 
-        for (BotService s : registry.all()) {
+        for (IBotService s : registry.all()) {
             if (!props.isAllowed(s.name())) continue;
 
             if (!perChat.containsKey(s.name())) {
@@ -177,7 +176,7 @@ public class ServiceManager {
         }
     }
 
-    private void refreshSchedule(String chatKey, Address addr, BotService s, ServiceState st) {
+    private void refreshSchedule(String chatKey, Address addr, IBotService s, ServiceState st) {
         String sk = scheduleKey(chatKey, s.name());
 
         ScheduledFuture<?> old = schedules.remove(sk);
@@ -220,7 +219,7 @@ public class ServiceManager {
         ServiceContext ctx = new ServiceContext(senderHub, in.addr());
         ServiceEvent ev = ServiceEvent.message(in);
 
-        for (BotService s : registry.all()) {
+        for (IBotService s : registry.all()) {
             if (!props.isAllowed(s.name())) continue;
 
             ServiceState st = perChat.get(s.name());
@@ -246,10 +245,10 @@ public class ServiceManager {
         boolean changed = ensureDefaultsForChat(perChat);
         if (changed) persist();
 
-        Optional<BotService> opt = registry.find(serviceName);
+        Optional<IBotService> opt = registry.find(serviceName);
         if (opt.isEmpty()) return;
 
-        BotService s = opt.get();
+        IBotService s = opt.get();
         if (!props.isAllowed(s.name())) return;
         if (s.type() != ServiceType.TRIGGER) return;
 
@@ -264,10 +263,10 @@ public class ServiceManager {
      * External trigger: fire an event to ALL chats that enabled the given service.
      */
     public void fireAll(String serviceName, ServiceEvent event) {
-        Optional<BotService> opt = registry.find(serviceName);
+        Optional<IBotService> opt = registry.find(serviceName);
         if (opt.isEmpty()) return;
 
-        BotService s = opt.get();
+        IBotService s = opt.get();
         if (!props.isAllowed(s.name())) return;
         if (s.type() != ServiceType.TRIGGER) return;
 
@@ -325,7 +324,7 @@ public class ServiceManager {
             if (d != null) {
                 st = new ServiceState(d.isEnabled(), new LinkedHashMap<>(d.getConfig()));
             } else {
-                BotService svc = registry.find(serviceName).orElse(null);
+                IBotService svc = registry.find(serviceName).orElse(null);
                 if (svc == null) return;
                 st = new ServiceState(false, new LinkedHashMap<>(svc.defaultConfig()));
             }
@@ -335,7 +334,7 @@ public class ServiceManager {
         st.setEnabled(enabled);
 
         // update schedules for TIME_BASED
-        BotService svc = registry.find(serviceName).orElse(null);
+        IBotService svc = registry.find(serviceName).orElse(null);
         if (svc != null && svc.type() == ServiceType.TIME_BASED) {
             refreshSchedule(chatKey(addr), addr, svc, st);
         }
@@ -355,7 +354,7 @@ public class ServiceManager {
             if (d != null) {
                 st = new ServiceState(d.isEnabled(), new LinkedHashMap<>(d.getConfig()));
             } else {
-                BotService svc = registry.find(serviceName).orElse(null);
+                IBotService svc = registry.find(serviceName).orElse(null);
                 if (svc == null) return;
                 st = new ServiceState(false, new LinkedHashMap<>(svc.defaultConfig()));
             }
@@ -370,7 +369,7 @@ public class ServiceManager {
         else st.getConfig().put(key, value);
 
         // if TIME_BASED and interval changed, reschedule
-        BotService svc = registry.find(serviceName).orElse(null);
+        IBotService svc = registry.find(serviceName).orElse(null);
         if (svc != null && svc.type() == ServiceType.TIME_BASED) {
             refreshSchedule(chatKey(addr), addr, svc, st);
         }

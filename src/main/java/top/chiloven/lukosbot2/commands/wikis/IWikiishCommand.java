@@ -1,6 +1,6 @@
 package top.chiloven.lukosbot2.commands.wikis;
 
-import top.chiloven.lukosbot2.commands.BotCommand;
+import top.chiloven.lukosbot2.commands.IBotCommand;
 
 import java.net.URI;
 import java.net.URLEncoder;
@@ -42,7 +42,7 @@ import java.nio.charset.StandardCharsets;
  *
  * @author Chiloven945
  */
-public interface WikiishCommand extends BotCommand {
+public interface IWikiishCommand extends IBotCommand {
 
     // TODO: change to the language in the application.yml
 

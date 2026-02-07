@@ -3,12 +3,12 @@ package top.chiloven.lukosbot2.platform.discord;
 import top.chiloven.lukosbot2.config.ProxyConfigProp;
 import top.chiloven.lukosbot2.model.MessageIn;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
-import top.chiloven.lukosbot2.platform.Receiver;
-import top.chiloven.lukosbot2.platform.Sender;
+import top.chiloven.lukosbot2.platform.IReceiver;
+import top.chiloven.lukosbot2.platform.ISender;
 
 import java.util.function.Consumer;
 
-public final class DiscordReceiver implements Receiver {
+public final class DiscordReceiver implements IReceiver {
 
     private final DiscordStack stack;
     private Consumer<MessageIn> sink = __ -> {
@@ -30,7 +30,7 @@ public final class DiscordReceiver implements Receiver {
         stack.setSink(this.sink);
     }
 
-    public Sender sender() throws Exception {
+    public ISender sender() throws Exception {
         start(); // idempotent
         return new DiscordSender(stack);
     }

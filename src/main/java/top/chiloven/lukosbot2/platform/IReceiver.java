@@ -7,7 +7,7 @@ import java.util.function.Consumer;
 /**
  * Receiver interface: responsible for receiving messages from a specific platform and passing them to the message handler
  */
-public interface Receiver extends AutoCloseable {
+public interface IReceiver extends AutoCloseable {
     ChatPlatform platform();
 
     /**

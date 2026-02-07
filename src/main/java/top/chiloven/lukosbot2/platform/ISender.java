@@ -5,7 +5,7 @@ import top.chiloven.lukosbot2.model.MessageOut;
 /**
  * Sender interface: responsible for sending messages to the appropriate platform
  */
-public interface Sender {
+public interface ISender {
     /**
      * Send a message
      *

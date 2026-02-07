@@ -1,19 +1,19 @@
 package top.chiloven.lukosbot2.commands.wikis;
 
-import top.chiloven.lukosbot2.core.command.CommandSource;
-import top.chiloven.lukosbot2.model.Attachment;
-import top.chiloven.lukosbot2.model.MessageOut;
-import top.chiloven.lukosbot2.util.feature.WebScreenshot;
-import top.chiloven.lukosbot2.util.feature.WebToMarkdown;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.core.command.CommandSource;
+import top.chiloven.lukosbot2.model.Attachment;
+import top.chiloven.lukosbot2.model.MessageOut;
+import top.chiloven.lukosbot2.util.feature.WebScreenshot;
+import top.chiloven.lukosbot2.util.feature.WebToMarkdown;
 
+import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 import static top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
 import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
-import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 
 /**
  * The /wiki command for Wikipedia screenshots and markdown conversion.
@@ -28,7 +28,7 @@ import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
         matchIfMissing = true
 )
 @Log4j2
-public class WikiCommand implements WikiishCommand {
+public class WikiCommand implements IWikiishCommand {
 
     @Override
     public String defaultLang() {

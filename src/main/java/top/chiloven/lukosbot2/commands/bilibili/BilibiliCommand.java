@@ -1,15 +1,15 @@
 package top.chiloven.lukosbot2.commands.bilibili;
 
-import top.chiloven.lukosbot2.commands.BotCommand;
-import top.chiloven.lukosbot2.core.command.CommandSource;
-import top.chiloven.lukosbot2.util.JsonUtils;
-import top.chiloven.lukosbot2.util.StringUtils;
 import com.google.gson.JsonObject;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.commands.IBotCommand;
+import top.chiloven.lukosbot2.core.command.CommandSource;
+import top.chiloven.lukosbot2.util.JsonUtils;
+import top.chiloven.lukosbot2.util.StringUtils;
 
 import java.net.URI;
 import java.net.URLEncoder;
@@ -43,7 +43,7 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuil
         matchIfMissing = true
 )
 @Log4j2
-public class BilibiliCommand implements BotCommand {
+public class BilibiliCommand implements IBotCommand {
 
     public static final StringUtils su = StringUtils.getStringUtils();
     public static final JsonUtils ju = JsonUtils.getJsonUtils();

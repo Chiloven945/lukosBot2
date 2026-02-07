@@ -1,21 +1,21 @@
 package top.chiloven.lukosbot2.commands;
 
-import top.chiloven.lukosbot2.core.command.CommandSource;
-import top.chiloven.lukosbot2.core.service.ServiceManager;
-import top.chiloven.lukosbot2.core.service.ServiceState;
-import top.chiloven.lukosbot2.services.BotService;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.core.command.CommandSource;
+import top.chiloven.lukosbot2.core.service.ServiceManager;
+import top.chiloven.lukosbot2.core.service.ServiceState;
+import top.chiloven.lukosbot2.services.IBotService;
 
 import java.util.Comparator;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
 import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
-import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 
 @Service
 @ConditionalOnProperty(
@@ -24,7 +24,7 @@ import static com.mojang.brigadier.arguments.StringArgumentType.getString;
         havingValue = "true",
         matchIfMissing = true
 )
-public class ServiceCommand implements BotCommand {
+public class ServiceCommand implements IBotCommand {
 
     private final ServiceManager services;
 
@@ -98,7 +98,7 @@ public class ServiceCommand implements BotCommand {
 
         return services.registry().all().stream()
                 .filter(s -> services.isAllowed(s.name()))
-                .sorted(Comparator.comparing(BotService::name))
+                .sorted(Comparator.comparing(IBotService::name))
                 .map(s -> {
                     ServiceState ss = st.get(s.name());
                     boolean enabled = ss != null && ss.isEnabled();

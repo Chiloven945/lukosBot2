@@ -18,7 +18,7 @@ import java.util.Map;
 
 @Service
 @Log4j2
-public class YamlServiceStateStore implements ServiceStateStore {
+public class YamlServiceStateStore implements IServiceStateStore {
 
     private static final Path CONFIG_DIR = Paths.get("config");
     private static final Path FILE = CONFIG_DIR.resolve("service.yml");

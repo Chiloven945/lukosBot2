@@ -1,10 +1,5 @@
 package top.chiloven.lukosbot2.lifecycle.platform;
 
-import top.chiloven.lukosbot2.config.AppProperties;
-import top.chiloven.lukosbot2.core.MessageDispatcher;
-import top.chiloven.lukosbot2.core.MessageSenderHub;
-import top.chiloven.lukosbot2.platform.ChatPlatform;
-import top.chiloven.lukosbot2.platform.onebot.OneBotReceiver;
 import com.mikuac.shiro.core.BotContainer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -12,6 +7,11 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
+import top.chiloven.lukosbot2.config.AppProperties;
+import top.chiloven.lukosbot2.core.MessageDispatcher;
+import top.chiloven.lukosbot2.core.MessageSenderHub;
+import top.chiloven.lukosbot2.platform.ChatPlatform;
+import top.chiloven.lukosbot2.platform.onebot.OneBotReceiver;
 
 import java.util.List;
 
@@ -19,7 +19,7 @@ import java.util.List;
 @ConditionalOnProperty(prefix = "lukos.onebot", name = "enabled", havingValue = "true")
 @RequiredArgsConstructor
 @Log4j2
-public class OneBotLifecycle implements SmartLifecycle, PlatformAdapter {
+public class OneBotLifecycle implements SmartLifecycle, IPlatformAdapter {
 
     private final MessageDispatcher md;
     private final MessageSenderHub msh;

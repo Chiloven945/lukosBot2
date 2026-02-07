@@ -1,9 +1,9 @@
 package top.chiloven.lukosbot2.commands;
 
-import top.chiloven.lukosbot2.core.command.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
+import top.chiloven.lukosbot2.core.command.CommandSource;
 
-public class CommandCommand implements BotCommand {
+public class CommandCommand implements IBotCommand {
     @Override
     public String name() {
         return "command";

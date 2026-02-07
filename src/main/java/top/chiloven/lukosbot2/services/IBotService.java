@@ -65,7 +65,7 @@ import java.util.Map;
  *
  * @author Chiloven945
  */
-public interface BotService {
+public interface IBotService {
 
     /**
      * Returns the unique identifier of this service.

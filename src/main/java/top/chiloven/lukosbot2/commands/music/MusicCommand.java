@@ -1,16 +1,16 @@
 package top.chiloven.lukosbot2.commands.music;
 
-import top.chiloven.lukosbot2.commands.BotCommand;
-import top.chiloven.lukosbot2.commands.music.provider.MusicProvider;
-import top.chiloven.lukosbot2.commands.music.provider.SoundCloudMusicProvider;
-import top.chiloven.lukosbot2.commands.music.provider.SpotifyMusicProvider;
-import top.chiloven.lukosbot2.config.CommandConfigProp;
-import top.chiloven.lukosbot2.core.command.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.commands.IBotCommand;
+import top.chiloven.lukosbot2.commands.music.provider.IMusicProvider;
+import top.chiloven.lukosbot2.commands.music.provider.SoundCloudMusicProvider;
+import top.chiloven.lukosbot2.commands.music.provider.SpotifyMusicProvider;
+import top.chiloven.lukosbot2.config.CommandConfigProp;
+import top.chiloven.lukosbot2.core.command.CommandSource;
 
 import java.util.List;
 import java.util.function.Predicate;
@@ -31,9 +31,9 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuil
         matchIfMissing = true
 )
 @Log4j2
-public class MusicCommand implements BotCommand {
-    private final MusicProvider spotify;
-    private final MusicProvider soundCloud;
+public class MusicCommand implements IBotCommand {
+    private final IMusicProvider spotify;
+    private final IMusicProvider soundCloud;
 
     public MusicCommand(CommandConfigProp ccp) {
         CommandConfigProp.Music.Spotify sp = ccp.getMusic().getSpotify();
@@ -124,7 +124,7 @@ public class MusicCommand implements BotCommand {
 
     private int runSearch(CommandSource src, String query, String platformName) {
         try {
-            MusicProvider provider = pickProvider(platformName);
+            IMusicProvider provider = pickProvider(platformName);
             if (provider == null) {
                 src.reply("未配置可用的音乐平台（Spotify / SoundCloud），请在 config/application.yml 中设置 lukos.music.*");
                 return 0;
@@ -145,7 +145,7 @@ public class MusicCommand implements BotCommand {
 
     private int runLink(CommandSource src, String link) {
         try {
-            MusicProvider provider = detectProviderByLink(link);
+            IMusicProvider provider = detectProviderByLink(link);
             if (provider == null) {
                 src.reply("无法识别链接所属平台，仅支持 Spotify / SoundCloud。");
                 return 0;
@@ -164,7 +164,7 @@ public class MusicCommand implements BotCommand {
         }
     }
 
-    private MusicProvider pickProvider(String platformName) {
+    private IMusicProvider pickProvider(String platformName) {
         if (platformName == null) {
             // Spotify default, then SoundCloud
             if (spotify != null) return spotify;
@@ -178,7 +178,7 @@ public class MusicCommand implements BotCommand {
         };
     }
 
-    private MusicProvider detectProviderByLink(String link) {
+    private IMusicProvider detectProviderByLink(String link) {
         if (link == null) return null;
         String s = link.toLowerCase();
         if (s.contains("open.spotify.com")) return spotify;

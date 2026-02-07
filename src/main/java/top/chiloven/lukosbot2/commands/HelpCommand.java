@@ -1,18 +1,18 @@
 package top.chiloven.lukosbot2.commands;
 
-import top.chiloven.lukosbot2.config.AppProperties;
-import top.chiloven.lukosbot2.core.command.CommandRegistry;
-import top.chiloven.lukosbot2.core.command.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.config.AppProperties;
+import top.chiloven.lukosbot2.core.command.CommandRegistry;
+import top.chiloven.lukosbot2.core.command.CommandSource;
 
 import static top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
 import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
 
 @Service
-public class HelpCommand implements BotCommand {
+public class HelpCommand implements IBotCommand {
 
     private final ObjectProvider<CommandRegistry> registryProvider;
     private final AppProperties appProperties;
@@ -30,7 +30,7 @@ public class HelpCommand implements BotCommand {
                         .executes(ctx -> {
                             StringBuilder sb = new StringBuilder("可用命令：\n");
                             registry().all().stream()
-                                    .filter(BotCommand::isVisible)
+                                    .filter(IBotCommand::isVisible)
                                     .forEach(c -> sb.append(appProperties.getPrefix())
                                             .append(c.name())
                                             .append(" - ")

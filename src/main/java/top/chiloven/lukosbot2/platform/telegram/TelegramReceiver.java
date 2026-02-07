@@ -2,12 +2,12 @@ package top.chiloven.lukosbot2.platform.telegram;
 
 import top.chiloven.lukosbot2.model.MessageIn;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
-import top.chiloven.lukosbot2.platform.Receiver;
-import top.chiloven.lukosbot2.platform.Sender;
+import top.chiloven.lukosbot2.platform.IReceiver;
+import top.chiloven.lukosbot2.platform.ISender;
 
 import java.util.function.Consumer;
 
-public final class TelegramReceiver implements Receiver {
+public final class TelegramReceiver implements IReceiver {
     private final TelegramStack stack;
     private Consumer<MessageIn> sink = __ -> {
     };
@@ -37,7 +37,7 @@ public final class TelegramReceiver implements Receiver {
     @Override
     public void stop() { /* Telegram SDK 无显式 stop，可忽略 */ }
 
-    public Sender sender() throws Exception {
+    public ISender sender() throws Exception {
         start();                           // 确保已启动（幂等）
         return new TelegramSender(stack);  // TelegramSender 复用同一个 stack.bot 发送
     }

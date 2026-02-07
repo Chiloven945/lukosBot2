@@ -1,14 +1,14 @@
 package top.chiloven.lukosbot2.commands;
 
-import top.chiloven.lukosbot2.core.command.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
+import top.chiloven.lukosbot2.core.command.CommandSource;
 
 /**
  * Record and send message.
  *
  * @author Chiloven945
  */
-public class CaveCommand implements BotCommand {
+public class CaveCommand implements IBotCommand {
     @Override
     public String name() {
         return "";

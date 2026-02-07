@@ -1,21 +1,21 @@
 package top.chiloven.lukosbot2.core.command;
 
-import top.chiloven.lukosbot2.config.AppProperties;
-import top.chiloven.lukosbot2.core.Processor;
-import top.chiloven.lukosbot2.model.MessageIn;
-import top.chiloven.lukosbot2.model.MessageOut;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.config.AppProperties;
+import top.chiloven.lukosbot2.core.IProcessor;
+import top.chiloven.lukosbot2.model.MessageIn;
+import top.chiloven.lukosbot2.model.MessageOut;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
 @Log4j2
-public class CommandProcessor implements Processor {
+public class CommandProcessor implements IProcessor {
 
     private final AppProperties props;
     private final CommandRegistry registry;

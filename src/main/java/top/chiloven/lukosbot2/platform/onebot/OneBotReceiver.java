@@ -1,13 +1,13 @@
 package top.chiloven.lukosbot2.platform.onebot;
 
+import com.mikuac.shiro.core.BotContainer;
 import top.chiloven.lukosbot2.model.MessageIn;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
-import top.chiloven.lukosbot2.platform.Receiver;
-import com.mikuac.shiro.core.BotContainer;
+import top.chiloven.lukosbot2.platform.IReceiver;
 
 import java.util.function.Consumer;
 
-public final class OneBotReceiver implements Receiver, AutoCloseable {
+public final class OneBotReceiver implements IReceiver, AutoCloseable {
 
     private final BotContainer botContainer;
 

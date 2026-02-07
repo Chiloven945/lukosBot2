@@ -1,11 +1,11 @@
 package top.chiloven.lukosbot2.commands;
 
-import top.chiloven.lukosbot2.core.command.CommandSource;
-import top.chiloven.lukosbot2.util.MathUtils;
 import com.mojang.brigadier.CommandDispatcher;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.core.command.CommandSource;
+import top.chiloven.lukosbot2.util.MathUtils;
 
 import java.time.LocalDate;
 
@@ -19,7 +19,7 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuild
         havingValue = "true",
         matchIfMissing = true
 )
-public class LuckCommand implements BotCommand {
+public class LuckCommand implements IBotCommand {
     private static final MathUtils mu = MathUtils.getMathUtils();
 
     @Override

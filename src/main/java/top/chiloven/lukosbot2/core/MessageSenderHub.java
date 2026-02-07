@@ -1,12 +1,12 @@
 package top.chiloven.lukosbot2.core;
 
-import top.chiloven.lukosbot2.model.MessageOut;
-import top.chiloven.lukosbot2.platform.ChatPlatform;
-import top.chiloven.lukosbot2.platform.Sender;
-import top.chiloven.lukosbot2.util.StringUtils;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.model.MessageOut;
+import top.chiloven.lukosbot2.platform.ChatPlatform;
+import top.chiloven.lukosbot2.platform.ISender;
+import top.chiloven.lukosbot2.util.StringUtils;
 
 import java.util.EnumMap;
 import java.util.List;
@@ -17,7 +17,7 @@ import java.util.concurrent.ExecutorService;
 
 /**
  * Central hub for routing and delivering {@link MessageOut} messages to platform-specific
- * {@link Sender}s, supporting synchronous sends, asynchronous sends backed by a
+ * {@link ISender}s, supporting synchronous sends, asynchronous sends backed by a
  * virtual-thread executor, and batch delivery with optional order preservation; acts as the single egress point
  * so callers don’t manage sender lookups or concurrency themselves.
  */
@@ -25,25 +25,25 @@ import java.util.concurrent.ExecutorService;
 @Log4j2
 public class MessageSenderHub {
     public static final StringUtils su = StringUtils.getStringUtils();
-    private final Map<ChatPlatform, Sender> routes = new EnumMap<>(ChatPlatform.class);
+    private final Map<ChatPlatform, ISender> routes = new EnumMap<>(ChatPlatform.class);
 
     private final ExecutorService sendPool = Execs.newVirtualExecutor("send-");
 
     /**
-     * Registers (or replaces) the {@link Sender} responsible for delivering messages
+     * Registers (or replaces) the {@link ISender} responsible for delivering messages
      * on the given {@link ChatPlatform}, enabling the hub to route outgoing messages
      * by platform without callers holding sender references.
      *
      * @param p the chat platform whose messages should be handled by the provided sender; must not be {@code null}
      * @param s the sender implementation that performs the actual delivery for the platform; must not be {@code null}
      */
-    public void register(ChatPlatform p, Sender s) {
+    public void register(ChatPlatform p, ISender s) {
         routes.put(Objects.requireNonNull(p), Objects.requireNonNull(s));
     }
 
     /**
      * Sends a single {@link MessageOut} synchronously by routing it to the registered
-     * {@link Sender} for its platform, logging basic metadata and swallowing
+     * {@link ISender} for its platform, logging basic metadata and swallowing
      * delivery exceptions to prevent failures from propagating to the caller.
      *
      * @param out the outgoing message to deliver; must not be {@code null} and must contain a valid address with
@@ -53,7 +53,7 @@ public class MessageSenderHub {
         int att = (out.attachments() == null) ? 0 : out.attachments().size();
         log.info("OUT -> [{}] to chat={} text=\"{}\" attachments={}",
                 out.addr().platform(), out.addr().chatId(), su.truncate(out.text()), att);
-        Sender s = routes.get(out.addr().platform());
+        ISender s = routes.get(out.addr().platform());
         if (s == null) {
             log.warn("No Sender for platform: {}", out.addr().platform());
             return;

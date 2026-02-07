@@ -1,10 +1,10 @@
 package top.chiloven.lukosbot2.commands;
 
-import top.chiloven.lukosbot2.Constants;
-import top.chiloven.lukosbot2.core.command.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.Constants;
+import top.chiloven.lukosbot2.core.command.CommandSource;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
@@ -22,7 +22,7 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuild
         havingValue = "true",
         matchIfMissing = true
 )
-public class PingCommand implements BotCommand {
+public class PingCommand implements IBotCommand {
     private static final Constants CONST = new Constants();
     @Override
     public String name() {

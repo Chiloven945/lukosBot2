@@ -1,12 +1,12 @@
 package top.chiloven.lukosbot2.commands;
 
-import top.chiloven.lukosbot2.core.command.CommandSource;
-import top.chiloven.lukosbot2.util.feature.IpService;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.core.command.CommandSource;
+import top.chiloven.lukosbot2.util.feature.IpService;
 
 import java.io.IOException;
 
@@ -21,7 +21,7 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuil
         matchIfMissing = true
 )
 @Log4j2
-public class IpCommand implements BotCommand {
+public class IpCommand implements IBotCommand {
     public static final IpService IS = new IpService();
 
     @Override

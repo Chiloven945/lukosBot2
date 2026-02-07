@@ -1,15 +1,15 @@
 package top.chiloven.lukosbot2.core;
 
-import top.chiloven.lukosbot2.config.AppProperties;
-import top.chiloven.lukosbot2.core.service.ServiceManager;
-import top.chiloven.lukosbot2.model.MessageIn;
-import top.chiloven.lukosbot2.model.MessageOut;
-import top.chiloven.lukosbot2.util.StringUtils;
 import jakarta.annotation.PreDestroy;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.config.AppProperties;
+import top.chiloven.lukosbot2.core.service.ServiceManager;
+import top.chiloven.lukosbot2.model.MessageIn;
+import top.chiloven.lukosbot2.model.MessageOut;
+import top.chiloven.lukosbot2.util.StringUtils;
 
 import java.util.List;
 import java.util.Objects;
@@ -29,7 +29,7 @@ public class MessageDispatcher implements AutoCloseable {
     public static final StringUtils su = StringUtils.getStringUtils();
     private static final Logger log = LogManager.getLogger(MessageDispatcher.class);
 
-    private final Processor pipeline;
+    private final IProcessor pipeline;
     private final MessageSenderHub msh;
     private final ServiceManager services;
     private final StripedExecutor lanes;

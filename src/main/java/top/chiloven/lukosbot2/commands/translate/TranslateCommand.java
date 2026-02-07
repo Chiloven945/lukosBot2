@@ -1,13 +1,13 @@
 package top.chiloven.lukosbot2.commands.translate;
 
-import top.chiloven.lukosbot2.commands.BotCommand;
-import top.chiloven.lukosbot2.config.CommandConfigProp;
-import top.chiloven.lukosbot2.config.CommandConfigProp.Translate;
-import top.chiloven.lukosbot2.core.command.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.commands.IBotCommand;
+import top.chiloven.lukosbot2.config.CommandConfigProp;
+import top.chiloven.lukosbot2.config.CommandConfigProp.Translate;
+import top.chiloven.lukosbot2.core.command.CommandSource;
 
 import java.util.Arrays;
 import java.util.regex.Pattern;
@@ -23,7 +23,7 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuil
         havingValue = "true",
         matchIfMissing = true
 )
-public class TranslateCommand implements BotCommand {
+public class TranslateCommand implements IBotCommand {
     public final TranslationService ts;
     private final Translate translate;
 

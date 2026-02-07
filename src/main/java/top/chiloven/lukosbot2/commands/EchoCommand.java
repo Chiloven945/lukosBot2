@@ -1,14 +1,14 @@
 package top.chiloven.lukosbot2.commands;
 
-import top.chiloven.lukosbot2.core.command.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.core.command.CommandSource;
 
+import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 import static top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
 import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
-import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 
 @Service
 @ConditionalOnProperty(
@@ -17,7 +17,7 @@ import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
         havingValue = "true",
         matchIfMissing = true
 )
-public class EchoCommand implements BotCommand {
+public class EchoCommand implements IBotCommand {
     @Override
     public String name() {
         return "echo";

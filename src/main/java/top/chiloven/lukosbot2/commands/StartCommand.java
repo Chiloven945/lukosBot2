@@ -1,13 +1,13 @@
 package top.chiloven.lukosbot2.commands;
 
-import top.chiloven.lukosbot2.core.command.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.core.command.CommandSource;
 
 import static top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
 
 @Service
-public class StartCommand implements BotCommand {
+public class StartCommand implements IBotCommand {
     @Override
     public String name() {
         return "start";

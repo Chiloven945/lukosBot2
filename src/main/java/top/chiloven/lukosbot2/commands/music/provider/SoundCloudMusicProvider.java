@@ -1,10 +1,10 @@
 package top.chiloven.lukosbot2.commands.music.provider;
 
-import top.chiloven.lukosbot2.commands.music.MusicPlatform;
-import top.chiloven.lukosbot2.commands.music.TrackInfo;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import top.chiloven.lukosbot2.commands.music.MusicPlatform;
+import top.chiloven.lukosbot2.commands.music.TrackInfo;
 
 import java.net.URI;
 import java.net.URLEncoder;
@@ -13,7 +13,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.stream.Stream;
 
-public class SoundCloudMusicProvider implements MusicProvider {
+public class SoundCloudMusicProvider implements IMusicProvider {
 
     private static final String API_BASE_V2 = "https://api-v2.soundcloud.com";
 

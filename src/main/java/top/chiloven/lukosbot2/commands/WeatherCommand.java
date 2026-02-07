@@ -1,9 +1,9 @@
 package top.chiloven.lukosbot2.commands;
 
-import top.chiloven.lukosbot2.core.command.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.core.command.CommandSource;
 
 @Service
 @ConditionalOnProperty(
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
         havingValue = "true",
         matchIfMissing = true
 )
-public class WeatherCommand implements BotCommand {
+public class WeatherCommand implements IBotCommand {
 
     @Override
     public String name() {

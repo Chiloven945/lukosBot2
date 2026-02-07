@@ -1,21 +1,21 @@
 package top.chiloven.lukosbot2.platform.discord;
 
-import top.chiloven.lukosbot2.model.Attachment;
-import top.chiloven.lukosbot2.model.MessageOut;
-import top.chiloven.lukosbot2.model.OutContentType;
-import top.chiloven.lukosbot2.platform.Sender;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.utils.FileUpload;
+import top.chiloven.lukosbot2.model.Attachment;
+import top.chiloven.lukosbot2.model.MessageOut;
+import top.chiloven.lukosbot2.model.OutContentType;
+import top.chiloven.lukosbot2.platform.ISender;
 
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-public final class DiscordSender implements Sender {
+public final class DiscordSender implements ISender {
     private final DiscordStack stack;
 
     public DiscordSender(DiscordStack stack) {

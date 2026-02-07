@@ -12,7 +12,7 @@ import java.util.List;
  * semantics—treating {@code null} and empty lists equivalently—via {@link #NO_OUTPUT} and
  * {@link #isEmpty(java.util.List)}, allowing pipelines to short-circuit or aggregate consistently.
  */
-public interface Processor {
+public interface IProcessor {
     /**
      * Canonical immutable empty output list used to represent “no result” from a processor; this shared constant
      * avoids per-call allocations, standardizes the semantics where {@code null} and an empty list are equivalent,

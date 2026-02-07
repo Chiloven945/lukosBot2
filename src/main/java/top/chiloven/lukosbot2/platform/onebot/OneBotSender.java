@@ -1,18 +1,18 @@
 package top.chiloven.lukosbot2.platform.onebot;
 
-import top.chiloven.lukosbot2.model.Attachment;
-import top.chiloven.lukosbot2.model.MessageOut;
-import top.chiloven.lukosbot2.model.OutContentType;
-import top.chiloven.lukosbot2.platform.Sender;
 import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.core.BotContainer;
+import top.chiloven.lukosbot2.model.Attachment;
+import top.chiloven.lukosbot2.model.MessageOut;
+import top.chiloven.lukosbot2.model.OutContentType;
+import top.chiloven.lukosbot2.platform.ISender;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class OneBotSender implements Sender {
+public final class OneBotSender implements ISender {
 
     private final BotContainer botContainer;
 

@@ -1,11 +1,11 @@
 package top.chiloven.lukosbot2.commands;
 
-import top.chiloven.lukosbot2.core.command.CommandSource;
-import top.chiloven.lukosbot2.util.MathUtils;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.core.command.CommandSource;
+import top.chiloven.lukosbot2.util.MathUtils;
 
 import java.math.BigInteger;
 import java.util.stream.IntStream;
@@ -20,7 +20,7 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuil
         havingValue = "true",
         matchIfMissing = true
 )
-public class DiceCommand implements BotCommand {
+public class DiceCommand implements IBotCommand {
 
     private static final MathUtils mu = MathUtils.getMathUtils();
 

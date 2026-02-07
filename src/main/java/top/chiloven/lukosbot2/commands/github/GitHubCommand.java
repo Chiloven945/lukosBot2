@@ -1,14 +1,14 @@
 package top.chiloven.lukosbot2.commands.github;
 
-import top.chiloven.lukosbot2.config.CommandConfigProp;
-import top.chiloven.lukosbot2.commands.BotCommand;
-import top.chiloven.lukosbot2.core.command.CommandSource;
 import com.google.gson.JsonObject;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.commands.IBotCommand;
+import top.chiloven.lukosbot2.config.CommandConfigProp;
+import top.chiloven.lukosbot2.core.command.CommandSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,7 +32,7 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuil
         matchIfMissing = true
 )
 @Log4j2
-public class GitHubCommand implements BotCommand {
+public class GitHubCommand implements IBotCommand {
     private final GitHubApi api;
 
     public GitHubCommand(CommandConfigProp ccp) {

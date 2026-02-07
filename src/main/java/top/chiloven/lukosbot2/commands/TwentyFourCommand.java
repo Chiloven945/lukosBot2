@@ -1,15 +1,15 @@
 package top.chiloven.lukosbot2.commands;
 
-import top.chiloven.lukosbot2.config.CommandConfigProp;
-import top.chiloven.lukosbot2.core.MessageSenderHub;
-import top.chiloven.lukosbot2.core.command.CommandSource;
-import top.chiloven.lukosbot2.model.Address;
-import top.chiloven.lukosbot2.model.MessageOut;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.config.CommandConfigProp;
+import top.chiloven.lukosbot2.core.MessageSenderHub;
+import top.chiloven.lukosbot2.core.command.CommandSource;
+import top.chiloven.lukosbot2.model.Address;
+import top.chiloven.lukosbot2.model.MessageOut;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -26,7 +26,7 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuil
         matchIfMissing = true
 )
 @Log4j2
-public class TwentyFourCommand implements BotCommand {
+public class TwentyFourCommand implements IBotCommand {
 
     private static final double TARGET = 24.0;
     private static final double EPS = 1e-6;

@@ -10,7 +10,7 @@ import java.util.List;
  * Every platform adapter implements this interface and is called in SmartLifecycle.start().
  * The adapter should initialize the platform connection and return a list of resources to be closed on shutdown.
  */
-public interface PlatformAdapter {
+public interface IPlatformAdapter {
     /**
      * Platform startup, return resources that need to be closed uniformly (such as connections, threads, Client instances wrapped as AutoCloseable)
      *

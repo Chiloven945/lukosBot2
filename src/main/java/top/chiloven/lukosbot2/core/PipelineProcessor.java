@@ -1,11 +1,11 @@
 package top.chiloven.lukosbot2.core;
 
-import top.chiloven.lukosbot2.core.command.CommandProcessor;
-import top.chiloven.lukosbot2.model.MessageIn;
-import top.chiloven.lukosbot2.model.MessageOut;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.core.command.CommandProcessor;
+import top.chiloven.lukosbot2.model.MessageIn;
+import top.chiloven.lukosbot2.model.MessageOut;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -17,13 +17,13 @@ import java.util.concurrent.ExecutorService;
 
 /**
  * Spring-managed pipeline processor that delegates to an internal {@link Pipeline}
- * composed of one or more {@link Processor} instances.
+ * composed of one or more {@link IProcessor} instances.
  * <p>
  * Default wiring: only {@link CommandProcessor} in STOP_ON_FIRST mode.
  */
 @Service
 @Log4j2
-public class PipelineProcessor implements Processor {
+public class PipelineProcessor implements IProcessor {
 
     private final Pipeline delegate;
 
@@ -57,11 +57,11 @@ public class PipelineProcessor implements Processor {
      * Internal reusable pipeline implementation.
      */
     @Getter
-    private static class Pipeline implements Processor {
+    private static class Pipeline implements IProcessor {
         /**
          * Ordered chain of processors that form the pipeline.
          */
-        private final List<Processor> chain;
+        private final List<IProcessor> chain;
         /**
          * Execution mode of the pipeline.
          */
@@ -82,14 +82,14 @@ public class PipelineProcessor implements Processor {
          * @param mode     the mode of the pipeline
          * @param parallel whether to run processors in parallel (only meaningful with COLLECT_ALL)
          */
-        Pipeline(List<Processor> chain, Mode mode, boolean parallel) {
+        Pipeline(List<IProcessor> chain, Mode mode, boolean parallel) {
             this.chain = new ArrayList<>(Objects.requireNonNull(chain, "chain"));
             this.mode = Objects.requireNonNull(mode, "mode");
             this.parallel = parallel;
             this.parallelExecutor = parallel ? Execs.newVirtualExecutor() : null;
         }
 
-        Pipeline add(Processor p) {
+        Pipeline add(IProcessor p) {
             chain.add(Objects.requireNonNull(p, "processor"));
             return this;
         }
@@ -99,9 +99,9 @@ public class PipelineProcessor implements Processor {
             if (chain.isEmpty()) return Collections.emptyList();
 
             if (mode == Mode.STOP_ON_FIRST) {
-                for (Processor p : chain) {
+                for (IProcessor p : chain) {
                     List<MessageOut> r = safeHandle(p, in);
-                    if (!Processor.isEmpty(r)) {
+                    if (!IProcessor.isEmpty(r)) {
                         return r; // short-circuit on first non-empty result
                     }
                 }
@@ -111,9 +111,9 @@ public class PipelineProcessor implements Processor {
             // Mode.COLLECT_ALL
             if (!parallel) {
                 List<MessageOut> outs = new ArrayList<>();
-                for (Processor p : chain) {
+                for (IProcessor p : chain) {
                     List<MessageOut> r = safeHandle(p, in);
-                    if (!Processor.isEmpty(r)) outs.addAll(r);
+                    if (!IProcessor.isEmpty(r)) outs.addAll(r);
                 }
                 return outs;
             } else {
@@ -126,7 +126,7 @@ public class PipelineProcessor implements Processor {
                 for (CompletableFuture<List<MessageOut>> f : futures) {
                     try {
                         List<MessageOut> r = f.get();
-                        if (!Processor.isEmpty(r)) outs.addAll(r);
+                        if (!IProcessor.isEmpty(r)) outs.addAll(r);
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
                         log.warn("Pipeline interrupted", ie);
@@ -141,13 +141,13 @@ public class PipelineProcessor implements Processor {
         /**
          * Execute a single processor with exception isolation.
          */
-        private List<MessageOut> safeHandle(Processor p, MessageIn in) {
+        private List<MessageOut> safeHandle(IProcessor p, MessageIn in) {
             try {
                 List<MessageOut> r = p.handle(in);
-                return Processor.isEmpty(r) ? Processor.NO_OUTPUT : r;
+                return IProcessor.isEmpty(r) ? IProcessor.NO_OUTPUT : r;
             } catch (Throwable ex) {
                 log.error("Processor {} error", p.getClass().getName(), ex);
-                return Processor.NO_OUTPUT;
+                return IProcessor.NO_OUTPUT;
             }
         }
     }

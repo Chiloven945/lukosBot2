@@ -1,13 +1,5 @@
 package top.chiloven.lukosbot2.platform.discord;
 
-import top.chiloven.lukosbot2.commands.BotCommand;
-import top.chiloven.lukosbot2.config.ProxyConfigProp;
-import top.chiloven.lukosbot2.core.command.CommandRegistry;
-import top.chiloven.lukosbot2.model.Address;
-import top.chiloven.lukosbot2.model.MessageIn;
-import top.chiloven.lukosbot2.model.MessageOut;
-import top.chiloven.lukosbot2.platform.ChatPlatform;
-import top.chiloven.lukosbot2.util.spring.SpringBeans;
 import lombok.extern.log4j.Log4j2;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
@@ -20,6 +12,14 @@ import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import okhttp3.OkHttpClient;
+import top.chiloven.lukosbot2.commands.IBotCommand;
+import top.chiloven.lukosbot2.config.ProxyConfigProp;
+import top.chiloven.lukosbot2.core.command.CommandRegistry;
+import top.chiloven.lukosbot2.model.Address;
+import top.chiloven.lukosbot2.model.MessageIn;
+import top.chiloven.lukosbot2.model.MessageOut;
+import top.chiloven.lukosbot2.platform.ChatPlatform;
+import top.chiloven.lukosbot2.util.spring.SpringBeans;
 
 import java.util.EnumSet;
 import java.util.List;
@@ -68,7 +68,7 @@ final class DiscordStack implements AutoCloseable {
             CommandRegistry registry = SpringBeans.getBean(CommandRegistry.class);
 
             List<SlashCommandData> slashCommands = registry.all().stream()
-                    .filter(BotCommand::isVisible)
+                    .filter(IBotCommand::isVisible)
                     .map(cmd -> {
                         String name = cmd.name();
                         if (name == null) {

@@ -1,6 +1,5 @@
 package top.chiloven.lukosbot2.commands;
 
-import top.chiloven.lukosbot2.core.command.CommandSource;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import jakarta.annotation.PostConstruct;
@@ -8,6 +7,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.net.whois.WhoisClient;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.core.command.CommandSource;
 
 import java.io.IOException;
 import java.util.*;
@@ -25,7 +25,7 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuil
         matchIfMissing = true
 )
 @Log4j2
-public class WhoisCommand implements BotCommand {
+public class WhoisCommand implements IBotCommand {
 
     private final Map<String, String> whoisServerMap = new HashMap<>();
 
