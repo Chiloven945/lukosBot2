@@ -32,10 +32,16 @@
     </Appenders>
 
     <Loggers>
-        <Root level="debug">
+        <!-- 1. Set the global floor to INFO (disables DEBUG for 3rd party libs) -->
+        <Root level="info">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="RollingFile"/>
             <AppenderRef ref="TraceFile"/>
         </Root>
+
+        <!-- 2. Re-enable DEBUG specifically for your code -->
+        <!-- Replace "top.chiloven.lukosbot2" with your actual base package -->
+        <Logger name="top.chiloven.lukosbot2" level="debug" additivity="true"/>
     </Loggers>
+
 </Configuration>
