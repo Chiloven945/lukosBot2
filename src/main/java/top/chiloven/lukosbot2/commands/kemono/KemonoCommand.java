@@ -302,6 +302,11 @@ public class KemonoCommand implements IBotCommand {
 
     // TODO: archive download feature
 
+    @Override
+    public boolean isVisible() {
+        return false;
+    }
+
     private String archivePostFromSpecific(Service service, String creatorId, String postId) throws IOException {
         throw new UnsupportedOperationException("未实现");
     }
