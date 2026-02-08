@@ -6,6 +6,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.jspecify.annotations.Nullable;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -16,9 +18,12 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 import java.util.StringJoiner;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.InflaterInputStream;
 
 public final class HttpJson {
     private static final int DEFAULT_READ_TIMEOUT = 10000;
+    private static final Map<String, String> DEFAULT_HEADERS = Map.of("Accept", "application/json", "Accept-Encoding", "identity");
 
     private final HttpClient client = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
@@ -30,6 +35,56 @@ public final class HttpJson {
 
     public static HttpJson getHttpJson() {
         return new HttpJson();
+    }
+
+    private static byte[] decodeByContentEncoding(byte[] raw, String encoding) throws IOException {
+        if (encoding.isEmpty() || "identity".equals(encoding)) return raw;
+
+        String[] encs = encoding.split(",");
+        byte[] data = raw;
+
+        for (String enc : encs) {
+            String e = enc.trim().toLowerCase();
+            switch (e) {
+                case "", "identity" -> {
+                }
+                case "gzip" -> data = gunzip(data);
+                case "deflate" -> data = inflate(data);
+                default -> throw new IOException("Unsupported Content-Encoding: " + encoding);
+            }
+        }
+        return data;
+    }
+
+    private static byte[] gunzip(byte[] gz) throws IOException {
+        try (ByteArrayInputStream bin = new ByteArrayInputStream(gz);
+             GZIPInputStream gin = new GZIPInputStream(bin);
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            gin.transferTo(out);
+            return out.toByteArray();
+        }
+    }
+
+    private static byte[] inflate(byte[] def) throws IOException {
+        try (ByteArrayInputStream bin = new java.io.ByteArrayInputStream(def);
+             InflaterInputStream in = new java.util.zip.InflaterInputStream(bin);
+             ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
+            in.transferTo(out);
+            return out.toByteArray();
+        }
+    }
+
+    private static String extractCharset(String contentType) {
+        if (contentType == null) return "UTF-8";
+        String ct = contentType.toLowerCase();
+        int i = ct.indexOf("charset=");
+        if (i < 0) return "UTF-8";
+        String cs = ct.substring(i + "charset=".length()).trim();
+        int semi = cs.indexOf(';');
+        if (semi >= 0) cs = cs.substring(0, semi).trim();
+        if (cs.isEmpty()) return "UTF-8";
+        if (cs.startsWith("\"") && cs.endsWith("\"") && cs.length() >= 2) cs = cs.substring(1, cs.length() - 1);
+        return cs;
     }
 
     /**
@@ -50,21 +105,28 @@ public final class HttpJson {
             HttpRequest.Builder b = HttpRequest.newBuilder()
                     .uri(uri)
                     .timeout(Duration.ofMillis(readTimeoutMs))
-                    .header("Accept", "application/json")
                     .GET();
 
             if (headers != null) headers.forEach(b::header);
 
-            HttpResponse<String> resp = client.send(b.build(), HttpResponse.BodyHandlers.ofString());
+            HttpResponse<byte[]> resp = client.send(b.build(), HttpResponse.BodyHandlers.ofByteArray());
             int code = resp.statusCode();
-            String body = resp.body();
+
+            String encoding = resp.headers().firstValue("Content-Encoding").orElse("").trim().toLowerCase();
+            String contentType = resp.headers().firstValue("Content-Type").orElse("");
+            String charset = extractCharset(contentType);
+
+            byte[] raw = resp.body();
+            byte[] plain = decodeByContentEncoding(raw, encoding);
+
+            String body = new String(plain, java.nio.charset.Charset.forName(charset));
 
             JsonElement root;
             try {
                 root = JsonParser.parseString(body);
             } catch (Exception e) {
                 if (code >= 400) throw new IOException("HTTP " + code);
-                throw new IOException("Response is not valid JSON");
+                throw new IOException("Response is not valid JSON", e);
             }
 
             if (code >= 400) throw new IOException(extractErrorMessage(root, code));
@@ -102,7 +164,7 @@ public final class HttpJson {
             URI uri,
             int readTimeoutMs
     ) throws IOException {
-        return getAny(uri, null, readTimeoutMs);
+        return getAny(uri, DEFAULT_HEADERS, readTimeoutMs);
     }
 
     /**
@@ -115,7 +177,7 @@ public final class HttpJson {
     public JsonElement getAny(
             URI uri
     ) throws IOException {
-        return getAny(uri, null, DEFAULT_READ_TIMEOUT);
+        return getAny(uri, DEFAULT_HEADERS, DEFAULT_READ_TIMEOUT);
     }
 
     /**
@@ -162,7 +224,7 @@ public final class HttpJson {
             String uri,
             int readTimeoutMs
     ) throws IOException {
-        return getAny(URI.create(uri), null, readTimeoutMs);
+        return getAny(URI.create(uri), DEFAULT_HEADERS, readTimeoutMs);
     }
 
     /**
@@ -175,7 +237,7 @@ public final class HttpJson {
     public JsonElement getAny(
             String uri
     ) throws IOException {
-        return getAny(URI.create(uri), null, DEFAULT_READ_TIMEOUT);
+        return getAny(URI.create(uri), DEFAULT_HEADERS, DEFAULT_READ_TIMEOUT);
     }
 
     /**
@@ -227,7 +289,7 @@ public final class HttpJson {
             URI uri,
             int readTimeoutMs
     ) throws IOException {
-        return getObject(uri, null, readTimeoutMs);
+        return getObject(uri, DEFAULT_HEADERS, readTimeoutMs);
     }
 
     /**
@@ -241,7 +303,7 @@ public final class HttpJson {
     public JsonObject getObject(
             URI uri
     ) throws IOException {
-        return getObject(uri, null, DEFAULT_READ_TIMEOUT);
+        return getObject(uri, DEFAULT_HEADERS, DEFAULT_READ_TIMEOUT);
     }
 
     /**
@@ -291,7 +353,7 @@ public final class HttpJson {
             String uri,
             int readTimeoutMs
     ) throws IOException {
-        return getObject(URI.create(uri), null, readTimeoutMs);
+        return getObject(URI.create(uri), DEFAULT_HEADERS, readTimeoutMs);
     }
 
     /**
@@ -305,7 +367,7 @@ public final class HttpJson {
     public JsonObject getObject(
             String uri
     ) throws IOException {
-        return getObject(URI.create(uri), null, DEFAULT_READ_TIMEOUT);
+        return getObject(URI.create(uri), DEFAULT_HEADERS, DEFAULT_READ_TIMEOUT);
     }
 
     /**
@@ -357,7 +419,7 @@ public final class HttpJson {
             URI uri,
             int readTimeoutMs
     ) throws IOException {
-        return getArray(uri, null, readTimeoutMs);
+        return getArray(uri, DEFAULT_HEADERS, readTimeoutMs);
     }
 
     /**
@@ -371,7 +433,7 @@ public final class HttpJson {
     public JsonArray getArray(
             URI uri
     ) throws IOException {
-        return getArray(uri, null, DEFAULT_READ_TIMEOUT);
+        return getArray(uri, DEFAULT_HEADERS, DEFAULT_READ_TIMEOUT);
     }
 
     /**
@@ -421,7 +483,7 @@ public final class HttpJson {
             String uri,
             int readTimeoutMs
     ) throws IOException {
-        return getArray(URI.create(uri), null, readTimeoutMs);
+        return getArray(URI.create(uri), DEFAULT_HEADERS, readTimeoutMs);
     }
 
     /**
@@ -435,7 +497,7 @@ public final class HttpJson {
     public JsonArray getArray(
             String uri
     ) throws IOException {
-        return getArray(URI.create(uri), null, DEFAULT_READ_TIMEOUT);
+        return getArray(URI.create(uri), DEFAULT_HEADERS, DEFAULT_READ_TIMEOUT);
     }
 
     /**
