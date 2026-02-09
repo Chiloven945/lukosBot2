@@ -5,6 +5,7 @@ import lombok.Getter;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * The service that kemono.cr supports
@@ -42,34 +43,51 @@ public enum Service {
         return SERVICE_MAP.getOrDefault(id, UNKNOWN);
     }
 
-    // TODO: service url parsing
+    /**
+     * Parse the post information and the specific service in the service URL.
+     *
+     * @param uri a URI stored the URL
+     * @return a {@link ServiceAndPostId} instance stored with a {@link Service} and a {@link String} service post id
+     * @see ServiceAndPostId
+     */
     public static ServiceAndPostId parseServicePostUrl(URI uri) {
         String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase();
 
-//        if (host.contains("patreon.com")) {
-//            return new ServiceAndPostId(PATREON, parsePatreonPostId(uri));
-//        }
-//        if (host.contains("fanbox.cc")) {
-//            return new ServiceAndPostId(FANBOX, parseFanboxPostId(uri));
-//        }
-//        if (host.contains("fantia.jp")) {
-//            return new ServiceAndPostId(FANTIA, parseFantiaPostId(uri));
-//        }
-//        if (host.contains("afdian.net")) {
-//            return new ServiceAndPostId(AFDIAN, parseAfdianPostId(uri));
-//        }
-//        if (host.contains("boosty.to")) {
-//            return new ServiceAndPostId(BOOSTY, parseBoostyPostId(uri));
-//        }
-//        if (host.contains("gumroad.com")) {
-//            return new ServiceAndPostId(GUMROAD, parseGumroadPostId(uri));
-//        }
-//        if (host.contains("subscribestar.com")) {
-//            return new ServiceAndPostId(SUBSCRIBE_STAR, parseSubscribeStarPostId(uri));
-//        }
-//        if (host.contains("dlsite.com")) {
-//            return new ServiceAndPostId(DL_SITE, parseDlsitePostId(uri));
-//        }
+        try {
+            if (host.contains("patreon.com")) {
+                String id = Pattern.compile("-(\\d+)(?:[/?#].*)?$").matcher(uri.toString()).group(1);
+                return new ServiceAndPostId(PATREON, id);
+            }
+            if (host.contains("fanbox.cc")) {
+                String id = Pattern.compile("/posts/(\\d+)(?:[/?#].*)?$").matcher(uri.toString()).group(1);
+                return new ServiceAndPostId(FANBOX, id);
+            }
+            if (host.contains("fantia.jp")) {
+                String id = Pattern.compile("/posts/(\\d+)(?:[/?#].*)?$").matcher(uri.toString()).group(1);
+                return new ServiceAndPostId(FANTIA, id);
+            }
+            if (host.contains("afdian.net")) {
+                String id = Pattern.compile("/p/([a-f0-9]+)(?:[/?#].*)?$").matcher(uri.toString()).group(1);
+                return new ServiceAndPostId(AFDIAN, id);
+            }
+            if (host.contains("boosty.to")) {
+                String id = Pattern.compile("/posts/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})(?:[/?#].*)?$").matcher(uri.toString()).group(1);
+                return new ServiceAndPostId(BOOSTY, id);
+            }
+            if (host.contains("gumroad.com")) {
+                throw new IllegalArgumentException("无法对 Gumroad 的链接进行解析……");
+            }
+            if (host.contains("subscribestar.com")) {
+                String id = Pattern.compile("/posts/(\\d+)(?:[/?#].*)?$").matcher(uri.toString()).group(1);
+                return new ServiceAndPostId(SUBSCRIBE_STAR, id);
+            }
+            if (host.contains("dlsite.com")) {
+                String id = Pattern.compile("/product_id/([A-Z0-9]+)\\.html(?:[?#].*)?$").matcher(uri.toString()).group(1);
+                return new ServiceAndPostId(DL_SITE, id);
+            }
+        } catch (Exception e) {
+            throw new IllegalArgumentException("错误的平台链接：" + uri);
+        }
 
         throw new IllegalArgumentException("不支持的平台链接: " + uri);
     }
@@ -79,7 +97,12 @@ public enum Service {
         return id;
     }
 
+    /**
+     * A record with a {@link Service} and a {@link String} service post id.
+     *
+     * @param service       the service of the post
+     * @param servicePostId the service post id
+     */
     public record ServiceAndPostId(Service service, String servicePostId) {
     }
-
 }
