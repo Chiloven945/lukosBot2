@@ -2,11 +2,19 @@ package top.chiloven.lukosbot2.commands.kemono.model;
 
 import com.google.gson.JsonObject;
 import org.jspecify.annotations.NonNull;
-import top.chiloven.lukosbot2.util.TimeUtil;
+import top.chiloven.lukosbot2.util.TimeUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Represent a file information return by the {@code hash_search}
+ *
+ * @param id    the id of the file
+ * @param hash  the hash
+ * @param added the time that the file get added
+ * @param posts the Post(s) that the file appear on
+ */
 public record File(
         String id,
         String hash,
@@ -18,7 +26,7 @@ public record File(
                 obj.get("id").getAsString(),
                 obj.get("hash").getAsString(),
                 LocalDateTime.parse(obj.get("added").getAsString()),
-                Post.fromJsonArray(obj.get("posts").getAsJsonArray())
+                Post.fromBriefList(obj.get("posts").getAsJsonArray())
         );
     }
 
@@ -27,10 +35,10 @@ public record File(
 
         sb.append("ID: ").append(id).append("\n");
         sb.append("哈希值：").append(hash).append("\n");
-        sb.append("添加时间：").append(added.format(TimeUtil.getDTF())).append("\n");
+        sb.append("添加时间：").append(added.format(TimeUtils.getDTF())).append("\n");
         sb.append("出现于：").append("\n");
         for (Post post : posts) {
-            sb.append("  - ").append(post.getStringBrief()).append("\n");
+            sb.append("  - ").append(post.getBrief()).append("\n");
         }
 
         return sb.toString();
