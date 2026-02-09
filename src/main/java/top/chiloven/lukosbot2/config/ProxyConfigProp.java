@@ -2,16 +2,16 @@ package top.chiloven.lukosbot2.config;
 
 import jakarta.annotation.PostConstruct;
 import lombok.Data;
+import lombok.extern.log4j.Log4j2;
 import okhttp3.Credentials;
 import okhttp3.OkHttpClient;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
-import java.net.Authenticator;
-import java.net.InetSocketAddress;
-import java.net.PasswordAuthentication;
-import java.net.Proxy;
+import java.net.*;
+import java.net.http.HttpClient;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Unified proxy configuration (SOCKS5 / HTTPS CONNECT).<br>
@@ -20,10 +20,15 @@ import java.util.List;
  * 2. Provide {@link #applyTo(OkHttpClient.Builder)}, {@link #toSeleniumProxy()},
  * and {@link #chromiumProxyArg()} for libraries that require explicit injection.<br>
  */
+@Log4j2
 @Data
 @Configuration
 @ConfigurationProperties(prefix = "lukos.proxy")
 public class ProxyConfigProp {
+
+    /* TODO: refactor this Proxy abomination fully, supports SOCKS and HTTPS simultaneously because something
+         requires SOCKS while something requires HTTPS (and this implementation is garbage >:( )
+         (fuck you git i have to write this again) */
 
     ///  Whether to enable the proxy, default is false.
     private boolean enabled = false;
@@ -56,7 +61,6 @@ public class ProxyConfigProp {
     public void applyJvmWide() {
         if (!enabled) return;
 
-        // 1) nonProxyHostsList 允许为 null，安全合并
         String result = (nonProxyHostsList == null || nonProxyHostsList.isEmpty())
                 ? ""
                 : String.join("|", nonProxyHostsList);
@@ -65,14 +69,11 @@ public class ProxyConfigProp {
             System.setProperty("socksNonProxyHosts", result);
         }
 
-        // 2) 基本健壮性：host/port 未配置就直接返回（避免 NPE/无意义设置）
         if (host == null || host.isBlank() || port <= 0) {
-            // 可选：换成你的日志体系
-            System.err.println("[ProxyConfig] proxy enabled but host/port is invalid, skip applying JVM proxy: host=" + host + ", port=" + port);
+            log.error("[ProxyConfig] proxy enabled but host/port is invalid, skip applying JVM proxy: host={}, port={}", host, port);
             return;
         }
 
-        // 3) 设置系统代理
         String t = (type == null) ? "NONE" : type.trim().toUpperCase();
         switch (t) {
             case "HTTPS" -> {
@@ -113,7 +114,29 @@ public class ProxyConfigProp {
         }
     }
 
-    // ===== Selenium / Chromium =====
+    // ===== JDK / HttpClient =====
+    public HttpClient.Builder applyTo(HttpClient.Builder b) {
+        HttpClient.Builder builder = (b != null) ? b : HttpClient.newBuilder();
+        if (!isEnabled()) return builder;
+
+        Proxy p = toJavaProxy();
+        if (p != null && p != Proxy.NO_PROXY) {
+            builder.proxy(ProxySelector.of((InetSocketAddress) p.address()));
+        }
+
+        String user = getUsername();
+        if (user != null && !user.isBlank()) {
+            String pass = Objects.requireNonNullElse(getPassword(), "");
+            builder.authenticator(new Authenticator() {
+                @Override
+                protected PasswordAuthentication getPasswordAuthentication() {
+                    return new PasswordAuthentication(user, pass.toCharArray());
+                }
+            });
+        }
+
+        return builder;
+    }
 
     /**
      * Return an argument like <code>--proxy-server=socks5://host:port</code> or <code>http://host:port</code> (supported by Chromium).
