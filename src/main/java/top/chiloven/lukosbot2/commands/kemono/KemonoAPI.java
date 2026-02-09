@@ -5,7 +5,7 @@ import com.google.gson.JsonObject;
 import lombok.extern.log4j.Log4j2;
 import top.chiloven.lukosbot2.commands.kemono.model.Service;
 import top.chiloven.lukosbot2.util.HttpJson;
-import top.chiloven.lukosbot2.util.SHAUtil;
+import top.chiloven.lukosbot2.util.SHAUtils;
 import top.chiloven.lukosbot2.util.StringUtils;
 
 import java.io.IOException;
@@ -16,7 +16,7 @@ import java.util.Map;
 public class KemonoAPI {
     private static final StringUtils SU = StringUtils.getStringUtils();
     private static final HttpJson HJ = HttpJson.getHttpJson();
-    private static final SHAUtil SHAU = SHAUtil.getSHAUtil();
+    private static final SHAUtils SHAU = SHAUtils.getSHAUtil();
 
     private static final URI API = URI.create("https://kemono.cr/api/");
     private static final Map<String, String> HEADER = Map.of("Accept", "text/css");
