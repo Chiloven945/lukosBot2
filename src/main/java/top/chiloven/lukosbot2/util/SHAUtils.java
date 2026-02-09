@@ -13,7 +13,7 @@ import java.security.NoSuchAlgorithmException;
  *
  * @author Chiloven945
  */
-public final class SHAUtil {
+public final class SHAUtils {
 
     private final MessageDigest sha256Digest;
     private final MessageDigest sha512Digest;
@@ -21,7 +21,7 @@ public final class SHAUtil {
     /**
      * Create a SHAUtil instance with SHA-256 and SHA-512 digests.
      */
-    private SHAUtil() {
+    private SHAUtils() {
         try {
             this.sha256Digest = MessageDigest.getInstance("SHA-256");
             this.sha512Digest = MessageDigest.getInstance("SHA-512");
@@ -35,8 +35,8 @@ public final class SHAUtil {
      *
      * @return a SHAUtil instance
      */
-    public static SHAUtil getSHAUtil() {
-        return new SHAUtil();
+    public static SHAUtils getSHAUtil() {
+        return new SHAUtils();
     }
 
     /* ===================== SHA-256: byte[] <-> byte[] ===================== */

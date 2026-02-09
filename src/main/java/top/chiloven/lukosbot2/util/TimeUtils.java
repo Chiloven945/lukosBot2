@@ -2,8 +2,8 @@ package top.chiloven.lukosbot2.util;
 
 import java.time.format.DateTimeFormatter;
 
-public class TimeUtil {
-    private TimeUtil() {
+public class TimeUtils {
+    private TimeUtils() {
     }
 
     public static DateTimeFormatter getDTF() {
