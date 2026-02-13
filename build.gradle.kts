@@ -1,5 +1,8 @@
 plugins {
     java
+    kotlin("jvm") version "2.3.10"
+    kotlin("plugin.spring") version "2.3.10"
+    kotlin("plugin.lombok") version "1.9.20"
     id("org.springframework.boot")
     id("io.spring.dependency-management")
 }
@@ -58,6 +61,8 @@ dependencies {
     implementation("org.seleniumhq.selenium:selenium-java:${property("selenium-version")}")
     implementation("org.jsoup:jsoup:${property("jsoup-version")}")
     implementation("io.github.bonigarcia:webdrivermanager:${property("webdrivermanager-version")}")
+
+    implementation(kotlin("stdlib"))
 }
 
 tasks.withType<JavaCompile>().configureEach {
@@ -77,4 +82,8 @@ configurations.all {
 
     exclude(group = "ch.qos.logback", module = "logback-classic")
     exclude(group = "ch.qos.logback", module = "logback-core")
+}
+
+kotlin {
+    jvmToolchain(25)
 }
