@@ -1,55 +1,49 @@
-package top.chiloven.lukosbot2;
+package top.chiloven.lukosbot2
 
-import java.util.Optional;
-import java.util.Properties;
+import java.util.*
 
 /**
- * Constants class for holding application-wide constants.
+ * Singleton object for holding application-wide constants.
  */
-public class Constants {
-    public static final String VERSION = "0.1.0-SNAPSHOT";
-    public static final String APP_NAME = "lukosBot2";
+object Constants {
+    const val VERSION = "0.1.0-SNAPSHOT"
+    const val APP_NAME = "lukosBot2"
 
-    public final String javaVersion =
-            "%s (%s)".formatted(System.getProperty("java.version"), System.getProperty("java.vendor.version"));
-    public final String springBootVersion =
-            getImplVersion("org.springframework.boot.SpringApplication");
-    public final String tgVersion =
-            getMavenVersion("org.telegram", "telegrambots-client");
-    public final String jdaVersion =
-            getImplVersion("net.dv8tion.jda.api.JDA");
-    public final String shiroVersion =
-            getImplVersion("com.mikuac.shiro.boot.Shiro");
+    val javaVersion: String = "%s (%s)".format(
+        System.getProperty("java.version"),
+        System.getProperty("java.vendor.version")
+    )
 
-    public Constants() {
-    }
+    val springBootVersion: String = getImplVersion("org.springframework.boot.SpringApplication")
+    val tgVersion: String? = getMavenVersion("org.telegram", "telegrambots-client")
+    val jdaVersion: String = getImplVersion("net.dv8tion.jda.api.JDA")
+    val shiroVersion: String = getImplVersion("com.mikuac.shiro.boot.Shiro")
 
-    private String getImplVersion(String className) {
-        try {
-            Class<?> clazz = Class.forName(className);
-            Package p = clazz.getPackage();
-            if (p != null && p.getImplementationVersion() != null) {
-                return p.getImplementationVersion();
-            }
-        } catch (ClassNotFoundException ignored) {
+    private fun getImplVersion(className: String): String {
+        return try {
+            val clazz = Class.forName(className)
+            clazz.`package`?.implementationVersion ?: "unknown"
+        } catch (ignored: ClassNotFoundException) {
+            "unknown"
         }
-        return "unknown";
     }
 
-    private String getMavenVersion(String groupId, String artifactId) {
-        String path = String.format("META-INF/maven/%s/%s/pom.properties", groupId, artifactId);
+    private fun getMavenVersion(groupId: String, artifactId: String): String? {
+        val path = "META-INF/maven/$groupId/$artifactId/pom.properties"
 
-        return Optional.ofNullable(Thread.currentThread().getContextClassLoader().getResourceAsStream(path))
-                .map(in -> {
-                    try (in) {
-                        Properties p = new Properties();
-                        p.load(in);
-                        return p.getProperty("version");
-                    } catch (Exception e) {
-                        return null;
+        return Optional.ofNullable(Thread.currentThread().contextClassLoader.getResourceAsStream(path))
+            .map { inputStream ->
+                try {
+                    inputStream.use {
+                        val p = Properties()
+                        p.load(it)
+                        p.getProperty("version")
                     }
-                })
-                .filter(version -> !version.isBlank())
-                .orElse("unknown");
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            .filter { it?.isNotBlank() == true }
+            .orElse("unknown")
     }
 }
