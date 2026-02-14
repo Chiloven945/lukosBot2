@@ -23,9 +23,6 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuil
         matchIfMissing = true
 )
 public class DiceCommand implements IBotCommand {
-
-    private static final MathUtils mu = MathUtils.getMathUtils();
-
     @Override
     public String name() {
         return "dice";
@@ -63,7 +60,7 @@ public class DiceCommand implements IBotCommand {
                                     try {
                                         count = Long.parseLong(StringArgumentType.getString(ctx, "count"));
                                     } catch (NumberFormatException e) {
-                                        ctx.getSource().reply("骰子数量必须是一个正整数。\n" + usage());
+                                        ctx.getSource().reply("骰子数量必须是一个正整数。");
                                         return 0;
                                     }
                                     ctx.getSource().reply(runDice(count));
@@ -75,10 +72,10 @@ public class DiceCommand implements IBotCommand {
 
     private String runDice(long count) {
         if (count <= 0) {
-            return "骰子数量必须是一个正整数。\n" + usage();
+            return "骰子数量必须是一个正整数。";
         }
 
-        long[] faces = mu.approximateMultinomial(count,
+        long[] faces = MathUtils.approximateMultinomial(count,
                 1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
 
         if (count == 1) {

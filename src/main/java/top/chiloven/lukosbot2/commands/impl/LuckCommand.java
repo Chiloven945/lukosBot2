@@ -22,8 +22,6 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuild
         matchIfMissing = true
 )
 public class LuckCommand implements IBotCommand {
-    private static final MathUtils mu = MathUtils.getMathUtils();
-
     @Override
     public String name() {
         return "luck";
@@ -49,7 +47,7 @@ public class LuckCommand implements IBotCommand {
                 literal(name())
                         .executes(ctx -> {
                             try {
-                                int luck = mu.stableRandom(
+                                int luck = MathUtils.stableRandom(
                                         0, 100,
                                         ctx.getSource().userId(),
                                         LocalDate.now()
