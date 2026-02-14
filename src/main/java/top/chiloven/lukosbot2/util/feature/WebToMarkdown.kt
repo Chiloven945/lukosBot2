@@ -1,78 +1,84 @@
-package top.chiloven.lukosbot2.util.feature;
+package top.chiloven.lukosbot2.util.feature
 
-import top.chiloven.lukosbot2.config.ProxyConfigProp;
-import top.chiloven.lukosbot2.model.ContentData;
-import top.chiloven.lukosbot2.util.spring.SpringBeans;
-import com.vladsch.flexmark.html2md.converter.FlexmarkHtmlConverter;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
+import com.vladsch.flexmark.html2md.converter.FlexmarkHtmlConverter
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Element
+import top.chiloven.lukosbot2.Constants
+import top.chiloven.lukosbot2.config.ProxyConfigProp
+import top.chiloven.lukosbot2.model.ContentData
+import top.chiloven.lukosbot2.util.spring.SpringBeans
+import java.net.Proxy
+import java.nio.charset.StandardCharsets
+import java.time.Duration
 
-import java.net.Proxy;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
+object WebToMarkdown {
+    private const val USER_AGENT = "Mozilla/5.0 (compatible; LukosBot/${Constants.VERSION})"
 
-public final class WebToMarkdown {
-    private WebToMarkdown() {
-    }
+    private val TIMEOUT_MS: Int = Duration.ofSeconds(15).toMillis().toInt()
+    private val html2md: FlexmarkHtmlConverter = FlexmarkHtmlConverter.builder().build()
+    private val ILLEGAL_FILENAME_CHARS = Regex("""[\\/:*?"<>|\r\n\t]""")
 
-    // WebToMarkdown.java —— 在类中追加以下方法
-    public static ContentData fetchAndConvertWithSelectors(
-            String url,
-            String titleSelector,
-            String contentSelectorsCsv,
-            String defaultTitleBase
-    ) throws Exception {
-        var proxy = SpringBeans.getBean(ProxyConfigProp.class);
-        var conn = Jsoup.connect(url)
-                .userAgent("Mozilla/5.0 (compatible; LukosBot/1.0)")
-                .timeout((int) Duration.ofSeconds(15).toMillis());
+    @Throws(Exception::class)
+    @JvmStatic
+    fun fetchAndConvertWithSelectors(
+        url: String,
+        titleSelector: String?,
+        contentSelectorsCsv: String?,
+        defaultTitleBase: String?
+    ): ContentData {
+        val proxy = SpringBeans.getBean(ProxyConfigProp::class.java)
 
-        Proxy p = proxy.toJavaProxy();
-        if (proxy.isEnabled() && p != Proxy.NO_PROXY) {
-            conn.proxy(p);
+        val conn = Jsoup.connect(url)
+            .userAgent(USER_AGENT)
+            .timeout(TIMEOUT_MS)
+
+        val javaProxy: Proxy = proxy.toJavaProxy()
+        if (proxy.isEnabled && javaProxy != Proxy.NO_PROXY) {
+            conn.proxy(javaProxy)
         }
 
-        Document doc = conn.get();
+        val doc = conn.get()
 
-        // 标题
-        String title = defaultTitleBase != null ? defaultTitleBase : "page";
-        var h = (titleSelector == null || titleSelector.isBlank())
-                ? null
-                : doc.selectFirst(titleSelector);
-        if (h != null && !h.text().isBlank()) {
-            title = h.text().trim();
-        }
-        String filename = sanitizeFilename(title) + ".md";
+        val title = resolveTitle(docTitleFallback = defaultTitleBase, doc = doc, titleSelector = titleSelector)
+        val filename = "${sanitizeFilename(title, fallback = defaultTitleBase ?: "page")}.md"
 
-        // 主体容器：按逗号分隔的多个 selector，择一使用
-        Element contentEl = null;
-        if (contentSelectorsCsv != null && !contentSelectorsCsv.isBlank()) {
-            for (String selector : contentSelectorsCsv.split(",")) {
-                selector = selector.trim();
-                if (selector.isEmpty()) continue;
-                Element cand = doc.selectFirst(selector);
-                if (cand != null) {
-                    contentEl = cand;
-                    break;
-                }
-            }
-        }
-        String html = contentEl != null ? contentEl.html() : doc.html();
+        val contentEl = selectFirstByCsv(doc, contentSelectorsCsv)
+        val html = (contentEl?.html() ?: doc.html())
 
-        String md = FlexmarkHtmlConverter.builder().build().convert(html);
-        byte[] bytes = md.getBytes(StandardCharsets.UTF_8);
-        return new ContentData(filename, "text/markdown; charset=utf-8", bytes);
+        val md = html2md.convert(html)
+        val bytes = md.toByteArray(StandardCharsets.UTF_8)
+
+        return ContentData(filename, "text/markdown; charset=utf-8", bytes)
     }
 
-    public static ContentData fetchWikipediaMarkdown(String url) throws Exception {
-        return fetchAndConvertWithSelectors(url, "h1#firstHeading", "#content", "wikipedia");
+    @Throws(Exception::class)
+    @JvmStatic
+    fun fetchWikipediaMarkdown(url: String): ContentData =
+        fetchAndConvertWithSelectors(url, "h1#firstHeading", "#content", "wikipedia")
+
+    private fun resolveTitle(docTitleFallback: String?, doc: org.jsoup.nodes.Document, titleSelector: String?): String {
+        val fallback = docTitleFallback?.takeIf { it.isNotBlank() } ?: "page"
+        val selector = titleSelector?.trim().orEmpty()
+        if (selector.isEmpty()) return fallback
+
+        val el = doc.selectFirst(selector)
+        val text = el?.text()?.trim().orEmpty()
+        return text.ifEmpty { fallback }
     }
 
-    private static String sanitizeFilename(String raw) {
-        if (raw == null) return "wikipedia";
-        String safe = raw.replaceAll("[\\\\/:*?\"<>|\\r\\n\\t]", "_").trim();
-        return safe.isEmpty() ? "wikipedia" : safe;
+    private fun selectFirstByCsv(doc: org.jsoup.nodes.Document, csv: String?): Element? {
+        val raw = csv?.trim().orEmpty()
+        if (raw.isEmpty()) return null
+
+        return raw.splitToSequence(',')
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .firstNotNullOfOrNull { sel -> doc.selectFirst(sel) }
     }
 
+    private fun sanitizeFilename(raw: String?, fallback: String): String {
+        val base = raw?.takeIf { it.isNotBlank() } ?: fallback
+        val safe = base.replace(ILLEGAL_FILENAME_CHARS, "_").trim()
+        return safe.ifEmpty { fallback }
+    }
 }
