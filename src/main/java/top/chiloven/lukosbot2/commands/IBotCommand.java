@@ -2,6 +2,7 @@ package top.chiloven.lukosbot2.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
 import top.chiloven.lukosbot2.core.command.CommandSource;
+import top.chiloven.lukosbot2.util.UsageImageUtils;
 
 /**
  * Contract for all bot commands.
@@ -49,8 +50,10 @@ import top.chiloven.lukosbot2.core.command.CommandSource;
  *   within the dispatcher.</li>
  *   <li>{@link #description()} is a short, one-line summary suitable for help
  *   listings.</li>
- *   <li>{@link #usage()} may contain multi-line usage examples and is typically
- *   shown when the user explicitly requests help for this command.</li>
+ *   <li>{@link #usage()} describes the structured usage tree for this command and is
+ *   typically shown when the user explicitly requests help for this command.</li>
+ *   <li>{@link #sendUsage(CommandSource)} sends usage/help for this command using the same
+ *   strategy as {@code /help}: send text when short enough, otherwise fall back to image.</li>
  *   <li>{@link #isVisible()} controls whether the command appears in generic
  *   help output; returning {@code false} keeps the command functional but
  *   hides it from listings.</li>
@@ -78,14 +81,57 @@ public interface IBotCommand {
     String description();
 
     /**
-     * Returns the detailed usage text for this command.
-     * <p>Implementations may return multi-line text including syntax and
-     * examples. It is usually shown when the user explicitly asks for help
-     * on this command.</p>
+     * Structured usage tree for this command.
      *
-     * @return detailed usage information
+     * <p>HelpCommand and {@link #sendUsage(CommandSource, String, String)} will render this usage as
+     * text or image depending on output constraints.</p>
      */
-    String usage();
+    UsageNode usage();
+
+    /**
+     * Send this command's usage/help output.
+     *
+     * <p>This uses the same mode parsing and AUTO heuristics as {@code HelpCommand} by delegating
+     * to {@link UsageOutput}.</p>
+     *
+     * @param src     message sink
+     * @param prefix  command prefix (e.g. "/"); if null/blank, "/" is used
+     * @param modeRaw raw mode string (same as /help): "img"/"text"/null => AUTO
+     */
+    default void sendUsage(CommandSource src, String prefix, String modeRaw) {
+        UsageOutput.UseMode mode = UsageOutput.parseMode(modeRaw);
+        UsageTextRenderer.Options opt = UsageTextRenderer.Options.forHelp(
+                (prefix == null || prefix.isBlank()) ? "/" : prefix.trim()
+        );
+
+        UsageOutput.sendUsage(
+                src,
+                prefix,
+                name(),
+                usage(),
+                opt,
+                UsageImageUtils.ImageStyle.defaults(),
+                mode
+        );
+    }
+
+    /**
+     * Convenience: send usage with AUTO mode.
+     *
+     * @see #sendUsage(CommandSource, String, String)
+     */
+    default void sendUsage(CommandSource src, String prefix) {
+        sendUsage(src, prefix, null);
+    }
+
+    /**
+     * Convenience: send usage with default prefix "/".
+     *
+     * @see #sendUsage(CommandSource, String, String)
+     */
+    default void sendUsage(CommandSource src) {
+        sendUsage(src, "/", null);
+    }
 
     /**
      * Registers this command and all of its sub-nodes with the given dispatcher.
