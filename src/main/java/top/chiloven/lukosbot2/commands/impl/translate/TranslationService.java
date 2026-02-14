@@ -15,7 +15,6 @@ import com.github.dockerjava.transport.DockerHttpClient;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import top.chiloven.lukosbot2.config.CommandConfigProp.Translate;
-import top.chiloven.lukosbot2.util.JsonUtils;
 import top.chiloven.lukosbot2.util.StringUtils;
 
 import java.io.IOException;
@@ -33,9 +32,6 @@ import java.util.List;
  * - 对外只暴露 translate(from, to, text)
  */
 public class TranslationService {
-    public static final StringUtils su = StringUtils.getStringUtils();
-    public static final JsonUtils ju = JsonUtils.getJsonUtils();
-
     private static final String IMAGE_NAME = "libretranslate/libretranslate:latest";
     private static final String CONTAINER_NAME = "lukos-libretranslate";
     private static final int CONTAINER_PORT = 5000;     // LibreTranslate 默认端口
@@ -76,9 +72,9 @@ public class TranslationService {
         String tgt = (to == null || to.isBlank()) ? defaultLang : to;
 
         try {
-            String body = "q=" + su.encodeTo(text)
-                    + "&source=" + su.encodeTo(src)
-                    + "&target=" + su.encodeTo(tgt)
+            String body = "q=" + StringUtils.encodeTo(text)
+                    + "&source=" + StringUtils.encodeTo(src)
+                    + "&target=" + StringUtils.encodeTo(tgt)
                     + "&format=text";
 
             HttpRequest req = HttpRequest.newBuilder()
