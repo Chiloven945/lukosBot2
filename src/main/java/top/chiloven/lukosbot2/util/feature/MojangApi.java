@@ -11,7 +11,7 @@ import java.io.IOException;
 public final class MojangApi {
     public static final HttpJson hj = HttpJson.getHttpJson();
     public static final JsonUtils ju = JsonUtils.getJsonUtils();
-    public static final Base64Utils b64 = Base64Utils.getBase64Utils();
+    public static final Base64Utils b64 = new Base64Utils();
 
     public String getUuidFromName(String name) {
         try {
