@@ -1,6 +1,8 @@
 package top.chiloven.lukosbot2.util.feature
 
 import com.google.gson.JsonObject
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 import top.chiloven.lukosbot2.util.Base64Utils
 import top.chiloven.lukosbot2.util.HttpJson
 import top.chiloven.lukosbot2.util.JsonUtils.getString
@@ -8,7 +10,7 @@ import top.chiloven.lukosbot2.util.JsonUtils.getStringByPath
 import java.io.IOException
 
 object MojangApi {
-    val hj: HttpJson = HttpJson.getHttpJson()
+    private val log: Logger = LogManager.getLogger(MojangApi::class.java)
     val b64: Base64Utils = Base64Utils()
 
     /**
@@ -16,48 +18,41 @@ object MojangApi {
      * Returns null if the player is not found or there's an error.
      */
     @JvmStatic
-    fun getUuidFromName(name: String): String? = try {
-        hj.getObject("https://api.mojang.com/users/profiles/minecraft/$name")
+    @Throws(IOException::class)
+    fun getUuidFromName(name: String): String? =
+        HttpJson.getObject("https://api.mojang.com/users/profiles/minecraft/$name")
             .get("id")
             .asString
-    } catch (_: IOException) {
-        null
-    }
 
     /**
      * Get player's name from UUID.
      * Returns null if the player is not found or there's an error.
      */
     @JvmStatic
-    fun getNameFromUuid(uuid: String): String? = try {
-        hj.getObject("https://api.minecraftservices.com/minecraft/profile/lookup/$uuid")
+    @Throws(IOException::class)
+    fun getNameFromUuid(uuid: String): String? =
+        HttpJson.getObject("https://api.minecraftservices.com/minecraft/profile/lookup/$uuid")
             .get("name")
             .asString
-    } catch (e: IOException) {
-        null
-    }
 
     /**
      * Get the full player information (skin, cape, etc.) using either UUID or player name.
      * Throws RuntimeException if an error occurs while fetching or parsing the data.
      */
     @JvmStatic
+    @Throws(IOException::class)
     fun getMcPlayerInfo(data: String): McPlayer {
         val uuid = if (data.length <= 16) getUuidFromName(data) else data
+        val info: JsonObject =
+            HttpJson.getObject("https://sessionserver.mojang.com/session/minecraft/profile/$uuid")
+        val value: JsonObject = b64.decodeToJsonObject(getStringByPath(info, "properties[0].value", ""))
 
-        try {
-            val info: JsonObject = hj.getObject("https://sessionserver.mojang.com/session/minecraft/profile/$uuid")
-            val value: JsonObject = b64.decodeToJsonObject(getStringByPath(info, "properties[0].value", ""))
-
-            return McPlayer(
-                name = getString(info, "name", ""),
-                uuid = getString(info, "id", ""),
-                skin = getStringByPath(value, "textures.SKIN.url", null),
-                cape = getStringByPath(value, "textures.CAPE.url", null)
-            )
-        } catch (e: IOException) {
-            throw RuntimeException("Failed to fetch player info for $data", e)
-        }
+        return McPlayer(
+            name = getString(info, "name", ""),
+            uuid = getString(info, "id", ""),
+            skin = getStringByPath(value, "textures.SKIN.url", null),
+            cape = getStringByPath(value, "textures.CAPE.url", null)
+        )
     }
 
     @JvmRecord

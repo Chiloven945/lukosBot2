@@ -1,503 +1,260 @@
-package top.chiloven.lukosbot2.util;
+package top.chiloven.lukosbot2.util
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import org.jspecify.annotations.Nullable;
+import com.google.gson.JsonArray
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
+import top.chiloven.lukosbot2.util.HttpJson.getAny
+import top.chiloven.lukosbot2.util.HttpJson.getArray
+import top.chiloven.lukosbot2.util.HttpJson.getObject
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.IOException
+import java.net.URI
+import java.net.URLEncoder
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
+import java.time.Duration
+import java.util.zip.GZIPInputStream
+import java.util.zip.InflaterInputStream
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URLEncoder;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.util.Map;
-import java.util.StringJoiner;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.InflaterInputStream;
+/**
+ * A small HTTP GET + JSON parsing utility.
+ *
+ * This is a Kotlin rewrite of the original Java [HttpJson] and keeps the same public API shape:
+ *  - Multiple overloads for [getAny]/[getObject]/[getArray] accepting [URI] or [String]
+ *  - Optional additional headers
+ *  - Configurable read timeout per request
+ *  - Automatic decoding for `Content-Encoding`: `identity`, `gzip`, `deflate`
+ *  - Charset detection from `Content-Type` header (defaults to UTF-8)
+ *  - HTTP errors (status &gt;= 400) raise [IOException] with best-effort message extraction
+ *
+ * Note: This object is stateful only for sharing a single [HttpClient] instance.
+ */
+object HttpJson {
+    private const val DEFAULT_READ_TIMEOUT: Int = 10_000
 
-public final class HttpJson {
-    private static final int DEFAULT_READ_TIMEOUT = 10000;
-    private static final Map<String, String> DEFAULT_HEADERS = Map.of("Accept", "application/json", "Accept-Encoding", "identity");
+    private val DEFAULT_HEADERS: Map<String, String> = mapOf(
+        "Accept" to "application/json",
+        "Accept-Encoding" to "identity"
+    )
 
-    private final HttpClient client = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
-            .followRedirects(HttpClient.Redirect.NORMAL)
-            .build();
+    private val client: HttpClient = HttpClient.newBuilder()
+        .connectTimeout(Duration.ofSeconds(10))
+        .followRedirects(HttpClient.Redirect.NORMAL)
+        .build()
 
-    private HttpJson() {
+    @Throws(IOException::class)
+    private fun decodeByContentEncoding(raw: ByteArray, encoding: String): ByteArray {
+        if (encoding.isEmpty() || encoding == "identity") return raw
+
+        val encs = encoding.split(',')
+        var data = raw
+
+        for (enc in encs) {
+            val e = enc.trim().lowercase()
+            when (e) {
+                "", "identity" -> Unit
+                "gzip" -> data = gunzip(data)
+                "deflate" -> data = inflate(data)
+                else -> throw IOException("Unsupported Content-Encoding: $encoding")
+            }
+        }
+        return data
     }
 
-    public static HttpJson getHttpJson() {
-        return new HttpJson();
-    }
-
-    private static byte[] decodeByContentEncoding(byte[] raw, String encoding) throws IOException {
-        if (encoding.isEmpty() || "identity".equals(encoding)) return raw;
-
-        String[] encs = encoding.split(",");
-        byte[] data = raw;
-
-        for (String enc : encs) {
-            String e = enc.trim().toLowerCase();
-            switch (e) {
-                case "", "identity" -> {
+    @Throws(IOException::class)
+    private fun gunzip(gz: ByteArray): ByteArray {
+        ByteArrayInputStream(gz).use { bin ->
+            GZIPInputStream(bin).use { gin ->
+                ByteArrayOutputStream().use { out ->
+                    gin.transferTo(out)
+                    return out.toByteArray()
                 }
-                case "gzip" -> data = gunzip(data);
-                case "deflate" -> data = inflate(data);
-                default -> throw new IOException("Unsupported Content-Encoding: " + encoding);
             }
         }
-        return data;
     }
 
-    private static byte[] gunzip(byte[] gz) throws IOException {
-        try (ByteArrayInputStream bin = new ByteArrayInputStream(gz);
-             GZIPInputStream gin = new GZIPInputStream(bin);
-             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            gin.transferTo(out);
-            return out.toByteArray();
+    @Throws(IOException::class)
+    private fun inflate(def: ByteArray): ByteArray {
+        ByteArrayInputStream(def).use { bin ->
+            InflaterInputStream(bin).use { input ->
+                ByteArrayOutputStream().use { out ->
+                    input.transferTo(out)
+                    return out.toByteArray()
+                }
+            }
         }
     }
 
-    private static byte[] inflate(byte[] def) throws IOException {
-        try (ByteArrayInputStream bin = new java.io.ByteArrayInputStream(def);
-             InflaterInputStream in = new java.util.zip.InflaterInputStream(bin);
-             ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
-            in.transferTo(out);
-            return out.toByteArray();
-        }
-    }
+    private fun extractCharset(contentType: String?): String {
+        if (contentType.isNullOrBlank()) return "UTF-8"
+        val ct = contentType.lowercase()
+        val i = ct.indexOf("charset=")
+        if (i < 0) return "UTF-8"
 
-    private static String extractCharset(String contentType) {
-        if (contentType == null) return "UTF-8";
-        String ct = contentType.toLowerCase();
-        int i = ct.indexOf("charset=");
-        if (i < 0) return "UTF-8";
-        String cs = ct.substring(i + "charset=".length()).trim();
-        int semi = cs.indexOf(';');
-        if (semi >= 0) cs = cs.substring(0, semi).trim();
-        if (cs.isEmpty()) return "UTF-8";
-        if (cs.startsWith("\"") && cs.endsWith("\"") && cs.length() >= 2) cs = cs.substring(1, cs.length() - 1);
-        return cs;
+        var cs = ct.substring(i + "charset=".length).trim()
+        val semi = cs.indexOf(';')
+        if (semi >= 0) cs = cs.substring(0, semi).trim()
+        if (cs.isEmpty()) return "UTF-8"
+        if (cs.startsWith("\"") && cs.endsWith("\"") && cs.length >= 2) {
+            cs = cs.substring(1, cs.length - 1)
+        }
+        return cs
     }
 
     /**
      * Sends a GET request and parses the JSON response.
      *
-     * @param uri           the request URI
-     * @param headers       additional headers, nullable
+     * @param uri the request URI
+     * @param headers additional headers, nullable
      * @param readTimeoutMs read timeout in milliseconds
      * @return parsed JSON root
      * @throws IOException if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
      */
-    public JsonElement getAny(
-            URI uri,
-            @Nullable Map<String, String> headers,
-            int readTimeoutMs
-    ) throws IOException {
+    @Throws(IOException::class)
+    @JvmOverloads
+    fun getAny(
+        uri: URI,
+        headers: Map<String, String>? = DEFAULT_HEADERS,
+        readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
+    ): JsonElement {
         try {
-            HttpRequest.Builder b = HttpRequest.newBuilder()
-                    .uri(uri)
-                    .timeout(Duration.ofMillis(readTimeoutMs))
-                    .GET();
+            val b = HttpRequest.newBuilder()
+                .uri(uri)
+                .timeout(Duration.ofMillis(readTimeoutMs.toLong()))
+                .GET()
 
-            if (headers != null) headers.forEach(b::header);
+            headers?.forEach { (k, v) -> b.header(k, v) }
 
-            HttpResponse<byte[]> resp = client.send(b.build(), HttpResponse.BodyHandlers.ofByteArray());
-            int code = resp.statusCode();
+            val resp: HttpResponse<ByteArray> = client.send(b.build(), HttpResponse.BodyHandlers.ofByteArray())
+            val code = resp.statusCode()
 
-            String encoding = resp.headers().firstValue("Content-Encoding").orElse("").trim().toLowerCase();
-            String contentType = resp.headers().firstValue("Content-Type").orElse("");
-            String charset = extractCharset(contentType);
+            val encoding = resp.headers().firstValue("Content-Encoding").orElse("").trim().lowercase()
+            val contentType = resp.headers().firstValue("Content-Type").orElse("")
+            val charsetName = extractCharset(contentType)
 
-            byte[] raw = resp.body();
-            byte[] plain = decodeByContentEncoding(raw, encoding);
+            val raw = resp.body()
+            val plain = decodeByContentEncoding(raw, encoding)
 
-            String body = new String(plain, java.nio.charset.Charset.forName(charset));
-
-            JsonElement root;
-            try {
-                root = JsonParser.parseString(body);
-            } catch (Exception e) {
-                if (code >= 400) throw new IOException("HTTP " + code);
-                throw new IOException("Response is not valid JSON", e);
+            val body = try {
+                String(plain, Charset.forName(charsetName))
+            } catch (_: Exception) {
+                String(plain, StandardCharsets.UTF_8)
             }
 
-            if (code >= 400) throw new IOException(extractErrorMessage(root, code));
-            return root;
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException("Request interrupted", e);
+            val root: JsonElement = try {
+                JsonParser.parseString(body)
+            } catch (e: Exception) {
+                if (code >= 400) throw IOException("HTTP $code")
+                throw IOException("Response is not valid JSON", e)
+            }
+
+            if (code >= 400) throw IOException(extractErrorMessage(root, code))
+            return root
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            throw IOException("Request interrupted", e)
         }
     }
 
     /**
      * Sends a GET request and parses the JSON response.
      *
-     * @param uri     the request URI
-     * @param headers additional headers, nullable
-     * @return parsed JSON root
-     * @throws IOException if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
-     */
-    public JsonElement getAny(
-            URI uri,
-            @Nullable Map<String, String> headers
-    ) throws IOException {
-        return getAny(uri, headers, DEFAULT_READ_TIMEOUT);
-    }
-
-    /**
-     * Sends a GET request and parses the JSON response.
-     *
-     * @param uri           the request URI
-     * @param readTimeoutMs read timeout in milliseconds
-     * @return parsed JSON root
-     * @throws IOException if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
-     */
-    public JsonElement getAny(
-            URI uri,
-            int readTimeoutMs
-    ) throws IOException {
-        return getAny(uri, DEFAULT_HEADERS, readTimeoutMs);
-    }
-
-    /**
-     * Sends a GET request and parses the JSON response.
-     *
-     * @param uri the request URI
-     * @return parsed JSON root
-     * @throws IOException if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
-     */
-    public JsonElement getAny(
-            URI uri
-    ) throws IOException {
-        return getAny(uri, DEFAULT_HEADERS, DEFAULT_READ_TIMEOUT);
-    }
-
-    /**
-     * Sends a GET request and parses the JSON response.
-     *
-     * @param uri           the request URI string
-     * @param headers       additional headers, nullable
-     * @param readTimeoutMs read timeout in milliseconds
-     * @return parsed JSON root
-     * @throws IOException if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
-     */
-    public JsonElement getAny(
-            String uri,
-            @Nullable Map<String, String> headers,
-            int readTimeoutMs
-    ) throws IOException {
-        return getAny(URI.create(uri), headers, readTimeoutMs);
-    }
-
-    /**
-     * Sends a GET request and parses the JSON response.
-     *
-     * @param uri     the request URI string
-     * @param headers additional headers, nullable
-     * @return parsed JSON root
-     * @throws IOException if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
-     */
-    public JsonElement getAny(
-            String uri,
-            @Nullable Map<String, String> headers
-    ) throws IOException {
-        return getAny(URI.create(uri), headers, DEFAULT_READ_TIMEOUT);
-    }
-
-    /**
-     * Sends a GET request and parses the JSON response.
-     *
-     * @param uri           the request URI string
-     * @param readTimeoutMs read timeout in milliseconds
-     * @return parsed JSON root
-     * @throws IOException if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
-     */
-    public JsonElement getAny(
-            String uri,
-            int readTimeoutMs
-    ) throws IOException {
-        return getAny(URI.create(uri), DEFAULT_HEADERS, readTimeoutMs);
-    }
-
-    /**
-     * Sends a GET request and parses the JSON response.
-     *
      * @param uri the request URI string
+     * @param headers additional headers, nullable
+     * @param readTimeoutMs read timeout in milliseconds
      * @return parsed JSON root
      * @throws IOException if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
      */
-    public JsonElement getAny(
-            String uri
-    ) throws IOException {
-        return getAny(URI.create(uri), DEFAULT_HEADERS, DEFAULT_READ_TIMEOUT);
-    }
-
-    /**
-     * Sends a GET request and parses a JSON object response.
-     *
-     * @param uri           the request URI
-     * @param headers       additional headers, nullable
-     * @param readTimeoutMs read timeout in milliseconds
-     * @return parsed JSON object
-     * @throws IOException              if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
-     * @throws IllegalArgumentException if the JSON root is not an object
-     */
-    public JsonObject getObject(
-            URI uri,
-            @Nullable Map<String, String> headers,
-            int readTimeoutMs
-    ) throws IOException {
-        JsonElement root = getAny(uri, headers, readTimeoutMs);
-        if (root != null && root.isJsonObject()) return root.getAsJsonObject();
-        throw new IllegalArgumentException("Response JSON is not an object (it is " + typeOf(root) + ")");
-    }
-
-    /**
-     * Sends a GET request and parses a JSON object response.
-     *
-     * @param uri     the request URI
-     * @param headers additional headers, nullable
-     * @return parsed JSON object
-     * @throws IOException              if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
-     * @throws IllegalArgumentException if the JSON root is not an object
-     */
-    public JsonObject getObject(
-            URI uri,
-            @Nullable Map<String, String> headers
-    ) throws IOException {
-        return getObject(uri, headers, DEFAULT_READ_TIMEOUT);
-    }
-
-    /**
-     * Sends a GET request and parses a JSON object response.
-     *
-     * @param uri           the request URI
-     * @param readTimeoutMs read timeout in milliseconds
-     * @return parsed JSON object
-     * @throws IOException              if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
-     * @throws IllegalArgumentException if the JSON root is not an object
-     */
-    public JsonObject getObject(
-            URI uri,
-            int readTimeoutMs
-    ) throws IOException {
-        return getObject(uri, DEFAULT_HEADERS, readTimeoutMs);
-    }
+    @JvmOverloads
+    @Throws(IOException::class)
+    fun getAny(
+        uri: String,
+        headers: Map<String, String>? = DEFAULT_HEADERS,
+        readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
+    ): JsonElement = getAny(URI(uri), headers, readTimeoutMs)
 
     /**
      * Sends a GET request and parses a JSON object response.
      *
      * @param uri the request URI
-     * @return parsed JSON object
-     * @throws IOException              if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
-     * @throws IllegalArgumentException if the JSON root is not an object
-     */
-    public JsonObject getObject(
-            URI uri
-    ) throws IOException {
-        return getObject(uri, DEFAULT_HEADERS, DEFAULT_READ_TIMEOUT);
-    }
-
-    /**
-     * Sends a GET request and parses a JSON object response.
-     *
-     * @param uri           the request URI string
-     * @param headers       additional headers, nullable
-     * @param readTimeoutMs read timeout in milliseconds
-     * @return parsed JSON object
-     * @throws IOException              if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
-     * @throws IllegalArgumentException if the JSON root is not an object
-     */
-    public JsonObject getObject(
-            String uri,
-            @Nullable Map<String, String> headers,
-            int readTimeoutMs
-    ) throws IOException {
-        return getObject(URI.create(uri), headers, readTimeoutMs);
-    }
-
-    /**
-     * Sends a GET request and parses a JSON object response.
-     *
-     * @param uri     the request URI string
      * @param headers additional headers, nullable
-     * @return parsed JSON object
-     * @throws IOException              if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
-     * @throws IllegalArgumentException if the JSON root is not an object
-     */
-    public JsonObject getObject(
-            String uri,
-            @Nullable Map<String, String> headers
-    ) throws IOException {
-        return getObject(URI.create(uri), headers, DEFAULT_READ_TIMEOUT);
-    }
-
-    /**
-     * Sends a GET request and parses a JSON object response.
-     *
-     * @param uri           the request URI string
      * @param readTimeoutMs read timeout in milliseconds
      * @return parsed JSON object
-     * @throws IOException              if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
+     * @throws IOException if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
      * @throws IllegalArgumentException if the JSON root is not an object
      */
-    public JsonObject getObject(
-            String uri,
-            int readTimeoutMs
-    ) throws IOException {
-        return getObject(URI.create(uri), DEFAULT_HEADERS, readTimeoutMs);
+    @Throws(IOException::class)
+    fun getObject(
+        uri: URI,
+        headers: Map<String, String>? = DEFAULT_HEADERS,
+        readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
+    ): JsonObject {
+        val root = getAny(uri, headers, readTimeoutMs)
+        if (root.isJsonObject) return root.asJsonObject
+        throw IllegalArgumentException("Response JSON is not an object (it is ${typeOf(root)})")
     }
 
     /**
      * Sends a GET request and parses a JSON object response.
      *
      * @param uri the request URI string
+     * @param headers additional headers, nullable
+     * @param readTimeoutMs read timeout in milliseconds
      * @return parsed JSON object
-     * @throws IOException              if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
+     * @throws IOException if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
      * @throws IllegalArgumentException if the JSON root is not an object
      */
-    public JsonObject getObject(
-            String uri
-    ) throws IOException {
-        return getObject(URI.create(uri), DEFAULT_HEADERS, DEFAULT_READ_TIMEOUT);
-    }
-
-    /**
-     * Sends a GET request and parses a JSON array response.
-     *
-     * @param uri           the request URI
-     * @param headers       additional headers, nullable
-     * @param readTimeoutMs read timeout in milliseconds
-     * @return parsed JSON array
-     * @throws IOException              if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
-     * @throws IllegalArgumentException if the JSON root is not an array
-     */
-    public JsonArray getArray(
-            URI uri,
-            @Nullable Map<String, String> headers,
-            int readTimeoutMs
-    ) throws IOException {
-        JsonElement root = getAny(uri, headers, readTimeoutMs);
-        if (root != null && root.isJsonArray()) return root.getAsJsonArray();
-        throw new IllegalArgumentException("Response JSON is not an array (it is " + typeOf(root) + ")");
-    }
-
-    /**
-     * Sends a GET request and parses a JSON array response.
-     *
-     * @param uri     the request URI
-     * @param headers additional headers, nullable
-     * @return parsed JSON array
-     * @throws IOException              if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
-     * @throws IllegalArgumentException if the JSON root is not an array
-     */
-    public JsonArray getArray(
-            URI uri,
-            @Nullable Map<String, String> headers
-    ) throws IOException {
-        return getArray(uri, headers, DEFAULT_READ_TIMEOUT);
-    }
-
-    /**
-     * Sends a GET request and parses a JSON array response.
-     *
-     * @param uri           the request URI
-     * @param readTimeoutMs read timeout in milliseconds
-     * @return parsed JSON array
-     * @throws IOException              if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
-     * @throws IllegalArgumentException if the JSON root is not an array
-     */
-    public JsonArray getArray(
-            URI uri,
-            int readTimeoutMs
-    ) throws IOException {
-        return getArray(uri, DEFAULT_HEADERS, readTimeoutMs);
-    }
+    @JvmStatic
+    @Throws(IOException::class)
+    fun getObject(
+        uri: String,
+        headers: Map<String, String>? = DEFAULT_HEADERS,
+        readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
+    ): JsonObject = getObject(URI(uri), headers, readTimeoutMs)
 
     /**
      * Sends a GET request and parses a JSON array response.
      *
      * @param uri the request URI
-     * @return parsed JSON array
-     * @throws IOException              if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
-     * @throws IllegalArgumentException if the JSON root is not an array
-     */
-    public JsonArray getArray(
-            URI uri
-    ) throws IOException {
-        return getArray(uri, DEFAULT_HEADERS, DEFAULT_READ_TIMEOUT);
-    }
-
-    /**
-     * Sends a GET request and parses a JSON array response.
-     *
-     * @param uri           the request URI string
-     * @param headers       additional headers, nullable
-     * @param readTimeoutMs read timeout in milliseconds
-     * @return parsed JSON array
-     * @throws IOException              if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
-     * @throws IllegalArgumentException if the JSON root is not an array
-     */
-    public JsonArray getArray(
-            String uri,
-            @Nullable Map<String, String> headers,
-            int readTimeoutMs
-    ) throws IOException {
-        return getArray(URI.create(uri), headers, readTimeoutMs);
-    }
-
-    /**
-     * Sends a GET request and parses a JSON array response.
-     *
-     * @param uri     the request URI string
      * @param headers additional headers, nullable
-     * @return parsed JSON array
-     * @throws IOException              if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
-     * @throws IllegalArgumentException if the JSON root is not an array
-     */
-    public JsonArray getArray(
-            String uri,
-            @Nullable Map<String, String> headers
-    ) throws IOException {
-        return getArray(URI.create(uri), headers, DEFAULT_READ_TIMEOUT);
-    }
-
-    /**
-     * Sends a GET request and parses a JSON array response.
-     *
-     * @param uri           the request URI string
      * @param readTimeoutMs read timeout in milliseconds
      * @return parsed JSON array
-     * @throws IOException              if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
+     * @throws IOException if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
      * @throws IllegalArgumentException if the JSON root is not an array
      */
-    public JsonArray getArray(
-            String uri,
-            int readTimeoutMs
-    ) throws IOException {
-        return getArray(URI.create(uri), DEFAULT_HEADERS, readTimeoutMs);
+    @Throws(IOException::class)
+    fun getArray(
+        uri: URI,
+        headers: Map<String, String>? = DEFAULT_HEADERS,
+        readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
+    ): JsonArray {
+        val root = getAny(uri, headers, readTimeoutMs)
+        if (root.isJsonArray) return root.asJsonArray
+        throw IllegalArgumentException("Response JSON is not an array (it is ${typeOf(root)})")
     }
 
     /**
      * Sends a GET request and parses a JSON array response.
      *
      * @param uri the request URI string
+     * @param headers additional headers, nullable
+     * @param readTimeoutMs read timeout in milliseconds
      * @return parsed JSON array
-     * @throws IOException              if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
+     * @throws IOException if an I/O error occurs, the response code is &gt;= 400, or the response is not valid JSON
      * @throws IllegalArgumentException if the JSON root is not an array
      */
-    public JsonArray getArray(
-            String uri
-    ) throws IOException {
-        return getArray(URI.create(uri), DEFAULT_HEADERS, DEFAULT_READ_TIMEOUT);
+    @Throws(IOException::class)
+    fun getArray(
+        uri: String,
+        headers: Map<String, String>? = DEFAULT_HEADERS,
+        readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
+    ): JsonArray {
+        return getArray(URI(uri), headers, readTimeoutMs)
     }
 
     /**
@@ -506,48 +263,51 @@ public final class HttpJson {
      * @param q query params
      * @return query string starting with '?', or empty string
      */
-    public String buildQuery(Map<String, String> q) {
-        if (q == null || q.isEmpty()) return "";
-        StringJoiner sj = new StringJoiner("&", "?", "");
-        for (var e : q.entrySet()) {
-            sj.add(encode(e.getKey()) + "=" + encode(e.getValue()));
+    @JvmStatic
+    fun buildQuery(q: Map<String, String>?): String {
+        if (q.isNullOrEmpty()) return ""
+        return q.entries.joinToString(separator = "&", prefix = "?", postfix = "") { (k, v) ->
+            "${encode(k)}=${encode(v)}"
         }
-        return sj.toString();
     }
 
-    private String encode(String s) {
-        return URLEncoder.encode(s, StandardCharsets.UTF_8);
+    private fun encode(s: String): String {
+        return URLEncoder.encode(s, StandardCharsets.UTF_8)
     }
 
-    private String extractErrorMessage(JsonElement root, int code) {
-        if (root != null && root.isJsonObject()) {
-            JsonObject obj = root.getAsJsonObject();
-            if (obj.has("message") && !obj.get("message").isJsonNull()) {
+    private fun extractErrorMessage(root: JsonElement?, code: Int): String {
+        if (root != null && root.isJsonObject) {
+            val obj = root.asJsonObject
+
+            if (obj.has("message") && !obj["message"].isJsonNull) {
                 try {
-                    String m = obj.get("message").getAsString();
-                    if (m != null && !m.isBlank()) return m;
-                } catch (Exception ignored) {
+                    val m = obj["message"].asString
+                    if (!m.isNullOrBlank()) return m
+                } catch (_: Exception) {
                 }
             }
-            for (String k : new String[]{"error", "detail"}) {
-                if (obj.has(k) && !obj.get(k).isJsonNull()) {
+
+            for (k in arrayOf("error", "detail")) {
+                if (obj.has(k) && !obj[k].isJsonNull) {
                     try {
-                        String m = obj.get(k).getAsString();
-                        if (m != null && !m.isBlank()) return m;
-                    } catch (Exception ignored) {
+                        val m = obj[k].asString
+                        if (!m.isNullOrBlank()) return m
+                    } catch (_: Exception) {
                     }
                 }
             }
         }
-        return "HTTP " + code;
+        return "HTTP $code"
     }
 
-    private String typeOf(JsonElement el) {
-        if (el == null) return "null";
-        if (el.isJsonObject()) return "object";
-        if (el.isJsonArray()) return "array";
-        if (el.isJsonPrimitive()) return "primitive";
-        if (el.isJsonNull()) return "null";
-        return "unknown";
+    private fun typeOf(el: JsonElement?): String {
+        if (el == null) return "null"
+        return when {
+            el.isJsonObject -> "object"
+            el.isJsonArray -> "array"
+            el.isJsonPrimitive -> "primitive"
+            el.isJsonNull -> "null"
+            else -> "unknown"
+        }
     }
 }

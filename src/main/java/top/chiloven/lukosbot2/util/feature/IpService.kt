@@ -6,12 +6,10 @@ import top.chiloven.lukosbot2.util.JsonUtils.getString
 import java.io.IOException
 
 object IpService {
-    val hj: HttpJson = HttpJson.getHttpJson()
-
     @JvmStatic
     @Throws(IOException::class)
     fun getIpInfo(ip: String?): IpInfo {
-        val result: JsonObject = hj.getObject("https://api.ip.sb/geoip/$ip")
+        val result: JsonObject = HttpJson.getObject("https://api.ip.sb/geoip/$ip")
 
         return IpInfo(
             ip = getString(result, "ip", null),

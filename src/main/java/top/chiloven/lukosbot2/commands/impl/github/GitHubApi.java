@@ -10,7 +10,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public final class GitHubApi {
-    public static final HttpJson hj = HttpJson.getHttpJson();
     private static final String BASE = "https://api.github.com";
     private final String token;
 
@@ -35,11 +34,11 @@ public final class GitHubApi {
      * @throws IOException if the request fails or there is a network error
      */
     private JsonObject get(String path, Map<String, String> query) throws IOException {
-        String url = BASE + path + hj.buildQuery(query);
+        String url = BASE + path + HttpJson.buildQuery(query);
         Map<String, String> headers = new java.util.LinkedHashMap<>();
         headers.put("Accept", "application/vnd.github.v3+json");
         if (token != null) headers.put("Authorization", "Bearer " + token);
-        return hj.getObject(url, headers, 10000);
+        return HttpJson.getObject(url, headers, 10000);
     }
 
     public JsonObject getRepo(String owner, String repo) throws IOException {

@@ -2,12 +2,15 @@ package top.chiloven.lukosbot2.commands.impl;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.IBotCommand;
 import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 import top.chiloven.lukosbot2.util.feature.MojangApi;
+
+import java.io.IOException;
 
 import static top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
 import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
@@ -24,6 +27,7 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuil
         havingValue = "true",
         matchIfMissing = true
 )
+@Log4j2
 public class PlayerCommand implements IBotCommand {
     @Override
     public String name() {
@@ -66,8 +70,15 @@ public class PlayerCommand implements IBotCommand {
                                 .executes(ctx -> {
                                     CommandSource src = ctx.getSource();
                                     String data = StringArgumentType.getString(ctx, "data");
-                                    src.reply(MojangApi.getMcPlayerInfo(data).toString());
-                                    return 1;
+
+                                    try {
+                                        src.reply(MojangApi.getMcPlayerInfo(data).toString());
+                                        return 1;
+                                    } catch (IOException e) {
+                                        log.warn("Failed to fetch player info: {}", e.getMessage(), e);
+                                        src.reply("获取失败玩家信息失败，请检查你的输入或重试。");
+                                        return 0;
+                                    }
                                 })
                                 // /player <data> <param>
                                 .then(argument("param", StringArgumentType.word())
@@ -76,14 +87,18 @@ public class PlayerCommand implements IBotCommand {
                                             String data = StringArgumentType.getString(ctx, "data");
                                             String param = StringArgumentType.getString(ctx, "param");
 
-                                            String result = switch (param) {
-                                                case "-u" -> MojangApi.getUuidFromName(data);
-                                                case "-n" -> MojangApi.getNameFromUuid(data);
-                                                default -> "不正确的参数：" + param;
-                                            };
-
-                                            src.reply(result);
-                                            return 1;
+                                            try {
+                                                src.reply(switch (param) {
+                                                    case "-u" -> MojangApi.getUuidFromName(data);
+                                                    case "-n" -> MojangApi.getNameFromUuid(data);
+                                                    default -> "不正确的参数：" + param;
+                                                });
+                                                return 1;
+                                            } catch (IOException e) {
+                                                log.warn("Failed to fetch player info: {}", e.getMessage(), e);
+                                                src.reply("获取失败玩家信息失败，请检查你的输入或重试。");
+                                                return 0;
+                                            }
                                         })
                                 )
                         )
