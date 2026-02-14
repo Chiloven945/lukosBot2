@@ -3,7 +3,6 @@ package top.chiloven.lukosbot2.commands.impl;
 import com.mojang.brigadier.CommandDispatcher;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
-import top.chiloven.lukosbot2.Constants;
 import top.chiloven.lukosbot2.commands.IBotCommand;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 
@@ -14,6 +13,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
+import static top.chiloven.lukosbot2.Constants.INSTANCE;
 import static top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
 
 @Service
@@ -24,7 +24,6 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuild
         matchIfMissing = true
 )
 public class PingCommand implements IBotCommand {
-    private static final Constants CONST = new Constants();
     @Override
     public String name() {
         return "ping";
@@ -100,8 +99,8 @@ public class PingCommand implements IBotCommand {
                 osBean.getName(), osBean.getVersion(),
                 (totalMem - freeMem), totalMem, maxMem,
                 Thread.activeCount(),
-                CONST.javaVersion, CONST.springBootVersion,
-                CONST.tgVersion, CONST.jdaVersion, CONST.shiroVersion
+                INSTANCE.getJavaVersion(), INSTANCE.getSpringBootVersion(),
+                INSTANCE.getTgVersion(), INSTANCE.getJdaVersion(), INSTANCE.getShiroVersion()
         );
     }
 }
