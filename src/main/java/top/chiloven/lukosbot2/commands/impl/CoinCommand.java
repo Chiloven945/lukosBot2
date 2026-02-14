@@ -27,8 +27,6 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuil
 )
 @Log4j2
 public class CoinCommand implements IBotCommand {
-    private static final MathUtils mu = MathUtils.getMathUtils();
-
     @Override
     public void register(CommandDispatcher<CommandSource> dispatcher) {
         dispatcher.register(literal(name())
@@ -79,7 +77,7 @@ public class CoinCommand implements IBotCommand {
         }
 
         try {
-            long[] r = mu.approximateMultinomial(times, 0.499999999999d, 0.499999999999d, 0.000000000002d);
+            long[] r = MathUtils.approximateMultinomial(times, 0.499999999999d, 0.499999999999d, 0.000000000002d);
 
             return """
                     你抛了 %d 个硬币。
