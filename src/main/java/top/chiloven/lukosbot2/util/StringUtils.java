@@ -5,7 +5,10 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Utility class for string manipulations.
@@ -121,4 +124,27 @@ public final class StringUtils {
     public String encodeTo(String str) {
         return encodeTo(str, StandardCharsets.UTF_8);
     }
+
+    public boolean isUrl(String s) {
+        String t = replaceNull(s, "").trim().toLowerCase();
+        return t.startsWith("http://") || t.startsWith("https://");
+    }
+
+    public List<String> splitPath(String path) {
+        return Arrays.stream(path.split("/"))
+                .filter(s -> !s.isBlank())
+                .collect(Collectors.toList());
+    }
+
+    public String formatFileSize(long bytes) {
+        if (bytes < 1024) return bytes + " B";
+
+        String[] units = {"B", "KB", "MB", "GB", "TB", "PB", "EB"};
+
+        int exp = (int) (Math.log(bytes) / Math.log(1024));
+        double value = bytes / Math.pow(1024, exp);
+
+        return String.format("%.2f %s", value, units[exp]);
+    }
+
 }

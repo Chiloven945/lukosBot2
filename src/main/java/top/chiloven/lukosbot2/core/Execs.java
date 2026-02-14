@@ -6,7 +6,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Utility methods for Java 25 concurrency: provides a virtual-thread-per-task executor for
+ * Utility methods for Java 21 concurrency: provides a virtual-thread-per-task executor for
  * highly concurrent I/O or blocking tasks and a named daemon platform-thread factory for
  * single-threaded lanes; this is a non-instantiable helper class.
  */
