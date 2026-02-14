@@ -1,9 +1,5 @@
 package top.chiloven.lukosbot2.util.feature;
 
-import top.chiloven.lukosbot2.config.ProxyConfigProp;
-import top.chiloven.lukosbot2.model.ContentData;
-import top.chiloven.lukosbot2.util.ImageUtils;
-import top.chiloven.lukosbot2.util.spring.SpringBeans;
 import lombok.extern.log4j.Log4j2;
 import org.jsoup.Jsoup;
 import org.openqa.selenium.*;
@@ -11,6 +7,10 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.edge.EdgeDriver;
 import org.openqa.selenium.edge.EdgeOptions;
+import top.chiloven.lukosbot2.config.ProxyConfigProp;
+import top.chiloven.lukosbot2.model.ContentData;
+import top.chiloven.lukosbot2.util.ImageUtils;
+import top.chiloven.lukosbot2.util.spring.SpringBeans;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,8 +23,6 @@ import java.util.Objects;
 
 @Log4j2
 public final class WebScreenshot {
-    private static final ImageUtils iu = ImageUtils.getImageUtils();
-
     private WebScreenshot() {
     }
 
@@ -114,7 +112,7 @@ public final class WebScreenshot {
             log.info("MediaWiki intro screenshot completed.");
             // Take PNG then convert to JPEG to reduce size (consistent with Wikipedia path)
             byte[] png = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
-            byte[] jpg = iu.pngToJpg(png);
+            byte[] jpg = ImageUtils.pngToJpg(png);
 
             // Try to fetch page title as filename; fallback to provided base
             String title = defaultFileBase;
