@@ -78,14 +78,25 @@ public interface IBotCommand {
     String description();
 
     /**
-     * Returns the detailed usage text for this command.
-     * <p>Implementations may return multi-line text including syntax and
-     * examples. It is usually shown when the user explicitly asks for help
-     * on this command.</p>
+     * Structured usage tree for this command.
      *
-     * @return detailed usage information
+     * <p>HelpCommand will render this usage as text or image.
      */
-    String usage();
+    UsageNode usage();
+
+    /**
+     * Render this command usage as Markdown (no header).
+     */
+    default String usageText(String prefix) {
+        return UsageTextRenderer.renderMarkdown(usage(), UsageTextRenderer.Options.forCommand(prefix));
+    }
+
+    /**
+     * Render this command usage as Markdown with default prefix "/".
+     */
+    default String usageText() {
+        return usageText("/");
+    }
 
     /**
      * Registers this command and all of its sub-nodes with the given dispatcher.
