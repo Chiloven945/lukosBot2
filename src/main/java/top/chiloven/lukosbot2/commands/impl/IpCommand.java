@@ -54,7 +54,7 @@ public class IpCommand implements IBotCommand {
         dispatcher.register(
                 literal(name())
                         .executes(ctx -> {
-                            ctx.getSource().reply(usageText());
+                            sendUsage(ctx.getSource());
                             return 1;
                         })
                         .then(argument("ip", StringArgumentType.greedyString())

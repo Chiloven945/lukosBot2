@@ -143,7 +143,7 @@ public class TwentyFourCommand implements IBotCommand {
     private void handleInput(CommandSource src, String rawInput) {
         String input = rawInput == null ? "" : rawInput.trim();
         if (input.isEmpty()) {
-            src.reply(usageText());
+            sendUsage(src);
             return;
         }
 

@@ -82,6 +82,47 @@ public class CommandSource {
         sink.accept(MessageOut.text(in.addr(), null).with(Attachment.fileBytes(name, bytes, mime)));
     }
 
+    // ===== Convenience for help/usage =====
+
+    /**
+     * Returns the command prefix for this chat.
+     *
+     * <p>Current implementation uses a fixed prefix {@code "/"}.
+     * If you later support per-chat prefix, change it here and all help rendering will follow.</p>
+     */
+    public String prefix() {
+        return "/";
+    }
+
+    /**
+     * Returns the maximum safe text length for a single message on the current platform.
+     *
+     * <p>This is used by help/usage rendering to decide whether to send text or fall back to an image.</p>
+     */
+    public int maxTextLength() {
+        return switch (platform()) {
+            case TELEGRAM -> 3500; // Telegram text limit is larger, but keep some margin for markdown/formatting
+            case DISCORD -> 1800;  // Discord message limit is 2000; keep margin
+            case ONEBOT -> 1800;   // varies; keep conservative
+        };
+    }
+
+    /**
+     * Sends a PNG image as an image attachment.
+     *
+     * <p>Centralized helper to keep callers (HelpCommand, IBotCommand) consistent.</p>
+     */
+    public void sendImagePng(String filename, byte[] pngBytes) {
+        replyImageBytes(filename, pngBytes, "image/png");
+    }
+
+    /**
+     * Sends an arbitrary file attachment.
+     */
+    public void sendFile(String filename, byte[] bytes, String mime) {
+        replyFileBytes(filename, bytes, mime);
+    }
+
     // ===== Getters =====
 
     /**

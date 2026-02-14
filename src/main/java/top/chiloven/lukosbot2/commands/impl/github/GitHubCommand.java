@@ -130,7 +130,7 @@ public class GitHubCommand implements IBotCommand {
                                 )
                         )
                         .executes(ctx -> {
-                            ctx.getSource().reply(usageText());
+                            sendUsage(ctx.getSource());
                             return 1;
                         })
         );

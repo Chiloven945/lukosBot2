@@ -159,7 +159,7 @@ public class McWikiCommand implements IWikiishCommand {
                                 )
                         )
                         .executes(ctx -> {
-                            ctx.getSource().reply(usageText());
+                            sendUsage(ctx.getSource());
                             return 1;
                         })
         );

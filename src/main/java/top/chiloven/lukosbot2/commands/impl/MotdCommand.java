@@ -64,7 +64,7 @@ public class MotdCommand implements IBotCommand {
         dispatcher.register(
                 literal(name())
                         .executes(ctx -> {
-                            ctx.getSource().reply(usageText());
+                            sendUsage(ctx.getSource());
                             return 0;
                         })
                         .then(argument("address", StringArgumentType.greedyString())

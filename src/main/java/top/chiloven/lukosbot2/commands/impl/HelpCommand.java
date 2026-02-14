@@ -6,12 +6,11 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.IBotCommand;
 import top.chiloven.lukosbot2.commands.UsageNode;
+import top.chiloven.lukosbot2.commands.UsageOutput;
 import top.chiloven.lukosbot2.commands.UsageTextRenderer;
 import top.chiloven.lukosbot2.config.AppProperties;
 import top.chiloven.lukosbot2.core.command.CommandRegistry;
 import top.chiloven.lukosbot2.core.command.CommandSource;
-import top.chiloven.lukosbot2.model.Attachment;
-import top.chiloven.lukosbot2.model.MessageOut;
 import top.chiloven.lukosbot2.util.UsageImageUtils;
 
 import static top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
@@ -19,9 +18,6 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuil
 
 @Service
 public class HelpCommand implements IBotCommand {
-    private static final int AUTO_IMAGE_MAX_CHARS = 1400;
-    private static final int AUTO_IMAGE_MAX_LINES = 32;
-
     private final ObjectProvider<CommandRegistry> registryProvider;
     private final AppProperties appProperties;
 
@@ -79,59 +75,20 @@ public class HelpCommand implements IBotCommand {
             return 0;
         }
 
-        UseMode mode = parseMode(modeRaw);
         UsageNode node = cmd.usage();
-
         UsageTextRenderer.Options opt = UsageTextRenderer.Options.forHelp(p);
-        UsageTextRenderer.Result rendered = UsageTextRenderer.render(node, opt);
 
-        boolean useImage = switch (mode) {
-            case IMAGE -> true;
-            case TEXT -> false;
-            case AUTO -> shouldAutoUseImage(rendered);
-        };
+        UsageOutput.sendUsage(
+                src,
+                p,
+                cmd.name(),
+                node,
+                opt,
+                UsageImageUtils.ImageStyle.defaults(),
+                UsageOutput.parseMode(modeRaw)
+        );
 
-        if (!useImage) {
-            src.reply(rendered.markdownText());
-            return 1;
-        }
-
-        try {
-            var img = UsageImageUtils.renderUsagePng(
-                    "usage-" + cmd.name(),
-                    node,
-                    opt,
-                    UsageImageUtils.ImageStyle.defaults()
-            );
-
-            MessageOut out = MessageOut.text(src.in().addr(), "命令用法：%s%s".formatted(p, cmd.name()))
-                    .with(Attachment.imageBytes(img.filename(), img.bytes(), img.mime()));
-
-            src.reply(out);
-            return 1;
-        } catch (Exception e) {
-            src.reply(rendered.markdownText() + "\n\n（图片渲染失败，已回退到文字版：" + e.getMessage() + "）");
-            return 1;
-        }
-    }
-
-    private boolean shouldAutoUseImage(UsageTextRenderer.Result rendered) {
-        if (rendered == null) return false;
-        String md = rendered.markdownText();
-        int lines = rendered.lines() == null ? 0 : rendered.lines().size();
-        int chars = md == null ? 0 : md.length();
-        return chars > AUTO_IMAGE_MAX_CHARS || lines > AUTO_IMAGE_MAX_LINES;
-    }
-
-    private UseMode parseMode(String modeRaw) {
-        if (modeRaw == null || modeRaw.isBlank()) return UseMode.AUTO;
-        String m = modeRaw.trim().toLowerCase();
-
-        return switch (m) {
-            case "img", "image", "pic", "png", "图片", "图" -> UseMode.IMAGE;
-            case "text", "txt", "raw", "文字" -> UseMode.TEXT;
-            default -> UseMode.AUTO;
-        };
+        return 1;
     }
 
     @Override
@@ -170,11 +127,5 @@ public class HelpCommand implements IBotCommand {
 
     private CommandRegistry registry() {
         return registryProvider.getObject();
-    }
-
-    private enum UseMode {
-        AUTO,
-        TEXT,
-        IMAGE
     }
 }

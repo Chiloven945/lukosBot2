@@ -100,7 +100,7 @@ public class WikiCommand implements IWikiishCommand {
                         )
                         // No args
                         .executes(ctx -> {
-                            ctx.getSource().reply(usageText());
+                            sendUsage(ctx.getSource());
                             return 1;
                         })
         );
