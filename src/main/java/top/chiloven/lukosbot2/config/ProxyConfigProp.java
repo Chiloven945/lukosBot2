@@ -160,7 +160,7 @@ public class ProxyConfigProp {
         if (!(p.address() instanceof InetSocketAddress addr)) return null;
 
         String hostPort = printableHost(addr) + ":" + addr.getPort();
-        org.openqa.selenium.Proxy sp = new org.openqa.selenium.Proxy(); // ← 显式写全名
+        org.openqa.selenium.Proxy sp = new org.openqa.selenium.Proxy();
         if (p.type() == java.net.Proxy.Type.SOCKS) {
             sp.setSocksProxy(hostPort);
             sp.setSocksVersion(5);
@@ -171,26 +171,23 @@ public class ProxyConfigProp {
         return sp;
     }
 
-    /**
-     * A standard Java Proxy (for libraries that need an explicitly injected Proxy).
-     */
     public java.net.Proxy toJavaProxy() {
-        if (!enabled) return Proxy.NO_PROXY;
-        if (isSocks()) {
-            return new Proxy(Proxy.Type.SOCKS, new InetSocketAddress(host, port));
-        } else if (isHttps()) {
-            return new Proxy(Proxy.Type.HTTP, new InetSocketAddress(host, port));
-        }
-        return Proxy.NO_PROXY;
-    }
+        if (!enabled || type == null) return Proxy.NO_PROXY;
 
-    // ===== Helpers =====
-    private boolean isSocks() {
-        return "SOCKS5".equalsIgnoreCase(type);
+        InetSocketAddress address = new InetSocketAddress(host, port);
+
+        return switch (type.toUpperCase()) {
+            case "SOCKS5", "SOCKS" -> new Proxy(Proxy.Type.SOCKS, address);
+            case "HTTPS", "HTTP" -> new Proxy(Proxy.Type.HTTP, address);
+            case "NONE" -> Proxy.NO_PROXY;
+            default -> {
+                log.warn("[ProxyConfig] Unknown proxy type: {}. You might enter a wrong name! Available types are 'SOCKS5', 'HTTPS', and 'NONE'.", type);
+                yield Proxy.NO_PROXY;
+            }
+        };
     }
 
     private boolean isHttps() {
         return "HTTPS".equalsIgnoreCase(type) || "HTTP".equalsIgnoreCase(type);
     }
-
 }
