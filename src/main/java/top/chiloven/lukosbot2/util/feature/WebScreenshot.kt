@@ -1,30 +1,36 @@
-package top.chiloven.lukosbot2.util.feature;
+package top.chiloven.lukosbot2.util.feature
 
-import lombok.extern.log4j.Log4j2;
-import org.jsoup.Jsoup;
-import org.openqa.selenium.*;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
-import org.openqa.selenium.edge.EdgeDriver;
-import org.openqa.selenium.edge.EdgeOptions;
-import top.chiloven.lukosbot2.config.ProxyConfigProp;
-import top.chiloven.lukosbot2.model.ContentData;
-import top.chiloven.lukosbot2.util.ImageUtils;
-import top.chiloven.lukosbot2.util.spring.SpringBeans;
+import org.apache.logging.log4j.LogManager
+import org.jsoup.Jsoup
+import org.openqa.selenium.*
+import org.openqa.selenium.chrome.ChromeDriver
+import org.openqa.selenium.chrome.ChromeOptions
+import org.openqa.selenium.edge.EdgeDriver
+import org.openqa.selenium.edge.EdgeOptions
+import top.chiloven.lukosbot2.Constants
+import top.chiloven.lukosbot2.config.ProxyConfigProp
+import top.chiloven.lukosbot2.model.ContentData
+import top.chiloven.lukosbot2.util.ImageUtils
+import top.chiloven.lukosbot2.util.spring.SpringBeans
+import java.io.File
+import java.io.IOException
+import java.nio.charset.StandardCharsets
+import java.nio.file.Paths
+import java.time.Duration
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+object WebScreenshot {
+    private val log = LogManager.getLogger(WebScreenshot::class.java)
 
-@Log4j2
-public final class WebScreenshot {
-    private WebScreenshot() {
-    }
+    private const val USER_AGENT = "Mozilla/5.0 (compatible; LukosBot/${Constants.VERSION})"
+    private val PAGE_LOAD_TIMEOUT: Duration = Duration.ofSeconds(20)
+
+    private const val FULLPAGE_WIDTH = 1080
+    private const val FULLPAGE_MAX_HEIGHT = 8000
+
+    private const val INTRO_WIDTH = 1380
+    private const val INTRO_FALLBACK_HEIGHT = 1200
+
+    private val ILLEGAL_FILENAME_CHARS = Regex("""[\\/:*?"<>|\r\n\t]""")
 
     /**
      * Take a full-page screenshot of the given URL.
@@ -33,32 +39,43 @@ public final class WebScreenshot {
      * @return the screenshot as a byte array (PNG format)
      * @throws Exception if an error occurs
      */
-    public static byte[] screenshotFullPage(String url) throws Exception {
-        WebDriver driver = null;
-        try {
-            log.info("Starting full-page screenshot: {}", url);
-            driver = createDriver();
-            driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(20));
-            driver.get(url);
+    @Throws(Exception::class)
+    @JvmStatic
+    fun screenshotFullPage(url: String): ByteArray {
+        log.info("Starting full-page screenshot: {}", url)
 
-            // Page height may vary; limit to a max height to avoid issues
-            Long height = (Long) ((JavascriptExecutor) driver).executeScript("return Math.min(document.body.scrollHeight || 800, 8000);");
-            driver.manage().window().setSize(new Dimension(1080, Objects.requireNonNull(height).intValue()));
+        createDriver().useDriver { driver ->
+            driver.manage().timeouts().pageLoadTimeout(PAGE_LOAD_TIMEOUT)
+            driver.get(url)
 
-            Thread.sleep(500);
-            log.info("Full-page screenshot completed.");
-            return ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
-        } catch (Exception e) {
-            log.error("Full-page screenshot failed for {}", url, e);
-            throw e;
-        } finally {
-            if (driver != null) try {
-                driver.quit();
-                log.debug("WebDriver quit successfully (full-page)");
-            } catch (Exception ignored) {
-            }
+            val height = driver.jsNumber(
+                "return Math.min(document.body.scrollHeight || 800, $FULLPAGE_MAX_HEIGHT);",
+                fallback = 800
+            )
+
+            driver.manage().window().size = Dimension(FULLPAGE_WIDTH, height)
+            Thread.sleep(500)
+
+            log.info("Full-page screenshot completed.")
+            return (driver as TakesScreenshot).getScreenshotAs(OutputType.BYTES)
         }
     }
+
+    /**
+     * Wikipedia intro screenshot (delegates to MediaWiki core).
+     */
+    @Throws(Exception::class)
+    @JvmStatic
+    fun screenshotWikipedia(url: String): ContentData =
+        screenshotMediaWiki(url, defaultFileBase = "wikipedia")
+
+    /**
+     * Minecraft Wiki intro screenshot (delegates to MediaWiki core).
+     */
+    @Throws(Exception::class)
+    @JvmStatic
+    fun screenshotMcWiki(url: String): ContentData =
+        screenshotMediaWiki(url, defaultFileBase = "mcwiki")
 
     /**
      * Core intro screenshot for MediaWiki-family sites (e.g., Wikipedia, Minecraft Wiki).
@@ -68,240 +85,210 @@ public final class WebScreenshot {
      * @param defaultFileBase default filename base when title cannot be fetched (e.g., "wikipedia" / "mcwiki")
      * @return ContentData containing JPEG bytes, mime, and a safe filename
      */
-    private static ContentData screenshotMediaWiki(String url, String defaultFileBase) throws Exception {
-        WebDriver driver = null;
-        try {
-            log.info("Starting MediaWiki intro screenshot: {}", url);
-            driver = createDriver();
-            driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(20));
-            driver.get(url);
+    @Throws(Exception::class)
+    private fun screenshotMediaWiki(url: String, defaultFileBase: String): ContentData {
+        log.info("Starting MediaWiki intro screenshot: {}", url)
 
-            JavascriptExecutor js = (JavascriptExecutor) driver;
+        createDriver().useDriver { driver ->
+            driver.manage().timeouts().pageLoadTimeout(PAGE_LOAD_TIMEOUT)
+            driver.get(url)
 
-            // Hide sticky headers / banners that may obstruct the lead section
-            log.debug("Injecting style to hide overlays");
-            js.executeScript("""
-                        const hide = document.createElement('style');
-                        hide.innerHTML = `
-                          .uls-menu, .uls-dialog, .vector-sticky-header,
-                          .mw-banner-ct-container, .centralNotice { display:none !important; }
-                        `;
-                        document.documentElement.appendChild(hide);
-                        window.scrollTo(0, 0);
-                    """);
+            val js = driver as JavascriptExecutor
+
+            log.debug("Injecting style to hide overlays")
+            js.executeScript(
+                """
+                const hide = document.createElement('style');
+                hide.innerHTML = `
+                  .uls-menu, .uls-dialog, .vector-sticky-header,
+                  .mw-banner-ct-container, .centralNotice { display:none !important; }
+                `;
+                document.documentElement.appendChild(hide);
+                window.scrollTo(0, 0);
+                """.trimIndent()
+            )
 
             // Measure lead height twice for stability
-            String script = loadScript("js/wikiIntroMeasure.js");
-            log.debug("Loaded measure script.");
+            val script = loadScript("js/wikiIntroMeasure.js")
+            log.debug("Loaded measure script.")
 
-            Number n1 = (Number) js.executeScript(script);
-            int h1 = toPx(n1, 1200);
-            log.debug("First measured height = {}", h1);
-            driver.manage().window().setSize(new Dimension(1380, h1));
-            Thread.sleep(700);
+            val h1 = driver.jsNumber(script, fallback = INTRO_FALLBACK_HEIGHT)
+            log.debug("First measured height = {}", h1)
+            driver.manage().window().size = Dimension(INTRO_WIDTH, h1)
+            Thread.sleep(700)
 
-            Number n2 = (Number) js.executeScript(script);
-            int h2 = toPx(n2, h1);
-            int target = Math.max(h1, h2);
-            log.debug("Second measured height = {}, final target = {}", h2, target);
+            val h2 = driver.jsNumber(script, fallback = h1)
+            val target = maxOf(h1, h2)
+            log.debug("Second measured height = {}, final target = {}", h2, target)
+
             if (target > h1) {
-                driver.manage().window().setSize(new Dimension(1380, target));
-                Thread.sleep(400);
+                driver.manage().window().size = Dimension(INTRO_WIDTH, target)
+                Thread.sleep(400)
             }
 
-            log.info("MediaWiki intro screenshot completed.");
-            // Take PNG then convert to JPEG to reduce size (consistent with Wikipedia path)
-            byte[] png = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
-            byte[] jpg = ImageUtils.pngToJpg(png);
+            val png = (driver as TakesScreenshot).getScreenshotAs(OutputType.BYTES)
+            val jpg = ImageUtils.pngToJpg(png)
 
-            // Try to fetch page title as filename; fallback to provided base
-            String title = defaultFileBase;
-            try {
-                var doc = Jsoup.connect(url)
-                        .userAgent("Mozilla/5.0 (compatible; LukosBot/1.0)")
-                        .timeout(10_000)
-                        .get();
-                var h1Tag = doc.selectFirst("h1#firstHeading");
-                if (h1Tag != null && !h1Tag.text().isBlank()) {
-                    title = h1Tag.text().trim();
-                }
-            } catch (IOException ignore) {
-            }
+            val title = fetchMediaWikiTitle(url, defaultFileBase)
+            val filename = "${sanitizeFilename(title, fallback = defaultFileBase)}.jpg"
 
-            String filename = sanitizeFilename(title) + ".jpg";
-            return new ContentData(filename, "image/jpeg", jpg);
-        } catch (Exception e) {
-            log.error("MediaWiki intro screenshot failed for {}", url, e);
-            throw e;
-        } finally {
-            if (driver != null) try {
-                driver.quit();
-                log.debug("WebDriver quit successfully (mediawiki intro)");
-            } catch (Exception _) {
-            }
+            log.info("MediaWiki intro screenshot completed.")
+            return ContentData(filename, "image/jpeg", jpg)
         }
     }
 
-    public static ContentData screenshotWikipedia(String url) throws Exception {
-        return screenshotMediaWiki(url, "wikipedia");
-    }
+    private fun createDriver(): WebDriver {
+        val proxy: ProxyConfigProp = SpringBeans.getBean(ProxyConfigProp::class.java)
 
-    /**
-     * Minecraft Wiki intro screenshot (delegates to MediaWiki core).
-     */
-    public static ContentData screenshotMcWiki(String url) throws Exception {
-        return screenshotMediaWiki(url, "mcwiki");
-    }
+        normalizeProxySystemProps()
 
-    // ====== Internal Utils ======
-    private static WebDriver createDriver() {
-        ProxyConfigProp proxy = SpringBeans.getBean(ProxyConfigProp.class);
+        val chromeBin = detectChrome()
+        return if (chromeBin != null) {
+            val co = ChromeOptions().apply {
+                addArguments(
+                    "--headless=new",
+                    "--disable-gpu",
+                    "--no-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--window-size=1920,1080",
+                    "--force-device-scale-factor=3"
+                )
 
-        // 清理“空字符串”的系统代理属性，避免 Selenium Manager 拼出 --proxy 但无值
-        normalizeProxySystemProps();
+                proxy.chromiumProxyArg()
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { addArguments(it) }
 
-        String chromeBin = detectChrome();
-        if (chromeBin != null) {
-            ChromeOptions co = new ChromeOptions();
-            co.addArguments("--headless=new", "--disable-gpu", "--no-sandbox",
-                    "--disable-dev-shm-usage", "--window-size=1920,1080",
-                    "--force-device-scale-factor=3");
-            // 只有在确实有有效参数时才传给 Chromium
-            String arg = proxy.chromiumProxyArg();
-            if (hasText(arg)) {
-                co.addArguments(arg);
+                setBinary(chromeBin)
             }
-            if (arg != null) co.addArguments(arg);
-            co.setBinary(chromeBin);
-            return new ChromeDriver(co);
+            ChromeDriver(co)
         } else {
-            EdgeOptions eo = new EdgeOptions();
-            eo.addArguments("--headless=new", "--disable-gpu", "--no-sandbox",
-                    "--disable-dev-shm-usage", "--window-size=1920,1080",
-                    "--force-device-scale-factor=3");
-            // 仅当 ProxyConfig 真的给出了有效地址时才设置代理；否则明确走 DIRECT
-            org.openqa.selenium.Proxy sp = proxy.toSeleniumProxy();
-            if (isValidSeleniumProxy(sp)) {
-                eo.setProxy(sp);
+            val eo = EdgeOptions().apply {
+                addArguments(
+                    "--headless=new",
+                    "--disable-gpu",
+                    "--no-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--window-size=1920,1080",
+                    "--force-device-scale-factor=3"
+                )
+
+                proxy.toSeleniumProxy()
+                    ?.takeIf { isValidSeleniumProxy(it) }
+                    ?.let { setProxy(it) }
             }
-            return new EdgeDriver(eo);
+            EdgeDriver(eo)
         }
     }
 
-    private static String detectChrome() {
-        // 1. 优先环境变量
-        String env = System.getenv("CHROME_BIN");
-        if (env != null && new File(env).isFile()) {
-            log.debug("Using CHROME_BIN from environment: {}", env);
-            return env;
+    private fun detectChrome(): String? {
+        val env = System.getenv("CHROME_BIN")
+        if (!env.isNullOrBlank() && File(env).isFile) {
+            log.debug("Using CHROME_BIN from environment: {}", env)
+            return env
         }
 
-        List<String> candidates = new ArrayList<>();
+        val candidates = mutableListOf<String>()
 
-        // 2. 常见安装路径
-        addCandidate(candidates, System.getenv("ProgramFiles"), "Google", "Chrome", "Application", "chrome.exe");
-        addCandidate(candidates, System.getenv("ProgramFiles(x86)"), "Google", "Chrome", "Application", "chrome.exe");
-        addCandidate(candidates, System.getenv("LOCALAPPDATA"), "Google", "Chrome", "Application", "chrome.exe");
+        addCandidate(candidates, System.getenv("ProgramFiles"), "Google", "Chrome", "Application", "chrome.exe")
+        addCandidate(candidates, System.getenv("ProgramFiles(x86)"), "Google", "Chrome", "Application", "chrome.exe")
+        addCandidate(candidates, System.getenv("LOCALAPPDATA"), "Google", "Chrome", "Application", "chrome.exe")
 
-        // 3. 用户目录下的一些常见缓存/安装路径
-        String home = System.getProperty("user.home");
-        if (home != null) {
-            addCandidate(candidates, home, ".cache", "selenium", "chrome", "win64", "chrome.exe");
-            addCandidate(candidates, home, "AppData", "Local", "ms-playwright", "chrome", "chrome-win", "chrome.exe");
+        val home = System.getProperty("user.home")
+        if (!home.isNullOrBlank()) {
+            addCandidate(candidates, home, ".cache", "selenium", "chrome", "win64", "chrome.exe")
+            addCandidate(candidates, home, "AppData", "Local", "ms-playwright", "chrome", "chrome-win", "chrome.exe")
         }
 
-        // 4. 遍历候选
-        for (String c : candidates) {
-            if (new File(c).isFile()) {
-                log.debug("Detected Chrome binary: {}", c);
-                return c;
-            }
+        candidates.firstOrNull { File(it).isFile }?.let {
+            log.debug("Detected Chrome binary: {}", it)
+            return it
         }
-        log.warn("Chrome binary not found in common locations.");
-        return null;
+
+        log.warn("Chrome binary not found in common locations.")
+        return null
     }
 
-    private static void addCandidate(List<String> list, String base, String... parts) {
-        if (base == null || base.isBlank()) return;
-        Path path = Paths.get(base, parts);
-        list.add(path.toString());
+    private fun addCandidate(list: MutableList<String>, base: String?, vararg parts: String) {
+        if (base.isNullOrBlank()) return
+        list += Paths.get(base, *parts).toString()
     }
 
-
-    /**
-     * 清理空字符串系统代理属性，避免 Selenium Manager 误认为需要 --proxy 但没有值。
-     */
-    private static void normalizeProxySystemProps() {
-        String[] keys = {
-                "http.proxyHost", "https.proxyHost",
-                "http.proxyPort", "https.proxyPort",
-                "http.nonProxyHosts"
-        };
-        for (String k : keys) {
-            String v = System.getProperty(k);
+    private fun normalizeProxySystemProps() {
+        val keys = arrayOf(
+            "http.proxyHost", "https.proxyHost",
+            "http.proxyPort", "https.proxyPort",
+            "http.nonProxyHosts"
+        )
+        for (k in keys) {
+            val v = System.getProperty(k)
             if (v != null && v.isBlank()) {
-                System.clearProperty(k);
-                log.debug("Cleared blank system property: {}", k);
+                System.clearProperty(k)
+                log.debug("Cleared blank system property: {}", k)
             }
         }
     }
 
-    private static boolean hasText(String s) {
-        return s != null && !s.isBlank();
+    private fun isValidSeleniumProxy(p: Proxy): Boolean {
+        val hp = p.httpProxy
+        val sp = p.sslProxy
+        val pac = p.proxyAutoconfigUrl
+        return !hp.isNullOrBlank() || !sp.isNullOrBlank() || !pac.isNullOrBlank()
     }
 
-    /**
-     * 只在代理字段确实有值时才视为有效代理
-     */
-    private static boolean isValidSeleniumProxy(org.openqa.selenium.Proxy p) {
-        if (p == null) return false;
-        String hp = p.getHttpProxy();
-        String sp = p.getSslProxy();
-        String pac = p.getProxyAutoconfigUrl();
-        return hasText(hp) || hasText(sp) || hasText(pac);
+    private fun WebDriver.jsNumber(script: String, fallback: Int): Int {
+        val v = (this as JavascriptExecutor).executeScript(script)
+        return toPx(v, fallback)
     }
 
-
-    /**
-     * Turns a valid pixel height from a JavaScript number (Long or Double) returned by Selenium.
-     *
-     * @param v        the value to convert
-     * @param fallback the fallback value if conversion fails
-     * @return the pixel height as an integer
-     */
-    private static int toPx(Object v, int fallback) {
-        if (v instanceof Number num) {
-            double d = num.doubleValue();
-            if (Double.isFinite(d)) return Math.max(1, (int) Math.round(d));
-        }
-        return fallback;
+    private fun toPx(v: Any?, fallback: Int): Int {
+        val num = v as? Number ?: return fallback
+        val d = num.toDouble()
+        return if (d.isFinite()) kotlin.math.max(1, kotlin.math.round(d).toInt()) else fallback
     }
 
-    /**
-     * Load a script from the classpath.
-     *
-     * @param resource the resource path (e.g., "scripts/some_script.js")
-     * @return the script content as a String
-     * @throws Exception if the resource cannot be found or read
-     */
-    private static String loadScript(String resource) throws Exception {
-        try (var in = WebScreenshot.class.getClassLoader().getResourceAsStream(resource)) {
-            if (in == null) throw new IllegalStateException("Script not found: " + resource);
-            return new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+    private fun loadScript(resource: String): String {
+        val inStream = WebScreenshot::class.java.classLoader.getResourceAsStream(resource)
+            ?: throw IllegalStateException("Script not found: $resource")
+        inStream.use { input ->
+            return String(input.readBytes(), StandardCharsets.UTF_8)
         }
     }
 
-    /**
-     * Sanitize a filename by replacing illegal characters with underscores.
-     * If the result is empty, return "wikipedia".
-     *
-     * @param raw the raw filename
-     * @return the sanitized filename
-     */
-    private static String sanitizeFilename(String raw) {
-        if (raw == null) return "wikipedia";
-        String safe = raw.replaceAll("[\\\\/:*?\"<>|\\r\\n\\t]", "_").trim();
-        return safe.isEmpty() ? "wikipedia" : safe;
+    private fun fetchMediaWikiTitle(url: String, fallback: String): String {
+        return try {
+            val doc = Jsoup.connect(url)
+                .userAgent(USER_AGENT)
+                .timeout(10_000)
+                .get()
+
+            doc.selectFirst("h1#firstHeading")
+                ?.text()
+                ?.trim()
+                ?.takeIf { it.isNotBlank() }
+                ?: fallback
+        } catch (_: IOException) {
+            fallback
+        }
     }
 
+    private fun sanitizeFilename(raw: String?, fallback: String): String {
+        val base = raw?.takeIf { it.isNotBlank() } ?: fallback
+        val safe = base.replace(ILLEGAL_FILENAME_CHARS, "_").trim()
+        return safe.ifEmpty { fallback }
+    }
+
+    private inline fun <T> WebDriver.useDriver(block: (WebDriver) -> T): T {
+        try {
+            return block(this)
+        } catch (e: Exception) {
+            log.error("Web screenshot failed.", e)
+            throw e
+        } finally {
+            try {
+                quit()
+                log.debug("WebDriver quit successfully.")
+            } catch (_: Exception) {
+            }
+        }
+    }
 }
