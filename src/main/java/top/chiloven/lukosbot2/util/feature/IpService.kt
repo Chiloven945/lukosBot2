@@ -5,8 +5,10 @@ import top.chiloven.lukosbot2.util.HttpJson
 import top.chiloven.lukosbot2.util.JsonUtils.getString
 import java.io.IOException
 
-class IpService {
+object IpService {
+    val hj: HttpJson = HttpJson.getHttpJson()
 
+    @JvmStatic
     @Throws(IOException::class)
     fun getIpInfo(ip: String?): IpInfo {
         val result: JsonObject = hj.getObject("https://api.ip.sb/geoip/$ip")
@@ -82,9 +84,5 @@ class IpService {
             if (!extra.isNullOrBlank()) append(extra)
             append('\n')
         }
-    }
-
-    companion object {
-        val hj: HttpJson = HttpJson.getHttpJson()
     }
 }

@@ -24,8 +24,6 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuil
 )
 @Log4j2
 public class IpCommand implements IBotCommand {
-    public static final IpService IS = new IpService();
-
     @Override
     public String name() {
         return "ip";
@@ -61,7 +59,7 @@ public class IpCommand implements IBotCommand {
                                 .executes(ctx -> {
                                     try {
                                         ctx.getSource().reply(
-                                                IS.getIpInfo(StringArgumentType.getString(ctx, "ip")).toString()
+                                                IpService.getIpInfo(StringArgumentType.getString(ctx, "ip")).toString()
                                         );
                                         return 1;
                                     } catch (IOException e) {
