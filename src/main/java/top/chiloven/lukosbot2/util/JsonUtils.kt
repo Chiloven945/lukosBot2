@@ -1,397 +1,261 @@
-package top.chiloven.lukosbot2.util;
+package top.chiloven.lukosbot2.util
 
-import com.google.gson.*;
-
-import java.io.*;
-import java.lang.reflect.Type;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.AtomicMoveNotSupportedException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.util.Objects;
-import java.util.function.Supplier;
+import com.google.gson.*
+import java.io.IOException
+import java.lang.reflect.Type
+import java.nio.charset.StandardCharsets
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 
 /**
- * JSON Utilities:<br>
- * - readJson / writeJson: File reading and writing (UTF-8, pretty print)<br>
- * - Supports Class and Type (generics)<br>
- * - Atomic write: First writes to a temporary file, then moves it to replace the original<br>
- * - loadOrCreate: If the file does not exist, creates and returns with a default value<br>
- * - fromJsonString / toJsonString: Convert between string and object<br>
- * - readResource: Reads from classpath resources (e.g., default configuration templates)<br>
+ * JSON Utilities:
+ * - readFile / writeFile: File reading and writing (UTF-8, pretty print)
+ * - Supports Class and Type (generics)
+ * - Atomic write: First writes to a temporary file, then moves it to replace the original
+ * - loadOrCreateFile: If the file does not exist, creates it with a default value and returns it
+ * - fromJsonString / toJsonString: Convert between string and object
+ * - readResourceAs: Reads from classpath resources (e.g., default configuration templates)
+ *
+ * Note:
+ * This class is designed in an idiomatic Kotlin style:
+ * - public APIs avoid nullable parameters
+ * - defaults are provided via lambdas instead of Java Supplier
  */
-public final class JsonUtils {
+object JsonUtils {
+    val GSON: Gson = GsonBuilder()
+        .setPrettyPrinting()
+        .disableHtmlEscaping()
+        .create()
 
-    public static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+    /* ===================== File <-> Object ===================== */
 
-    private JsonUtils() {
+    @Throws(IOException::class, JsonSyntaxException::class)
+    fun <T> readFile(path: Path, cls: Class<T>): T {
+        Files.newBufferedReader(path, StandardCharsets.UTF_8).use { r ->
+            return GSON.fromJson(r, cls)
+        }
     }
 
-    public static JsonUtils getJsonUtils() {
-        return new JsonUtils();
-    }
-
-    /* ===================== File ←→ Object ===================== */
-
-    /**
-     * Reads JSON from a file and deserializes it into an object (supports Class)
-     *
-     * @param path file path
-     * @param cls  target class
-     * @param <T>  type parameter
-     * @return deserialized object
-     * @throws IOException         if file read fails
-     * @throws JsonSyntaxException if JSON is malformed
-     */
-    public <T> T readFile(Path path, Class<T> cls) throws IOException, JsonSyntaxException {
-        Objects.requireNonNull(path);
-        try (Reader r = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
-            return GSON.fromJson(r, cls);
+    @Throws(IOException::class, JsonSyntaxException::class)
+    fun <T> readFile(path: Path, type: Type): T {
+        Files.newBufferedReader(path, StandardCharsets.UTF_8).use { r ->
+            @Suppress("UNCHECKED_CAST")
+            return GSON.fromJson<T>(r, type)
         }
     }
 
     /**
-     * Reads JSON from a file and deserializes it into an object (supports Type for generics)
-     *
-     * @param path file path
-     * @param type target type
-     * @param <T>  type parameter
-     * @return deserialized object
-     * @throws IOException         if file read fails
-     * @throws JsonSyntaxException if JSON is malformed
+     * Serializes [obj] to JSON and writes it to [path] (UTF-8, pretty print).
+     * Uses atomic write: first writes to a temporary file, then moves it to replace the original file.
      */
-    public <T> T readFile(Path path, Type type) throws IOException, JsonSyntaxException {
-        Objects.requireNonNull(path);
-        try (Reader r = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
-            return GSON.fromJson(r, type);
+    @Throws(IOException::class)
+    fun writeFile(path: Path, obj: Any) {
+        val dir = path.parent
+        if (dir != null) Files.createDirectories(dir)
+
+        val json = toJsonString(obj)
+
+        val fn = path.fileName.toString()
+        val tmpName = "$fn.tmp-${System.nanoTime()}"
+        val tmp = path.parent?.resolve(tmpName) ?: Path.of(tmpName)
+
+        Files.newBufferedWriter(tmp, StandardCharsets.UTF_8).use { w ->
+            w.write(json)
         }
-    }
 
-    /**
-     * Serializes an object to JSON and writes it to a file (UTF-8, pretty print)
-     * Uses atomic write: first writes to a temporary file, then moves it to replace the
-     * original file
-     *
-     * @param path file path
-     * @param obj  object to serialize
-     * @throws IOException if file write fails
-     */
-    public void writeFile(Path path, Object obj) throws IOException {
-        Objects.requireNonNull(path);
-        Objects.requireNonNull(obj);
-
-        Path dir = path.getParent();
-        if (dir != null) Files.createDirectories(dir);
-
-        String json = toJsonString(obj);
-
-        String fn = path.getFileName().toString();
-        String tmpName = fn + ".tmp-" + System.nanoTime();
-        Path tmp = (path.getParent() == null) ? Path.of(tmpName) : path.getParent().resolve(tmpName);
-        try (Writer w = Files.newBufferedWriter(tmp, StandardCharsets.UTF_8)) {
-            w.write(json);
-        }
         try {
-            Files.move(tmp, path, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-        } catch (AtomicMoveNotSupportedException e) {
-            Files.move(tmp, path, StandardCopyOption.REPLACE_EXISTING);
+            Files.move(tmp, path, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+        } catch (_: AtomicMoveNotSupportedException) {
+            Files.move(tmp, path, StandardCopyOption.REPLACE_EXISTING)
         }
     }
 
     /**
-     * If the file does not exist, creates it with default values and returns the defaults;
-     * If it exists, reads and returns the deserialized object
-     *
-     * @param path     file path
-     * @param cls      target class
-     * @param defaults supplier for default object if file does not exist
-     * @param <T>      type parameter
-     * @return deserialized object or default object
-     * @throws IOException if file read/write fails
+     * If [path] does not exist, creates it using [defaults] and returns that default object;
+     * otherwise reads and returns the deserialized object.
      */
-    public <T> T loadOrCreateFile(Path path, Class<T> cls, Supplier<T> defaults) throws IOException {
-        Objects.requireNonNull(path);
-        Objects.requireNonNull(cls);
-        Objects.requireNonNull(defaults);
-
+    @Throws(IOException::class)
+    fun <T> loadOrCreateFile(path: Path, cls: Class<T>, defaults: () -> T): T {
         if (Files.notExists(path)) {
-            T def = defaults.get();
-            writeFile(path, def);
-            return def;
+            val def = defaults()
+            writeFile(path, def as Any)
+            return def
         }
-        return readFile(path, cls);
+        return readFile(path, cls)
     }
 
-    /* ===================== String ←→ Object ===================== */
+    /* ===================== String <-> Object ===================== */
 
-    /**
-     * Deserializes a JSON string into an object (supports Class)
-     *
-     * @param json JSON string
-     * @param cls  target class
-     * @param <T>  type parameter
-     * @return deserialized object
-     * @throws JsonSyntaxException if JSON is malformed
-     */
-    public <T> T fromJsonString(String json, Class<T> cls) throws JsonSyntaxException {
-        Objects.requireNonNull(json);
-        return GSON.fromJson(json, cls);
+    @JvmStatic
+    @Throws(JsonSyntaxException::class)
+    fun <T> fromJsonString(json: String, cls: Class<T>): T {
+        return GSON.fromJson(json, cls)
     }
 
-    /**
-     * Deserializes a JSON string into an object (supports Type for generics)
-     *
-     * @param json JSON string
-     * @param type target type
-     * @param <T>  type parameter
-     * @return deserialized object
-     * @throws JsonSyntaxException if JSON is malformed
-     */
-    public <T> T fromJsonString(String json, Type type) throws JsonSyntaxException {
-        Objects.requireNonNull(json);
-        return GSON.fromJson(json, type);
+    @Throws(JsonSyntaxException::class)
+    fun <T> fromJsonString(json: String, type: Type): T {
+        @Suppress("UNCHECKED_CAST")
+        return GSON.fromJson<T>(json, type)
     }
 
-    /**
-     * Serializes an object into a JSON string (pretty print)
-     *
-     * @param obj object to serialize
-     * @return JSON string
-     */
-    public String toJsonString(Object obj) {
-        Objects.requireNonNull(obj);
-        return GSON.toJson(obj);
-    }
+    fun toJsonString(obj: Any): String = GSON.toJson(obj)
 
-    /* =====================  Resource Reading  ===================== */
+    /* ===================== Resource Reading ===================== */
 
     /**
-     * Reads a JSON resource from the classpath and deserializes it into an object
+     * Reads a JSON resource from the classpath and deserializes it into an object.
      *
      * @param resourcePath path to the resource (e.g., "/default_config.json")
-     * @param cls          target class
-     * @param <T>          type parameter
-     * @return deserialized object
-     * @throws IOException         if resource not found or read fails
-     * @throws JsonSyntaxException if JSON is malformed
      */
-    public <T> T readResourceAs(String resourcePath, Class<T> cls) throws IOException {
-        Objects.requireNonNull(resourcePath);
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(Objects.requireNonNull(JsonUtils.class.getResourceAsStream(resourcePath)), StandardCharsets.UTF_8))) {
-            return GSON.fromJson(br, cls);
-        } catch (NullPointerException npe) {
-            throw new IOException("Unable to find the resource: " + resourcePath, npe);
+    @Throws(IOException::class, JsonSyntaxException::class)
+    fun <T> readResourceAs(resourcePath: String, cls: Class<T>): T {
+        val input = JsonUtils::class.java.getResourceAsStream(resourcePath)
+            ?: throw IOException("Unable to find the resource: $resourcePath")
+
+        input.reader(StandardCharsets.UTF_8).buffered().use { br ->
+            return GSON.fromJson(br, cls)
         }
     }
 
-    /* =====================  Private Helpers  ===================== */
+    /* ===================== Helpers ===================== */
+
+    fun toJsonObject(obj: Any): JsonObject = GSON.toJsonTree(obj).asJsonObject
+
+    fun <T> fromJsonObject(obj: JsonObject, cls: Class<T>): T = GSON.fromJson(obj, cls)
 
     /**
-     * Serializes an object into a JsonObject
-     *
-     * @param obj the object to serialize
-     * @return the resulting JsonObject
+     * Deep merge [src] into [dst] (modifies [dst]).
+     * If both dst and src have a value for the same key and both values are JsonObjects, merge recursively.
+     * Otherwise, overwrite dst's value with src's value.
+     * Arrays are overwritten (no special handling).
      */
-    public JsonObject toJsonObject(Object obj) {
-        return GSON.toJsonTree(obj).getAsJsonObject();
-    }
-
-    /**
-     * Deserializes a JsonObject into an object of the specified class
-     *
-     * @param obj the JsonObject to deserialize
-     * @param cls the target class
-     * @param <T> type parameter
-     * @return the deserialized object
-     */
-    public <T> T fromJsonObject(JsonObject obj, Class<T> cls) {
-        return GSON.fromJson(obj, cls);
-    }
-
-    /**
-     * Deep merge src into dst (modifies dst).
-     * If both dst and src have a value for the same key and both values are Json
-     * objects, merge them recursively. Otherwise, overwrite dst's value with src's value.
-     * This does not handle Json arrays specially; src's value
-     * will overwrite dst's value if they are arrays.
-     *
-     * @param dst the destination JsonObject to merge into
-     * @param src the source JsonObject to merge from
-     */
-    public void mergeInto(JsonObject dst, JsonObject src) {
-        for (String key : src.keySet()) {
-            JsonElement srcVal = src.get(key);
-            // If dst does not have the key, add it
+    fun mergeInto(dst: JsonObject, src: JsonObject) {
+        for (key in src.keySet()) {
+            val srcVal = src.get(key)
             if (!dst.has(key)) {
-                dst.add(key, srcVal);
-                continue;
+                dst.add(key, srcVal)
+                continue
             }
 
-            JsonElement dstVal = dst.get(key);
-            // If both values are JsonObjects, merge them recursively
-            if (srcVal != null && srcVal.isJsonObject() && dstVal != null && dstVal.isJsonObject()) {
-                mergeInto(dstVal.getAsJsonObject(), srcVal.getAsJsonObject());
+            val dstVal = dst.get(key)
+            if (srcVal.isJsonObject && dstVal.isJsonObject) {
+                mergeInto(dstVal.asJsonObject, srcVal.asJsonObject)
             } else {
-                dst.add(key, srcVal);
+                dst.add(key, srcVal)
             }
         }
     }
 
-    /**
-     * Get a string value from a JsonObject by key, with a default if the key is missing or null.
-     *
-     * @param obj the JsonObject
-     * @param key the key
-     * @param def the default value
-     * @return the string value or the default
-     */
-    public String getString(JsonObject obj, String key, String def) {
-        return (obj != null && obj.has(key) && !obj.get(key).isJsonNull()) ? obj.get(key).getAsString() : def;
+    @JvmStatic
+    fun getString(obj: JsonObject, key: String, def: String? = null): String? {
+        val el = obj.get(key) ?: return def
+        return if (!el.isJsonNull) el.asString else def
     }
 
-    /**
-     * Get a long value from a JsonObject by key, with a default if the key is missing or null.
-     *
-     * @param obj the JsonObject
-     * @param key the key
-     * @param def the default value
-     * @return the long value or the default
-     */
-    public long getLong(JsonObject obj, String key, long def) {
-        return (obj != null && obj.has(key) && !obj.get(key).isJsonNull()) ? obj.get(key).getAsLong() : def;
+    @JvmStatic
+    fun getLong(obj: JsonObject, key: String, def: Long): Long {
+        val el = obj.get(key) ?: return def
+        return if (!el.isJsonNull) el.asLong else def
     }
 
-    /**
-     * Get an int value from a JsonObject by key, with a default if the key is missing or null.
-     *
-     * @param obj the JsonObject
-     * @param key the key
-     * @param def the default value
-     * @return the int value or the default
-     */
-    public int getInt(JsonObject obj, String key, int def) {
-        return (obj != null && obj.has(key) && !obj.get(key).isJsonNull()) ? obj.get(key).getAsInt() : def;
+    @JvmStatic
+    fun getInt(obj: JsonObject, key: String, def: Int): Int {
+        val el = obj.get(key) ?: return def
+        return if (!el.isJsonNull) el.asInt else def
     }
 
-    /**
-     * Get a JsonObject value from a JsonObject by key, or null if the key is missing or not a JsonObject.
-     *
-     * @param obj the JsonObject
-     * @param key the key
-     * @return the JsonObject value or null
-     */
-    public JsonObject getObj(JsonObject obj, String key) {
-        return (obj != null && obj.has(key) && obj.get(key).isJsonObject()) ? obj.getAsJsonObject(key) : null;
+    @JvmStatic
+    fun getObj(obj: JsonObject, key: String): JsonObject? {
+        val el = obj.get(key) ?: return null
+        return if (el.isJsonObject) el.asJsonObject else null
     }
 
-    /**
-     * Get a JsonArray from a JsonObject by key, or null if missing / not array.
-     */
-    public JsonArray getArray(JsonObject obj, String key) {
-        return (obj != null && obj.has(key) && obj.get(key).isJsonArray())
-                ? obj.getAsJsonArray(key)
-                : null;
+    fun getArray(obj: JsonObject, key: String): JsonArray? {
+        val el = obj.get(key) ?: return null
+        return if (el.isJsonArray) el.asJsonArray else null
     }
 
-    /**
-     * Get a JsonElement from a JsonObject by key, or null if missing.
-     */
-    public JsonElement getElement(JsonObject obj, String key) {
-        return (obj != null && obj.has(key) && !obj.get(key).isJsonNull())
-                ? obj.get(key)
-                : null;
+    fun getElement(obj: JsonObject, key: String): JsonElement? {
+        val el = obj.get(key) ?: return null
+        return if (!el.isJsonNull) el else null
     }
 
-    /**
-     * Get a string from an array of objects:
-     * e.g. key="properties", index=0, subKey="value"
-     */
-    public String getStringFromArrayObj(JsonObject obj, String arrayKey, int index, String subKey, String def) {
-        if (obj == null || arrayKey == null || subKey == null) return def;
+    fun getStringFromArrayObj(
+        obj: JsonObject,
+        arrayKey: String,
+        index: Int,
+        subKey: String,
+        def: String? = null
+    ): String? {
+        val arr = getArray(obj, arrayKey) ?: return def
+        if (index !in 0 until arr.size()) return def
 
-        JsonArray arr = getArray(obj, arrayKey);
-        if (arr == null || index < 0 || index >= arr.size()) return def;
+        val el = arr[index]
+        if (!el.isJsonObject) return def
 
-        JsonElement el = arr.get(index);
-        if (el == null || !el.isJsonObject()) return def;
-
-        return getString(el.getAsJsonObject(), subKey, def);
+        return getString(el.asJsonObject, subKey, def)
     }
 
-    /**
-     * Find first object in array where matchKey==matchValue, then return its targetKey as String.
-     * e.g. arrayKey="properties", matchKey="name", matchValue="textures", targetKey="value"
-     */
-    public String findStringInArrayByKey(JsonObject obj,
-                                         String arrayKey,
-                                         String matchKey,
-                                         String matchValue,
-                                         String targetKey,
-                                         String def) {
-        if (obj == null) return def;
+    fun findStringInArrayByKey(
+        obj: JsonObject,
+        arrayKey: String,
+        matchKey: String,
+        matchValue: String,
+        targetKey: String,
+        def: String? = null
+    ): String? {
+        val arr = getArray(obj, arrayKey) ?: return def
 
-        JsonArray arr = getArray(obj, arrayKey);
-        if (arr == null) return def;
+        for (e in arr) {
+            if (!e.isJsonObject) continue
+            val item = e.asJsonObject
 
-        for (JsonElement e : arr) {
-            if (e == null || !e.isJsonObject()) continue;
-            JsonObject item = e.getAsJsonObject();
-
-            String mk = getString(item, matchKey, null);
-            if (mk != null && mk.equals(matchValue)) {
-                return getString(item, targetKey, def);
+            val mk = getString(item, matchKey, null)
+            if (mk == matchValue) {
+                return getString(item, targetKey, def)
             }
         }
-        return def;
+        return def
     }
 
-    /**
-     * Get JsonElement by simple path like: "properties[0].value" or "a.b.c"
-     */
-    public JsonElement getByPath(JsonObject obj, String path) {
-        if (obj == null || path == null || path.isEmpty()) return null;
+    fun getByPath(obj: JsonObject, path: String): JsonElement? {
+        if (path.isEmpty()) return null
 
-        JsonElement current = obj;
-        String[] parts = path.split("\\.");
+        var current: JsonElement = obj
+        val parts = path.split('.')
 
-        for (String part : parts) {
-            if (current == null || current.isJsonNull()) return null;
+        for (part in parts) {
+            if (current.isJsonNull) return null
 
-            // Handle something like "properties[0]"
-            int lb = part.indexOf('[');
+            val lb = part.indexOf('[')
             if (lb >= 0) {
-                String key = part.substring(0, lb);
-                int rb = part.indexOf(']', lb);
-                if (rb < 0) return null;
+                val key = part.substring(0, lb)
+                val rb = part.indexOf(']', lb)
+                if (rb < 0) return null
 
-                String idxStr = part.substring(lb + 1, rb);
-                int idx;
-                try {
-                    idx = Integer.parseInt(idxStr);
-                } catch (NumberFormatException ex) {
-                    return null;
-                }
+                val idx = part.substring(lb + 1, rb).toIntOrNull() ?: return null
+                if (!current.isJsonObject) return null
 
-                if (!current.isJsonObject()) return null;
-                JsonObject curObj = current.getAsJsonObject();
-                JsonArray arr = getArray(curObj, key);
-                if (arr == null || idx < 0 || idx >= arr.size()) return null;
+                val curObj = current.asJsonObject
+                val arr = getArray(curObj, key) ?: return null
+                if (idx !in 0 until arr.size()) return null
 
-                current = arr.get(idx);
+                current = arr[idx]
             } else {
-                if (!current.isJsonObject()) return null;
-                current = current.getAsJsonObject().get(part);
+                if (!current.isJsonObject) return null
+                val next = current.asJsonObject.get(part) ?: return null
+                current = next
             }
         }
-        return (current == null || current.isJsonNull()) ? null : current;
+
+        return if (current.isJsonNull) null else current
     }
 
-    /**
-     * Get String by path with default.
-     */
-    public String getStringByPath(JsonObject obj, String path, String def) {
-        JsonElement el = getByPath(obj, path);
-        return (el != null && el.isJsonPrimitive()) ? el.getAsString() : def;
+    @JvmStatic
+    fun getStringByPath(obj: JsonObject, path: String, def: String? = null): String? {
+        val el = getByPath(obj, path) ?: return def
+        return if (el.isJsonPrimitive) el.asString else def
     }
 }

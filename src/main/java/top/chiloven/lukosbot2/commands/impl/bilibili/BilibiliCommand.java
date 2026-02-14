@@ -9,8 +9,6 @@ import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.IBotCommand;
 import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.core.command.CommandSource;
-import top.chiloven.lukosbot2.util.JsonUtils;
-import top.chiloven.lukosbot2.util.StringUtils;
 
 import java.net.URI;
 import java.net.URLEncoder;
@@ -28,6 +26,8 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static top.chiloven.lukosbot2.util.JsonUtils.*;
+import static top.chiloven.lukosbot2.util.StringUtils.*;
 import static top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
 import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
 
@@ -45,9 +45,6 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuil
 )
 @Log4j2
 public class BilibiliCommand implements IBotCommand {
-
-    public static final StringUtils su = StringUtils.getStringUtils();
-    public static final JsonUtils ju = JsonUtils.getJsonUtils();
     private static final HttpClient HTTP = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(8))
             .followRedirects(Redirect.NEVER)
@@ -146,9 +143,9 @@ public class BilibiliCommand implements IBotCommand {
                 """.formatted(
                 link,
                 v.getTitle(),
-                su.replaceNull(v.getTname()),
-                su.replaceNull(v.getOwnerName()),
-                su.formatTime(v.getPubDateMs())
+                replaceNull(v.getTname()),
+                replaceNull(v.getOwnerName()),
+                formatTime(v.getPubDateMs())
         );
     }
 
@@ -157,24 +154,24 @@ public class BilibiliCommand implements IBotCommand {
         sb.append(link).append("\n");
         sb.append("标题：").append(v.getTitle());
         if (v.getPageCount() > 1) sb.append("（").append(v.getPageCount()).append("P）");
-        sb.append(" | 类型：").append(su.replaceNull(v.getTname())).append("\n");
+        sb.append(" | 类型：").append(replaceNull(v.getTname())).append("\n");
 
-        sb.append("UP主：").append(su.replaceNull(v.getOwnerName())).append(" | 粉丝：").append(su.formatNum(v.getFans())).append("\n");
+        sb.append("UP主：").append(replaceNull(v.getOwnerName())).append(" | 粉丝：").append(formatNum(v.getFans())).append("\n");
 
         if (v.getDesc() != null && !v.getDesc().isBlank()) {
-            sb.append("简介：").append(su.truncate(v.getDesc(), 160)).append("\n");
+            sb.append("简介：").append(truncate(v.getDesc(), 160)).append("\n");
         }
 
-        sb.append("观看：").append(su.formatNum(v.getView()))
-                .append(" | 弹幕：").append(su.formatNum(v.getDanmaku()))
-                .append(" | 评论：").append(su.formatNum(v.getReply())).append("\n");
+        sb.append("观看：").append(formatNum(v.getView()))
+                .append(" | 弹幕：").append(formatNum(v.getDanmaku()))
+                .append(" | 评论：").append(formatNum(v.getReply())).append("\n");
 
-        sb.append("喜欢：").append(su.formatNum(v.getLike()))
-                .append(" | 投币：").append(su.formatNum(v.getCoin()))
-                .append(" | 收藏：").append(su.formatNum(v.getFavorite()))
-                .append(" | 分享：").append(su.formatNum(v.getShare())).append("\n");
+        sb.append("喜欢：").append(formatNum(v.getLike()))
+                .append(" | 投币：").append(formatNum(v.getCoin()))
+                .append(" | 收藏：").append(formatNum(v.getFavorite()))
+                .append(" | 分享：").append(formatNum(v.getShare())).append("\n");
 
-        sb.append("日期：").append(su.formatTime(v.getPubDateMs()));
+        sb.append("日期：").append(formatTime(v.getPubDateMs()));
         return sb.toString();
     }
 
@@ -188,42 +185,42 @@ public class BilibiliCommand implements IBotCommand {
             return null;
         }
 
-        final int code = ju.getInt(root, "code", -999);
-        final String message = ju.getString(root, "message", "");
+        final int code = getInt(root, "code", -999);
+        final String message = getString(root, "message", "");
         log.debug("API response code={}, message='{}' for {}", code, message, api);
         if (code != 0) {
             log.warn("Non-zero API code={} (message='{}') for {}", code, message, api);
             return null;
         }
 
-        final JsonObject data = ju.getObj(root, "data");
+        final JsonObject data = getObj(root, "data");
         if (data == null) {
             log.warn("API response has no 'data' object for {}", api);
             return null;
         }
 
         final VideoInfo v = new VideoInfo();
-        v.setBvid(Objects.requireNonNullElse(ju.getString(data, "bvid", null), bvid));
-        v.setTitle(ju.getString(data, "title", ""));
-        v.setTname(ju.getString(data, "tname", ""));
-        v.setDesc(ju.getString(data, "desc", ""));
-        v.setCover(ju.getString(data, "pic", ""));
+        v.setBvid(Objects.requireNonNullElse(getString(data, "bvid", null), bvid));
+        v.setTitle(getString(data, "title", ""));
+        v.setTname(getString(data, "tname", ""));
+        v.setDesc(getString(data, "desc", ""));
+        v.setCover(getString(data, "pic", ""));
         v.setPubDateMs(publishDateMs(data));
 
         // owner
-        final JsonObject owner = ju.getObj(data, "owner");
-        v.setOwnerName(ju.getString(owner, "name", ""));
-        v.setOwnerMid(ju.getLong(owner, "mid", 0L));
+        final JsonObject owner = getObj(data, "owner");
+        v.setOwnerName(getString(owner, "name", ""));
+        v.setOwnerMid(getLong(owner, "mid", 0L));
 
         // stat
-        final JsonObject stat = ju.getObj(data, "stat");
-        v.setView(ju.getLong(stat, "view", 0L));
-        v.setDanmaku(ju.getLong(stat, "danmaku", 0L));
-        v.setReply(ju.getLong(stat, "reply", 0L));
-        v.setFavorite(ju.getLong(stat, "favorite", 0L));
-        v.setCoin(ju.getLong(stat, "coin", 0L));
-        v.setShare(ju.getLong(stat, "share", 0L));
-        v.setLike(ju.getLong(stat, "like", 0L));
+        final JsonObject stat = getObj(data, "stat");
+        v.setView(getLong(stat, "view", 0L));
+        v.setDanmaku(getLong(stat, "danmaku", 0L));
+        v.setReply(getLong(stat, "reply", 0L));
+        v.setFavorite(getLong(stat, "favorite", 0L));
+        v.setCoin(getLong(stat, "coin", 0L));
+        v.setShare(getLong(stat, "share", 0L));
+        v.setLike(getLong(stat, "like", 0L));
 
         // pages
         v.setPageCount(pageCount(data));
@@ -241,17 +238,17 @@ public class BilibiliCommand implements IBotCommand {
             log.debug("Requesting follower stat: {}", relApi);
             try {
                 final JsonObject rel = getJson(relApi, 6);
-                if (rel != null && ju.getInt(rel, "code", -999) == 0) {
-                    final JsonObject d = ju.getObj(rel, "data");
+                if (rel != null && getInt(rel, "code", -999) == 0) {
+                    final JsonObject d = getObj(rel, "data");
                     if (d != null) {
-                        v.setFans(ju.getLong(d, "follower", 0L));
+                        v.setFans(getLong(d, "follower", 0L));
                         log.info("Fetched follower count={} for mid={}", v.getFans(), v.getOwnerMid());
                     } else {
                         log.warn("'data' missing in follower API for mid={}", v.getOwnerMid());
                     }
                 } else {
                     log.warn("Follower API non-zero/invalid response for mid={}, url={}, message='{}'",
-                            v.getOwnerMid(), relApi, (rel == null ? "null" : ju.getString(rel, "message", "")));
+                            v.getOwnerMid(), relApi, (rel == null ? "null" : getString(rel, "message", "")));
                 }
             } catch (Exception e) {
                 log.debug("Fetch fans failed: mid={}, err={}", v.getOwnerMid(), e.toString());
@@ -335,7 +332,7 @@ public class BilibiliCommand implements IBotCommand {
         }
         log.debug("Received {} bytes from {}", resp.body().length(), url);
 
-        return ju.fromJsonString(resp.body(), JsonObject.class);
+        return fromJsonString(resp.body(), JsonObject.class);
     }
 
     public static String buildViewApi(String bvid, Long aid) {
@@ -348,7 +345,7 @@ public class BilibiliCommand implements IBotCommand {
      * pubdate: epoch seconds -> ms; missing => 0
      */
     public static long publishDateMs(JsonObject data) {
-        long sec = ju.getLong(data, "pubdate", 0L);
+        long sec = getLong(data, "pubdate", 0L);
         return (sec <= 0) ? 0L : sec * 1000L;
     }
 
@@ -358,7 +355,7 @@ public class BilibiliCommand implements IBotCommand {
     public static int pageCount(JsonObject data) {
         int byArray = (data != null && data.has("pages") && data.get("pages").isJsonArray())
                 ? data.getAsJsonArray("pages").size() : 0;
-        int byField = ju.getInt(data, "videos", 0);
+        int byField = getInt(data, "videos", 0);
         int pages = Math.max(byArray, byField);
         return Math.max(1, pages);
     }

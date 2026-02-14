@@ -10,7 +10,6 @@ import java.io.IOException;
 
 public final class MojangApi {
     public static final HttpJson hj = HttpJson.getHttpJson();
-    public static final JsonUtils ju = JsonUtils.getJsonUtils();
     public static final Base64Utils b64 = new Base64Utils();
 
     public String getUuidFromName(String name) {
@@ -42,14 +41,14 @@ public final class MojangApi {
             );
 
             JsonObject value = b64.decodeToJsonObject(
-                    ju.getStringByPath(info, "properties[0].value", "")
+                    JsonUtils.getStringByPath(info, "properties[0].value", "")
             );
 
             return new McPlayer(
-                    ju.getString(info, "name", ""),
-                    ju.getString(info, "id", ""),
-                    ju.getStringByPath(value, "textures.SKIN.url", null),
-                    ju.getStringByPath(value, "textures.CAPE.url", null)
+                    JsonUtils.getString(info, "name", ""),
+                    JsonUtils.getString(info, "id", ""),
+                    JsonUtils.getStringByPath(value, "textures.SKIN.url", null),
+                    JsonUtils.getStringByPath(value, "textures.CAPE.url", null)
             );
         } catch (IOException e) {
             throw new RuntimeException(e);
