@@ -25,8 +25,6 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuil
         matchIfMissing = true
 )
 public class PlayerCommand implements IBotCommand {
-    public static final MojangApi MAPI = new MojangApi();
-
     @Override
     public String name() {
         return "player";
@@ -68,7 +66,7 @@ public class PlayerCommand implements IBotCommand {
                                 .executes(ctx -> {
                                     CommandSource src = ctx.getSource();
                                     String data = StringArgumentType.getString(ctx, "data");
-                                    src.reply(MAPI.getMcPlayerInfo(data).toString());
+                                    src.reply(MojangApi.getMcPlayerInfo(data).toString());
                                     return 1;
                                 })
                                 // /player <data> <param>
@@ -79,8 +77,8 @@ public class PlayerCommand implements IBotCommand {
                                             String param = StringArgumentType.getString(ctx, "param");
 
                                             String result = switch (param) {
-                                                case "-u" -> MAPI.getUuidFromName(data);
-                                                case "-n" -> MAPI.getNameFromUuid(data);
+                                                case "-u" -> MojangApi.getUuidFromName(data);
+                                                case "-n" -> MojangApi.getNameFromUuid(data);
                                                 default -> "不正确的参数：" + param;
                                             };
 

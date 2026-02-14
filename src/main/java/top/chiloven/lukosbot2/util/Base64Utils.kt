@@ -103,7 +103,7 @@ class Base64Utils(private val defaultCharset: Charset = StandardCharsets.UTF_8) 
      */
     @JvmOverloads
     @Throws(JsonSyntaxException::class, IllegalArgumentException::class)
-    fun decodeToJsonObject(base64: String?, charset: Charset? = defaultCharset): JsonObject? {
+    fun decodeToJsonObject(base64: String?, charset: Charset? = defaultCharset): JsonObject {
         if (base64.isNullOrEmpty()) {
             return JsonObject()
         }
