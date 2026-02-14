@@ -1,76 +1,90 @@
-package top.chiloven.lukosbot2.util.feature;
+package top.chiloven.lukosbot2.util.feature
 
-import com.google.gson.JsonObject;
-import org.jspecify.annotations.NonNull;
-import top.chiloven.lukosbot2.util.HttpJson;
-import top.chiloven.lukosbot2.util.JsonUtils;
-import top.chiloven.lukosbot2.util.SafeStringBuilder;
+import com.google.gson.JsonObject
+import top.chiloven.lukosbot2.util.HttpJson
+import top.chiloven.lukosbot2.util.JsonUtils.getString
+import java.io.IOException
 
-import java.io.IOException;
+class IpService {
 
-public final class IpService {
-    public static final HttpJson hj = HttpJson.getHttpJson();
-    public static final JsonUtils ju = JsonUtils.getJsonUtils();
+    @Throws(IOException::class)
+    fun getIpInfo(ip: String?): IpInfo {
+        val result: JsonObject = hj.getObject("https://api.ip.sb/geoip/$ip")
 
-    public IpService() {
+        return IpInfo(
+            ip = getString(result, "ip", null),
+            country = getString(result, "country", null),
+            countryCode = getString(result, "country_code", null),
+            region = getString(result, "region", null),
+            regionCode = getString(result, "region_code", null),
+            city = getString(result, "city", null),
+            postalCode = getString(result, "postal_code", null),
+            latitude = getString(result, "latitude", null),
+            longitude = getString(result, "longitude", null),
+            org = getString(result, "organization", null),
+            timezone = getString(result, "timezone", null),
+            asn = getString(result, "asn", null)
+        )
     }
 
-    public IpInfo getIpInfo(String ip) throws IOException {
-        try {
-            JsonObject result = hj.getObject(
-                    "https://api.ip.sb/geoip/" + ip
-            );
-
-            return new IpInfo(
-                    ju.getString(result, "ip", null),
-                    ju.getString(result, "country", null),
-                    ju.getString(result, "country_code", null),
-                    ju.getString(result, "region", null),
-                    ju.getString(result, "region_code", null),
-                    ju.getString(result, "city", null),
-                    ju.getString(result, "postal_code", null),
-                    ju.getString(result, "latitude", null),
-                    ju.getString(result, "longitude", null),
-                    ju.getString(result, "organization", null),
-                    ju.getString(result, "timezone", null),
-                    ju.getString(result, "asn", null)
-            );
-        } catch (IOException e) {
-            throw new IOException(e);
-        }
-    }
-
-    public record IpInfo(
-            String ip,
-            String country,
-            String countryCode,
-            String region,
-            String regionCode,
-            String city,
-            String postalCode,
-            String latitude,
-            String longitude,
-            String org,
-            String timezone,
-            String asn
+    @JvmRecord
+    data class IpInfo(
+        val ip: String?,
+        val country: String?,
+        val countryCode: String?,
+        val region: String?,
+        val regionCode: String?,
+        val city: String?,
+        val postalCode: String?,
+        val latitude: String?,
+        val longitude: String?,
+        val org: String?,
+        val timezone: String?,
+        val asn: String?
     ) {
-        @Override
-        public @NonNull String toString() {
-            SafeStringBuilder sb = new SafeStringBuilder();
+        override fun toString(): String = buildString {
+            append("IP 地址 - ").append(ip ?: "未知").append('\n')
 
-            sb.append("IP 地址 - ").append(ip).ln()
-                    .add("国家/地区：{0}{1?}\n", country,
-                            countryCode == null ? null : " (" + countryCode + ")")
-                    .add("区域：{0}{1?}\n", region,
-                            regionCode == null ? null : " (" + regionCode + ")")
-                    .add("城市：{0}{1?}\n", city,
-                            postalCode == null ? null : " (" + postalCode + ")")
-                    .add("位置：{0}, {1}\n", latitude, longitude)
-                    .add("时区：{0}\n", timezone)
-                    .add("组织：{0}\n", org)
-                    .add("ASN：{0}", asn);
+            appendLineIfPresent(
+                label = "国家/地区：",
+                main = country,
+                extra = countryCode?.let { " ($it)" }
+            )
 
-            return sb.toString();
+            appendLineIfPresent(
+                label = "区域：",
+                main = region,
+                extra = regionCode?.let { " ($it)" }
+            )
+
+            appendLineIfPresent(
+                label = "城市：",
+                main = city,
+                extra = postalCode?.let { " ($it)" }
+            )
+
+            if (!latitude.isNullOrBlank() && !longitude.isNullOrBlank()) {
+                append("位置：").append(latitude).append(", ").append(longitude).append('\n')
+            }
+
+            appendLineIfPresent("时区：", timezone)
+            appendLineIfPresent("组织：", org)
+            appendLineIfPresent("ASN：", asn)
         }
+
+        private fun StringBuilder.appendLineIfPresent(
+            label: String,
+            main: String?,
+            extra: String? = null
+        ) {
+            if (main.isNullOrBlank()) return
+            append(label).append(main)
+            if (!extra.isNullOrBlank()) append(extra)
+            append('\n')
+        }
+    }
+
+    companion object {
+        val hj: HttpJson = HttpJson.getHttpJson()
     }
 }
