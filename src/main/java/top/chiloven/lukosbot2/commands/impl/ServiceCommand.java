@@ -5,6 +5,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.IBotCommand;
+import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 import top.chiloven.lukosbot2.core.service.ServiceManager;
 import top.chiloven.lukosbot2.core.service.ServiceState;
@@ -44,14 +45,27 @@ public class ServiceCommand implements IBotCommand {
     }
 
     @Override
-    public String usage() {
-        return """
-                Usage:
-                /service list                      # 列出当前聊天支持的服务与开关状态
-                /service <service>                 # 在当前聊天启用/禁用该服务
-                /service <service> <key>           # 获取当前聊天该服务的配置值
-                /service <service> <key> <value>   # 设置当前聊天该服务的配置值
-                """;
+    public UsageNode usage() {
+        return UsageNode.root(name())
+                .description(description())
+                .syntax("显示本命令帮助")
+                .syntax("启用/禁用指定服务（在当前聊天中生效）", UsageNode.arg("service"))
+                .syntax("获取服务配置", UsageNode.arg("service"), UsageNode.arg("key"))
+                .syntax("设置服务配置", UsageNode.arg("service"), UsageNode.arg("key"), UsageNode.arg("value"))
+                .subcommand("list", "列出当前聊天支持的服务与开关状态", b -> b
+                        .syntax("列出服务列表")
+                )
+                .param("service", "服务名（见 /service list）")
+                .param("key", "配置项键")
+                .param("value", "配置项值（字符串）")
+                .note("服务配置按“当前聊天”独立保存。")
+                .example(
+                        "service list",
+                        "service weather",
+                        "service weather intervalMs",
+                        "service weather intervalMs 60000"
+                )
+                .build();
     }
 
     @Override
@@ -59,7 +73,7 @@ public class ServiceCommand implements IBotCommand {
         dispatcher.register(
                 literal(name())
                         .executes(ctx -> {
-                            ctx.getSource().reply(usage());
+                            ctx.getSource().reply(usageText());
                             return 1;
                         })
                         .then(literal("list")

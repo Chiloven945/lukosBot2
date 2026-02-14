@@ -6,6 +6,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.IBotCommand;
+import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.config.CommandConfigProp;
 import top.chiloven.lukosbot2.core.MessageSenderHub;
 import top.chiloven.lukosbot2.core.command.CommandSource;
@@ -60,17 +61,19 @@ public class TwentyFourCommand implements IBotCommand {
     }
 
     @Override
-    public String usage() {
-        return """
-                用法：
-                /24                 # 开始一场新游戏
-                /24 <expression>    # 提交答案表达式，例如：(2+1)*7+3
-                /24 giveup          # 放弃作答并给出答案
-                示例：
-                /24
-                /24 (2+1)*7+3
-                /24 giveup
-                """;
+    public UsageNode usage() {
+        return UsageNode.root(name())
+                .description(description())
+                .syntax("开始一场新游戏")
+                .syntax("提交答案表达式", UsageNode.arg("expression"))
+                .syntax("放弃作答并公布答案", UsageNode.lit("giveup"))
+                .param("expression", "表达式（可使用 + - * / ()，并使用全部给出的 4 个数字）")
+                .example(
+                        "24",
+                        "24 (2+1)*7+3",
+                        "24 giveup"
+                )
+                .build();
     }
 
     @Override
@@ -140,7 +143,7 @@ public class TwentyFourCommand implements IBotCommand {
     private void handleInput(CommandSource src, String rawInput) {
         String input = rawInput == null ? "" : rawInput.trim();
         if (input.isEmpty()) {
-            src.reply(usage());
+            src.reply(usageText());
             return;
         }
 

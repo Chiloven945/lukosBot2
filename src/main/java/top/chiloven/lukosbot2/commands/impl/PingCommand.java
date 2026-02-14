@@ -4,6 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.IBotCommand;
+import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 
 import java.lang.management.ManagementFactory;
@@ -44,13 +45,12 @@ public class PingCommand implements IBotCommand {
     }
 
     @Override
-    public String usage() {
-        return """
-                用法：
-                /ping # 返回 pong 及运行状态
-                示例：
-                /ping
-                """;
+    public UsageNode usage() {
+        return UsageNode.root(name())
+                .description(description())
+                .syntax("检测机器人在线状态")
+                .example("ping")
+                .build();
     }
 
     @Override

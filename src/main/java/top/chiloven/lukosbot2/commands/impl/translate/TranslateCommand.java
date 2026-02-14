@@ -5,6 +5,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.IBotCommand;
+import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.config.CommandConfigProp;
 import top.chiloven.lukosbot2.config.CommandConfigProp.Translate;
 import top.chiloven.lukosbot2.core.command.CommandSource;
@@ -43,19 +44,24 @@ public class TranslateCommand implements IBotCommand {
     }
 
     @Override
-    public String usage() {
-        return """
-                用法：
-                `/translate <text>` # 翻译字段至默认语言
-                `/translate -f <from_lang> -t <to_lang> <text>` # 翻译字段从指定语言到指定语言
-                参数：
-                `-f <from_lang>` # 源语言，不存在则自动检测
-                `-t <to_lang>` # 目标语言，不存在则使用默认值
-                示例：
-                /translate the quick brown fox over the lazy dog
-                /translate -f en -t zh-Hans the quick brown fox over the lazy dog
-                /translate -t ja Do not go gentle into that good night
-                """;
+    public UsageNode usage() {
+        return UsageNode.root(name())
+                .description(description())
+                .syntax("翻译文本（默认自动检测语言）", UsageNode.arg("text"))
+                .syntax("翻译文本（可选指定源/目标语言）",
+                        UsageNode.opt(UsageNode.group(UsageNode.lit("-f"), UsageNode.arg("from_lang"))),
+                        UsageNode.opt(UsageNode.group(UsageNode.lit("-t"), UsageNode.arg("to_lang"))),
+                        UsageNode.arg("text")
+                )
+                .param("text", "要翻译的文本（支持空格）")
+                .option("-f", "指定源语言（可选；不指定则自动检测）")
+                .option("-t", "指定目标语言（可选；不指定则使用默认目标语言）")
+                .example(
+                        "/translate the quick brown fox over the lazy dog",
+                        "/translate -f en -t zh-Hans the quick brown fox over the lazy dog",
+                        "/translate -t ja Do not go gentle into that good night"
+                )
+                .build();
     }
 
     @Override
@@ -63,7 +69,7 @@ public class TranslateCommand implements IBotCommand {
         dispatcher.register(
                 literal(name())
                         .executes(ctx -> {
-                            ctx.getSource().reply(usage());
+                            ctx.getSource().reply(usageText());
                             return 0;
                         })
 

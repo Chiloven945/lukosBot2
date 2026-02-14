@@ -2,6 +2,7 @@ package top.chiloven.lukosbot2.commands.impl;
 
 import com.mojang.brigadier.CommandDispatcher;
 import top.chiloven.lukosbot2.commands.IBotCommand;
+import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 
 public class CommandCommand implements IBotCommand {
@@ -16,8 +17,11 @@ public class CommandCommand implements IBotCommand {
     }
 
     @Override
-    public String usage() {
-        return "";
+    public UsageNode usage() {
+        return UsageNode.root(name())
+                .description(description())
+                .syntax("WIP")
+                .build();
     }
 
     @Override

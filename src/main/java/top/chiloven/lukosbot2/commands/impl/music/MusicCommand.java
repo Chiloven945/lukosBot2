@@ -6,6 +6,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.IBotCommand;
+import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.commands.impl.music.provider.IMusicProvider;
 import top.chiloven.lukosbot2.commands.impl.music.provider.SoundCloudMusicProvider;
 import top.chiloven.lukosbot2.commands.impl.music.provider.SpotifyMusicProvider;
@@ -58,17 +59,25 @@ public class MusicCommand implements IBotCommand {
     }
 
     @Override
-    public String usage() {
-        return """
-                用法：
-                /music <query>
-                /music <platform> <query>
-                /music link <link>
-                示例：
-                /music Never Gonna Give You Up
-                /music spotify
-                /music link
-                """;
+    public UsageNode usage() {
+        return UsageNode.root(name())
+                .description(description())
+                .syntax("搜索歌曲（默认平台）", UsageNode.arg("query"))
+                .syntax("在指定平台搜索歌曲",
+                        UsageNode.oneOf(UsageNode.lit("spotify"), UsageNode.lit("soundcloud"), UsageNode.lit("sc")),
+                        UsageNode.arg("query")
+                )
+                .subcommand("link", "通过链接解析歌曲", b -> b
+                        .syntax("解析歌曲链接", UsageNode.arg("link"))
+                        .param("link", "Spotify 或 SoundCloud 链接")
+                )
+                .param("query", "搜索关键字（支持空格）")
+                .example(
+                        "music Never Gonna Give You Up",
+                        "music spotify Never Gonna Give You Up",
+                        "music link https://open.spotify.com/track/xxxxxxxx"
+                )
+                .build();
     }
 
     @Override
@@ -77,7 +86,7 @@ public class MusicCommand implements IBotCommand {
                 literal(name())
                         // /music
                         .executes(ctx -> {
-                            ctx.getSource().reply(usage());
+                            ctx.getSource().reply(usageText());
                             return 1;
                         })
                         // /music link <link>

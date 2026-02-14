@@ -9,6 +9,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 import top.chiloven.lukosbot2.model.Attachment;
 import top.chiloven.lukosbot2.model.MessageOut;
@@ -49,10 +50,8 @@ public class McWikiCommand implements IWikiishCommand {
         Document doc = conn.get();
         String title = textOrEmpty(doc.selectFirst("h1#firstHeading"));
 
-        // MediaWiki 正文容器通常位于 #mw-content-text .mw-parser-output
         Element container = doc.selectFirst("#mw-content-text .mw-parser-output");
         if (container == null) {
-            // 后备
             container = doc.selectFirst("#content");
         }
         if (container == null) {
@@ -108,16 +107,23 @@ public class McWikiCommand implements IWikiishCommand {
     }
 
     @Override
-    public String usage() {
-        return """
-                用法：
-                `/mcwiki <minecraftwiki_link|article>`    # 返回“标题\\n简介”
-                `/mcwiki md <minecraftwiki_link|article>` # 抓取整页并转为 Markdown 文件
-                示例：
-                /mcwiki 僵尸猪灵
-                /mcwiki md https://zh.minecraft.wiki/w/僵尸猪灵
-                /mcwiki en:Zombie_Piglin
-                """;
+    public UsageNode usage() {
+        UsageNode.Item target = UsageNode.oneOf(UsageNode.arg("link"), UsageNode.arg("article"));
+        return UsageNode.root(name())
+                .description(description())
+                .syntax("生成页面截图", target)
+                .subcommand("md", "抓取整页并转为 Markdown 文件", b -> b
+                        .syntax("抓取整页并转为 Markdown 文件", target)
+                )
+                .param("link", "Minecraft Wiki 链接")
+                .param("article", "词条名（可用 `en:` 前缀指定语言）")
+                .example(
+                        "mcwiki 僵尸猪灵",
+                        "mcwiki en:Zombie_Piglin",
+                        "mcwiki md https://zh.minecraft.wiki/w/僵尸猪灵"
+                )
+                .note("词条名支持 `en:` 前缀指定语言，例如：`en:Zombie_Piglin`。")
+                .build();
     }
 
     @Override
@@ -152,9 +158,8 @@ public class McWikiCommand implements IWikiishCommand {
                                         })
                                 )
                         )
-                        // 无参时给出用法
                         .executes(ctx -> {
-                            ctx.getSource().reply(usage());
+                            ctx.getSource().reply(usageText());
                             return 1;
                         })
         );

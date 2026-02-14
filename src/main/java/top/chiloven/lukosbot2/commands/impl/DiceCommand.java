@@ -5,6 +5,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.IBotCommand;
+import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 import top.chiloven.lukosbot2.util.MathUtils;
 
@@ -36,14 +37,16 @@ public class DiceCommand implements IBotCommand {
     }
 
     @Override
-    public String usage() {
-        return """
-                用法：
-                /dice [number] # 掷指定数量的骰子，默认为1
-                示例：
-                /dice
-                /dice 3
-                """;
+    public UsageNode usage() {
+        return UsageNode.root(name())
+                .description(description())
+                .syntax("掷骰子（默认 1 个）", UsageNode.opt(UsageNode.arg("count")))
+                .param("count", "骰子数量（正整数，可选，默认 1）")
+                .example(
+                        "dice",
+                        "dice 3"
+                )
+                .build();
     }
 
     @Override

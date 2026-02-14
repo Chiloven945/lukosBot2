@@ -7,6 +7,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.IBotCommand;
+import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 import top.chiloven.lukosbot2.util.JsonUtils;
 import top.chiloven.lukosbot2.util.StringUtils;
@@ -375,15 +376,20 @@ public class BilibiliCommand implements IBotCommand {
     }
 
     @Override
-    public String usage() {
-        return """
-                用法：
-                `/bilibili <code|link> [-i]` # 获取 B 站视频信息，支持 AV/BV 号或 b23 短链。添加 -i 参数可获取更详细的信息。
-                示例：
-                `/bilibili BV1GJ411x7h7`
-                `/bilibili av170001`
-                `/bilibili https://b23.tv/xxxxxx -i
-                """;
+    public UsageNode usage() {
+        UsageNode.Item target = UsageNode.oneOf(UsageNode.arg("code"), UsageNode.arg("link"));
+        return UsageNode.root(name())
+                .description(description())
+                .syntax("查询 B 站视频信息（可选 -i 获取更详细的信息）", target, UsageNode.opt(UsageNode.lit("-i")))
+                .param("code", "视频编号（AV/BV）")
+                .param("link", "视频链接或 b23 短链")
+                .option("-i", "输出更多信息")
+                .example(
+                        "bilibili BV1GJ411x7h7",
+                        "bilibili av170001",
+                        "bilibili https://b23.tv/xxxxxx -i"
+                )
+                .build();
     }
 
     @Override

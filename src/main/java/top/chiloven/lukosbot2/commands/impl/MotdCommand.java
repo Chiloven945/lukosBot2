@@ -9,6 +9,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.IBotCommand;
+import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.config.ProxyConfigProp;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 import top.chiloven.lukosbot2.util.spring.SpringBeans;
@@ -46,14 +47,16 @@ public class MotdCommand implements IBotCommand {
     }
 
     @Override
-    public String usage() {
-        return """
-                用法：
-                /motd <address[:port]> # 查询 Java 版服务器 MOTD 信息
-                示例：
-                /motd play.example.com
-                /motd play.example.com:25565
-                """;
+    public UsageNode usage() {
+        return UsageNode.root(name())
+                .description(description())
+                .syntax("查询 Minecraft Java 版服务器 MOTD", UsageNode.arg("address[:port]"))
+                .param("address[:port]", "服务器地址（可选端口，默认 25565）")
+                .example(
+                        "motd play.example.com",
+                        "motd play.example.com:25565"
+                )
+                .build();
     }
 
     @Override
@@ -61,7 +64,7 @@ public class MotdCommand implements IBotCommand {
         dispatcher.register(
                 literal(name())
                         .executes(ctx -> {
-                            ctx.getSource().reply(usage());
+                            ctx.getSource().reply(usageText());
                             return 0;
                         })
                         .then(argument("address", StringArgumentType.greedyString())

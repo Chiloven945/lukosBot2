@@ -5,6 +5,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.IBotCommand;
+import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 import top.chiloven.lukosbot2.util.feature.MojangApi;
 
@@ -37,16 +38,21 @@ public class PlayerCommand implements IBotCommand {
     }
 
     @Override
-    public String usage() {
-        return """
-                用法：
-                /player <name|uuid> # 查询玩家信息
-                /player <name> -u # 根据用户名获取 UUID
-                /player <uuid> -n # 根据 UUID 获取用户名
-                示例：
-                /player jeb_
-                /player Notch -u
-                """;
+    public UsageNode usage() {
+        return UsageNode.root(name())
+                .description(description())
+                .syntax("查询玩家信息", UsageNode.oneOf(UsageNode.arg("name"), UsageNode.arg("uuid")))
+                .syntax("根据用户名获取 UUID", UsageNode.arg("name"), UsageNode.lit("-u"))
+                .syntax("根据 UUID 获取用户名", UsageNode.arg("uuid"), UsageNode.lit("-n"))
+                .param("name", "玩家用户名（Java 版）")
+                .param("uuid", "玩家 UUID（不带横线或带横线均可）")
+                .option("-u", "强制按“用户名 → UUID”查询")
+                .option("-n", "强制按“UUID → 用户名”查询")
+                .example(
+                        "player jeb_",
+                        "player Notch -u"
+                )
+                .build();
     }
 
     @Override
@@ -54,7 +60,7 @@ public class PlayerCommand implements IBotCommand {
         dispatcher.register(
                 literal(name())
                         .executes(ctx -> {
-                            ctx.getSource().reply(usage());
+                            ctx.getSource().reply(usageText());
                             return 1;
                         })
                         // /player <name|uuid>

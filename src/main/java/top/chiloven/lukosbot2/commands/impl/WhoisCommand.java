@@ -8,6 +8,7 @@ import org.apache.commons.net.whois.WhoisClient;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.IBotCommand;
+import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 
 import java.io.IOException;
@@ -41,14 +42,16 @@ public class WhoisCommand implements IBotCommand {
     }
 
     @Override
-    public String usage() {
-        return """
-                用法：
-                /whois <domain> # 查询域名 Whois 信息
-                示例：
-                /whois baidu.com
-                /whois cloudflare.com
-                """;
+    public UsageNode usage() {
+        return UsageNode.root(name())
+                .description(description())
+                .syntax("查询域名 Whois 信息", UsageNode.arg("domain"))
+                .param("domain", "域名，例如 example.com")
+                .example(
+                        "whois example.com",
+                        "whois google.com"
+                )
+                .build();
     }
 
     @Override
@@ -56,7 +59,7 @@ public class WhoisCommand implements IBotCommand {
         dispatcher.register(
                 literal(name())
                         .executes(ctx -> {
-                            ctx.getSource().reply(usage());
+                            ctx.getSource().reply(usageText());
                             return 1;
                         })
                         .then(argument("domain", StringArgumentType.greedyString())

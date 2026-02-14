@@ -6,6 +6,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.IBotCommand;
+import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 import top.chiloven.lukosbot2.util.feature.IpService;
 
@@ -36,14 +37,16 @@ public class IpCommand implements IBotCommand {
     }
 
     @Override
-    public String usage() {
-        return """
-                用法：
-                /ip <ip_address> # 查询 IP 地址，支持 v4 和 v6
-                示例：
-                /ip 1.1.1.1
-                /ip 2606:4700:4700::1111
-                """;
+    public UsageNode usage() {
+        return UsageNode.root(name())
+                .description(description())
+                .syntax("查询 IP 地址信息", UsageNode.arg("ip_address"))
+                .param("ip_address", "IP 地址（IPv4 / IPv6）")
+                .example(
+                        "ip 1.1.1.1",
+                        "ip 2606:4700:4700::1111"
+                )
+                .build();
     }
 
     @Override
@@ -51,7 +54,7 @@ public class IpCommand implements IBotCommand {
         dispatcher.register(
                 literal(name())
                         .executes(ctx -> {
-                            ctx.getSource().reply(usage());
+                            ctx.getSource().reply(usageText());
                             return 1;
                         })
                         .then(argument("ip", StringArgumentType.greedyString())

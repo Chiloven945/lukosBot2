@@ -5,6 +5,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 import top.chiloven.lukosbot2.model.Attachment;
 import top.chiloven.lukosbot2.model.MessageOut;
@@ -56,15 +57,23 @@ public class WikiCommand implements IWikiishCommand {
     }
 
     @Override
-    public String usage() {
-        return """
-                用法：
-                `/wiki <wikipedia_link|article>`    # 生成页面截图
-                `/wiki md <wikipedia_link|article>` # 抓取并转为 Markdown 文件
-                示例：
-                /wiki Java
-                /wiki md https://zh.wikipedia.org/wiki/Java
-                """;
+    public UsageNode usage() {
+        UsageNode.Item target = UsageNode.oneOf(UsageNode.arg("link"), UsageNode.arg("article"));
+        return UsageNode.root(name())
+                .description(description())
+                .syntax("生成页面截图", target)
+                .subcommand("md", "抓取整页并转为 Markdown 文件", b -> b
+                        .syntax("抓取整页并转为 Markdown 文件", target)
+                )
+                .param("link", "维基百科链接")
+                .param("article", "词条名（可用 `en:` 前缀指定语言）")
+                .example(
+                        "wiki Java",
+                        "wiki en:Albert_Einstein",
+                        "wiki md https://zh.wikipedia.org/wiki/Java"
+                )
+                .note("词条名支持 `en:` 前缀指定语言，例如：`en:Albert_Einstein`。")
+                .build();
     }
 
     @Override
@@ -91,7 +100,7 @@ public class WikiCommand implements IWikiishCommand {
                         )
                         // No args
                         .executes(ctx -> {
-                            ctx.getSource().reply(usage());
+                            ctx.getSource().reply(usageText());
                             return 1;
                         })
         );

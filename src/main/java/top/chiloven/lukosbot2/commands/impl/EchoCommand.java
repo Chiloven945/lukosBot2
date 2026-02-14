@@ -5,6 +5,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.IBotCommand;
+import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
@@ -30,13 +31,13 @@ public class EchoCommand implements IBotCommand {
     }
 
     @Override
-    public String usage() {
-        return """
-                用法：
-                `/echo <text>` # 返回输入的文本
-                示例：
-                /echo Hello, world!
-                """;
+    public UsageNode usage() {
+        return UsageNode.root(name())
+                .description(description())
+                .syntax("回显输入的文本", UsageNode.arg("text"))
+                .param("text", "要回显的文本（支持空格）")
+                .example("echo Hello world")
+                .build();
     }
 
     @Override
@@ -44,7 +45,7 @@ public class EchoCommand implements IBotCommand {
         dispatcher.register(
                 literal(name())
                         .executes(ctx -> {
-                            ctx.getSource().reply(usage());
+                            ctx.getSource().reply(usageText());
                             return 1;
                         })
                         .then(argument("text", greedyString())

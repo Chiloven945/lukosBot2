@@ -6,6 +6,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.IBotCommand;
+import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 import top.chiloven.lukosbot2.util.MathUtils;
 
@@ -32,7 +33,7 @@ public class CoinCommand implements IBotCommand {
     public void register(CommandDispatcher<CommandSource> dispatcher) {
         dispatcher.register(literal(name())
                 .executes(ctx -> {
-                    ctx.getSource().reply(usage());
+                    ctx.getSource().reply(usageText());
                     return 1;
                 })
                 .then(argument("count", StringArgumentType.greedyString())
@@ -63,13 +64,13 @@ public class CoinCommand implements IBotCommand {
     }
 
     @Override
-    public String usage() {
-        return """
-                用法：
-                /coin <count> # 抛 count 个硬币
-                示例：
-                /coin 10
-                """;
+    public UsageNode usage() {
+        return UsageNode.root(name())
+                .description(description())
+                .syntax("抛 count 个硬币", UsageNode.arg("count"))
+                .param("count", "硬币数量（正整数）")
+                .example("coin 10")
+                .build();
     }
 
     private String runCoin(long times) {

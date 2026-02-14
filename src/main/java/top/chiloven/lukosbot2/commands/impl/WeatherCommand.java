@@ -4,6 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.IBotCommand;
+import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 
 @Service
@@ -26,8 +27,12 @@ public class WeatherCommand implements IBotCommand {
     }
 
     @Override
-    public String usage() {
-        return "";
+    public UsageNode usage() {
+        return UsageNode.root(name())
+                .description(description())
+                .syntax("（该命令尚未实现）")
+                .note("提示：此命令目前没有注册任何参数解析逻辑。")
+                .build();
     }
 
     @Override
