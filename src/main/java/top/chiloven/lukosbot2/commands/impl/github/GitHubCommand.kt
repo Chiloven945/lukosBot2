@@ -10,6 +10,8 @@ import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.commands.UsageNode
 import top.chiloven.lukosbot2.config.CommandConfigProp
 import top.chiloven.lukosbot2.core.command.CommandSource
+import top.chiloven.lukosbot2.util.JsonUtils.int
+import top.chiloven.lukosbot2.util.JsonUtils.str
 import top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal
 import top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument
 
@@ -302,9 +304,3 @@ private data class SearchParams(
         }
     }
 }
-
-private fun JsonObject.str(key: String): String? =
-    if (has(key) && !get(key).isJsonNull) get(key).asString else null
-
-private fun JsonObject.int(key: String): Int =
-    if (has(key) && !get(key).isJsonNull) runCatching { get(key).asInt }.getOrDefault(0) else 0
