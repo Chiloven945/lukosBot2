@@ -12,7 +12,7 @@ import java.nio.charset.StandardCharsets
 import java.time.Duration
 
 object WebToMarkdown {
-    private const val USER_AGENT = "Mozilla/5.0 (compatible; LukosBot/${Constants.VERSION})"
+    private const val USER_AGENT = "Mozilla/5.0 (compatible; ${Constants.UA})"
 
     private val TIMEOUT_MS: Int = Duration.ofSeconds(15).toMillis().toInt()
     private val html2md: FlexmarkHtmlConverter = FlexmarkHtmlConverter.builder().build()

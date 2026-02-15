@@ -9,6 +9,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.Constants;
 import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 import top.chiloven.lukosbot2.model.Attachment;
@@ -44,7 +45,7 @@ public class McWikiCommand implements IWikiishCommand {
      */
     private static TitleLead fetchTitleAndLead(String url) throws Exception {
         Connection conn = Jsoup.connect(url)
-                .userAgent("Mozilla/5.0 (compatible; LukosBot/1.0)")
+                .userAgent("Mozilla/5.0 (compatible; %s)".formatted(Constants.UA))
                 .timeout(15000);
 
         Document doc = conn.get();
