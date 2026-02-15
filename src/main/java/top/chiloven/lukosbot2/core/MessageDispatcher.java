@@ -71,7 +71,7 @@ public class MessageDispatcher implements AutoCloseable {
      */
     public void receive(MessageIn in) {
         log.info("IN <- [{}] user={} chat={} text=\"{}\"",
-                in.addr().platform(), in.userId(), in.addr().chatId(), StringUtils.truncate(in.text()));
+                in.addr().platform(), in.userId(), in.addr().chatId(), StringUtils.truncateText(in.text()));
 
         if (prefix != null) {
             String t = (in.text() == null ? "" : in.text().trim());

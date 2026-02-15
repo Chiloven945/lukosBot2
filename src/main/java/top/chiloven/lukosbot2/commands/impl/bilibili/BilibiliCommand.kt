@@ -15,7 +15,8 @@ import top.chiloven.lukosbot2.util.JsonUtils.int
 import top.chiloven.lukosbot2.util.JsonUtils.long
 import top.chiloven.lukosbot2.util.JsonUtils.obj
 import top.chiloven.lukosbot2.util.JsonUtils.str
-import top.chiloven.lukosbot2.util.StringUtils.formatNum
+import top.chiloven.lukosbot2.util.StringUtils.fmtNum
+import top.chiloven.lukosbot2.util.StringUtils.fmtTime
 import top.chiloven.lukosbot2.util.StringUtils.formatTime
 import top.chiloven.lukosbot2.util.StringUtils.truncate
 import top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal
@@ -171,7 +172,7 @@ class BilibiliCommand : IBotCommand {
             标题：$title
             类型：${tname.orEmpty().ifBlank { "未知" }}
             UP 主：${ownerName.orEmpty().ifBlank { "未知" }}
-            日期：${pubDateMs.formatTime()}
+            日期：${pubDateMs.fmtTime()}
             详细内容：
         """.trimIndent()
 
@@ -183,20 +184,20 @@ class BilibiliCommand : IBotCommand {
             sb.append(" | 类型：").append(tname.orEmpty().ifBlank { "未知" }).append('\n')
 
             sb.append("UP主：").append(ownerName.orEmpty().ifBlank { "未知" })
-                .append(" | 粉丝：").append(fans.formatNum()).append('\n')
+                .append(" | 粉丝：").append(fans.fmtNum()).append('\n')
 
             desc?.takeIf { it.isNotBlank() }?.let {
                 sb.append("简介：").append(it.truncate(160)).append('\n')
             }
 
-            sb.append("观看：").append(view.formatNum())
-                .append(" | 弹幕：").append(danmaku.formatNum())
-                .append(" | 评论：").append(reply.formatNum()).append('\n')
+            sb.append("观看：").append(view.fmtNum())
+                .append(" | 弹幕：").append(danmaku.fmtNum())
+                .append(" | 评论：").append(reply.fmtNum()).append('\n')
 
-            sb.append("喜欢：").append(like.formatNum())
-                .append(" | 投币：").append(coin.formatNum())
-                .append(" | 收藏：").append(favorite.formatNum())
-                .append(" | 分享：").append(share.formatNum()).append('\n')
+            sb.append("喜欢：").append(like.fmtNum())
+                .append(" | 投币：").append(coin.fmtNum())
+                .append(" | 收藏：").append(favorite.fmtNum())
+                .append(" | 分享：").append(share.fmtNum()).append('\n')
 
             sb.append("日期：").append(formatTime(pubDateMs))
             return sb.toString()

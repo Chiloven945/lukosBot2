@@ -22,14 +22,14 @@ object StringUtils {
      */
     @JvmStatic
     @JvmOverloads
-    fun truncate(s: String, limit: Int = 200): String {
+    fun truncateText(s: String, limit: Int = 200): String {
         if (limit <= 0) return ""
         val t = s.replace(Regex("\\s+"), " ").trim()
         return if (t.length > limit) "${t.take(limit - 1)}…" else t
     }
 
     fun String.truncate(limit: Int = 200): String {
-        return truncate(this, limit)
+        return truncateText(this, limit)
     }
 
     /**
@@ -51,7 +51,7 @@ object StringUtils {
         }
     }
 
-    fun Long.formatNum(pattern: String = "#0.0"): String {
+    fun Long.fmtNum(pattern: String = "#0.0"): String {
         return formatNum(this, pattern)
     }
 
@@ -70,7 +70,7 @@ object StringUtils {
         return SimpleDateFormat(pattern).format(Date(millis))
     }
 
-    fun Long.formatTime(pattern: String = "yyyy-MM-dd HH:mm:ss"): String? {
+    fun Long.fmtTime(pattern: String = "yyyy-MM-dd HH:mm:ss"): String? {
         return formatTime(this, pattern)
     }
 
