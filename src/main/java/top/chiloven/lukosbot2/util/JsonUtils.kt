@@ -154,16 +154,28 @@ object JsonUtils {
         return if (!el.isJsonNull) el.asString else def
     }
 
+    fun JsonObject.str(key: String, def: String? = null): String? {
+        return getString(this, key, def)
+    }
+
     @JvmStatic
-    fun getLong(obj: JsonObject, key: String, def: Long): Long {
+    fun getLong(obj: JsonObject, key: String, def: Long = 0): Long {
         val el = obj.get(key) ?: return def
         return if (!el.isJsonNull) el.asLong else def
     }
 
+    fun JsonObject.long(key: String, def: Long = 0): Long {
+        return getLong(this, key, def)
+    }
+
     @JvmStatic
-    fun getInt(obj: JsonObject, key: String, def: Int): Int {
+    fun getInt(obj: JsonObject, key: String, def: Int = 0): Int {
         val el = obj.get(key) ?: return def
         return if (!el.isJsonNull) el.asInt else def
+    }
+
+    fun JsonObject.int(key: String, def: Int = 0): Int {
+        return getInt(this, key, def)
     }
 
     @JvmStatic
@@ -172,14 +184,26 @@ object JsonUtils {
         return if (el.isJsonObject) el.asJsonObject else null
     }
 
+    fun JsonObject.obj(key: String): JsonObject? {
+        return getObj(this, key)
+    }
+
     fun getArray(obj: JsonObject, key: String): JsonArray? {
         val el = obj.get(key) ?: return null
         return if (el.isJsonArray) el.asJsonArray else null
     }
 
+    fun JsonObject.arr(key: String): JsonArray? {
+        return getArray(this, key)
+    }
+
     fun getElement(obj: JsonObject, key: String): JsonElement? {
         val el = obj.get(key) ?: return null
         return if (!el.isJsonNull) el else null
+    }
+
+    fun JsonObject.elm(key: String): JsonElement? {
+        return getElement(this, key)
     }
 
     fun getStringFromArrayObj(
