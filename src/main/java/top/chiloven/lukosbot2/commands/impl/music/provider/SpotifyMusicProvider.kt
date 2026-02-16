@@ -1,164 +1,153 @@
-package top.chiloven.lukosbot2.commands.impl.music.provider;
+package top.chiloven.lukosbot2.commands.impl.music.provider
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import top.chiloven.lukosbot2.commands.impl.music.MusicPlatform;
-import top.chiloven.lukosbot2.commands.impl.music.TrackInfo;
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
+import top.chiloven.lukosbot2.commands.impl.music.MusicPlatform
+import top.chiloven.lukosbot2.commands.impl.music.TrackInfo
+import top.chiloven.lukosbot2.util.JsonUtils.arr
+import top.chiloven.lukosbot2.util.JsonUtils.int
+import top.chiloven.lukosbot2.util.JsonUtils.long
+import top.chiloven.lukosbot2.util.JsonUtils.obj
+import top.chiloven.lukosbot2.util.JsonUtils.str
+import java.net.URI
+import java.net.URLEncoder
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.nio.charset.StandardCharsets
+import java.time.Duration
+import java.util.*
 
-import java.net.URI;
-import java.net.URLEncoder;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+class SpotifyMusicProvider(
+    private val clientId: String,
+    private val clientSecret: String
+) : IMusicProvider {
 
-public class SpotifyMusicProvider implements IMusicProvider {
+    @Volatile
+    private var accessToken: String? = null
 
-    private static final String TOKEN_URL = "https://accounts.spotify.com/api/token";
-    private static final String API_BASE = "https://api.spotify.com/v1";
+    @Volatile
+    private var tokenExpireAtMs: Long = 0L
 
-    private final String clientId;
-    private final String clientSecret;
-    private volatile String accessToken;
-    private volatile long tokenExpireAtMs;
+    override fun platform(): MusicPlatform = MusicPlatform.SPOTIFY
 
-    public SpotifyMusicProvider(String clientId, String clientSecret) {
-        this.clientId = clientId;
-        this.clientSecret = clientSecret;
-    }
+    @Throws(Exception::class)
+    override fun searchTrack(query: String): TrackInfo? {
+        val token = ensureToken()
+        val encoded = URLEncoder.encode(query, StandardCharsets.UTF_8)
+        val url = "$API_BASE/search?q=$encoded&type=track&limit=1"
 
-    @Override
-    public MusicPlatform platform() {
-        return MusicPlatform.SPOTIFY;
-    }
+        val req = HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .header("Authorization", "Bearer $token")
+            .GET()
+            .build()
 
-    @Override
-    public TrackInfo searchTrack(String query) throws Exception {
-        String token = ensureToken();
-        String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
-        String url = API_BASE + "/search?q=" + encoded + "&type=track&limit=1";
-
-        HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Authorization", "Bearer " + token)
-                .GET()
-                .build();
-
-        HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+        val resp = IMusicProvider.HTTP.send(req, HttpResponse.BodyHandlers.ofString())
         if (resp.statusCode() != 200) {
-            throw new RuntimeException("Spotify search error: " + resp.body());
+            throw RuntimeException("Spotify search error: ${resp.body()}")
         }
 
-        JsonObject root = JsonParser.parseString(resp.body()).getAsJsonObject();
+        val root = JsonParser.parseString(resp.body()).asJsonObject
+        val tracks = root.obj("tracks") ?: return null
+        val items = tracks.arr("items") ?: return null
+        if (items.size() == 0) return null
 
-        JsonObject tracks = root.getAsJsonObject("tracks");
-        if (tracks == null) return null;
-
-        JsonArray items = tracks.getAsJsonArray("items");
-        if (items == null || items.isEmpty()) return null;
-
-        JsonObject t = items.get(0).getAsJsonObject();
-        return toTrackInfo(t);
+        return toTrackInfo(items[0].asJsonObject)
     }
 
-    @Override
-    public TrackInfo resolveLink(String link) throws Exception {
-        String id = extractTrackIdFromLink(link);
-        if (id == null || id.isBlank()) {
-            return null;
-        }
+    @Throws(Exception::class)
+    override fun resolveLink(link: String): TrackInfo? {
+        val id = extractTrackIdFromLink(link)?.takeIf { it.isNotBlank() } ?: return null
 
-        String token = ensureToken();
-        String url = API_BASE + "/tracks/" + id;
+        val token = ensureToken()
+        val url = "$API_BASE/tracks/$id"
 
-        HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Authorization", "Bearer " + token)
-                .GET()
-                .build();
+        val req = HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .header("Authorization", "Bearer $token")
+            .GET()
+            .build()
 
-        HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+        val resp = IMusicProvider.HTTP.send(req, HttpResponse.BodyHandlers.ofString())
         if (resp.statusCode() != 200) {
-            throw new RuntimeException("Spotify track error: " + resp.body());
+            throw RuntimeException("Spotify track error: ${resp.body()}")
         }
 
-        JsonObject root = JsonParser.parseString(resp.body()).getAsJsonObject();
-        return toTrackInfo(root);
+        val root = JsonParser.parseString(resp.body()).asJsonObject
+        return toTrackInfo(root)
     }
 
-    private String ensureToken() throws Exception {
-        long now = System.currentTimeMillis();
-        if (accessToken != null && now < tokenExpireAtMs - 60_000) { // 预留 60s
-            return accessToken;
+    @Synchronized
+    @Throws(Exception::class)
+    private fun ensureToken(): String {
+        val now = System.currentTimeMillis()
+        val cached = accessToken
+        if (cached != null && now < tokenExpireAtMs - 60_000) {
+            return cached
         }
-        String auth = clientId + ":" + clientSecret;
-        String basic = Base64.getEncoder().encodeToString(auth.getBytes(StandardCharsets.UTF_8));
 
-        HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(TOKEN_URL))
-                .header("Authorization", "Basic " + basic)
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .POST(HttpRequest.BodyPublishers.ofString("grant_type=client_credentials"))
-                .build();
+        val basic = Base64.getEncoder().encodeToString(
+            "$clientId:$clientSecret".toByteArray(StandardCharsets.UTF_8)
+        )
 
-        HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+        val req = HttpRequest.newBuilder()
+            .uri(URI.create(TOKEN_URL))
+            .timeout(Duration.ofSeconds(10))
+            .header("Authorization", "Basic $basic")
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .POST(HttpRequest.BodyPublishers.ofString("grant_type=client_credentials"))
+            .build()
+
+        val resp = IMusicProvider.HTTP.send(req, HttpResponse.BodyHandlers.ofString())
         if (resp.statusCode() != 200) {
-            throw new RuntimeException("Spotify token error: " + resp.body());
+            throw RuntimeException("Spotify token error: ${resp.body()}")
         }
 
-        JsonObject root = JsonParser.parseString(resp.body()).getAsJsonObject();
-        String token = root.get("access_token").getAsString();
-        int expiresIn = root.get("expires_in").getAsInt(); // 秒
+        val root = JsonParser.parseString(resp.body()).asJsonObject
+        val token = root.str("access_token").orEmpty()
+        val expiresIn = root.int("expires_in") ?: 0
 
-        this.accessToken = token;
-        this.tokenExpireAtMs = now + expiresIn * 1000L;
-        return token;
+        accessToken = token
+        tokenExpireAtMs = now + expiresIn * 1000L
+        return token
     }
 
-    private TrackInfo toTrackInfo(JsonObject t) {
-        String id = t.get("id").getAsString();
-        String name = t.get("name").getAsString();
+    private fun toTrackInfo(t: JsonObject): TrackInfo {
+        val id = t.str("id").orEmpty()
+        val name = t.str("name").orEmpty()
 
-        String artist = "";
-        JsonArray artists = t.getAsJsonArray("artists");
-        if (artists != null && !artists.isEmpty()) {
-            JsonObject a0 = artists.get(0).getAsJsonObject();
-            artist = a0.get("name").getAsString();
+        val artist = t.arr("artists")
+            ?.takeIf { it.size() > 0 }
+            ?.get(0)?.asJsonObject
+            ?.str("name")
+            .orEmpty()
+
+        val albumObj = t.obj("album")
+        val album = albumObj?.str("name").orEmpty()
+
+        val cover = albumObj?.arr("images")
+            ?.takeIf { it.size() > 0 }
+            ?.get(0)?.asJsonObject
+            ?.str("url")
+
+        var url = t.obj("external_urls")?.str("spotify")
+        if (url.isNullOrBlank()) {
+            url = "https://open.spotify.com/track/$id"
         }
 
-        String album = "";
-        String cover = null;
-        JsonObject albumObj = t.getAsJsonObject("album");
-        if (albumObj != null) {
-            album = albumObj.get("name").getAsString();
-            JsonArray imgs = albumObj.getAsJsonArray("images");
-            if (imgs != null && !imgs.isEmpty()) {
-                cover = imgs.get(0).getAsJsonObject().get("url").getAsString();
-            }
-        }
-
-        String url = null;
-        if (t.has("external_urls") && t.get("external_urls").isJsonObject()) {
-            JsonObject ext = t.getAsJsonObject("external_urls");
-            if (ext.has("spotify") && !ext.get("spotify").isJsonNull()) {
-                url = ext.get("spotify").getAsString();
-            }
-        }
-        if (url == null || url.isBlank()) {
-            url = "https://open.spotify.com/track/" + id;
-        }
-
-        long duration = t.get("duration_ms").getAsLong();
-
-        return new TrackInfo(platform(), id, name, artist, album, cover, url, duration);
+        val duration = t.long("duration_ms") ?: 0L
+        return TrackInfo(platform(), id, name, artist, album, cover, url, duration)
     }
 
-    private String extractTrackIdFromLink(String link) {
-        if (link == null) return null;
-        Matcher m = Pattern.compile("/track/([^?#\\s/]+)").matcher(link.trim());
-        return m.find() ? m.group(1) : null;
+    private fun extractTrackIdFromLink(link: String?): String? {
+        if (link.isNullOrBlank()) return null
+        val m = TRACK_ID_RE.find(link.trim()) ?: return null
+        return m.groupValues.getOrNull(1)
+    }
+
+    private companion object {
+        private const val TOKEN_URL = "https://accounts.spotify.com/api/token"
+        private const val API_BASE = "https://api.spotify.com/v1"
+        private val TRACK_ID_RE = Regex("""/track/([^?#\s/]+)""")
     }
 }

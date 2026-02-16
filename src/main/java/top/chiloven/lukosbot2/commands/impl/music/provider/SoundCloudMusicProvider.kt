@@ -1,144 +1,104 @@
-package top.chiloven.lukosbot2.commands.impl.music.provider;
+package top.chiloven.lukosbot2.commands.impl.music.provider
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import top.chiloven.lukosbot2.commands.impl.music.MusicPlatform;
-import top.chiloven.lukosbot2.commands.impl.music.TrackInfo;
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
+import org.jspecify.annotations.NonNull
+import top.chiloven.lukosbot2.commands.impl.music.MusicPlatform
+import top.chiloven.lukosbot2.commands.impl.music.TrackInfo
+import top.chiloven.lukosbot2.util.JsonUtils.arr
+import top.chiloven.lukosbot2.util.JsonUtils.long
+import top.chiloven.lukosbot2.util.JsonUtils.obj
+import top.chiloven.lukosbot2.util.JsonUtils.str
+import java.net.URI
+import java.net.URLEncoder
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.nio.charset.StandardCharsets
 
-import java.net.URI;
-import java.net.URLEncoder;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
-import java.util.stream.Stream;
+class SoundCloudMusicProvider(
+    private val clientId: String
+) : IMusicProvider {
 
-public class SoundCloudMusicProvider implements IMusicProvider {
+    override fun platform(): @NonNull MusicPlatform = MusicPlatform.SOUNDCLOUD
 
-    private static final String API_BASE_V2 = "https://api-v2.soundcloud.com";
+    @Throws(Exception::class)
+    override fun searchTrack(query: String): TrackInfo? {
+        val encoded = URLEncoder.encode(query, StandardCharsets.UTF_8)
+        val url = "$API_BASE_V2/search/tracks?q=$encoded&client_id=$clientId&limit=1"
 
-    private final String clientId;
+        val req = HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .GET()
+            .build()
 
-    public SoundCloudMusicProvider(String clientId) {
-        this.clientId = clientId;
-    }
-
-    @Override
-    public MusicPlatform platform() {
-        return MusicPlatform.SOUNDCLOUD;
-    }
-
-    @Override
-    public TrackInfo searchTrack(String query) throws Exception {
-        String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
-        String url = API_BASE_V2 + "/search/tracks?q=" + encoded + "&client_id=" + clientId + "&limit=1";
-
-        HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .GET()
-                .build();
-
-        HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+        val resp = IMusicProvider.HTTP.send(req, HttpResponse.BodyHandlers.ofString())
         if (resp.statusCode() != 200) {
-            throw new RuntimeException("SoundCloud search error: " + resp.body());
+            throw RuntimeException("SoundCloud search error: ${resp.body()}")
         }
 
-        JsonObject root = JsonParser.parseString(resp.body()).getAsJsonObject();
-        JsonArray collection = root.getAsJsonArray("collection");
-        if (collection == null || collection.isEmpty()) return null;
+        val root = JsonParser.parseString(resp.body()).asJsonObject
+        val collection = root.arr("collection")
+        if (collection == null || collection.size() == 0) return null
 
-        JsonObject t = collection.get(0).getAsJsonObject();
-        return toTrackInfo(t);
+        val t = collection[0].asJsonObject
+        return toTrackInfo(t)
     }
 
-    @Override
-    public TrackInfo resolveLink(String link) throws Exception {
-        String encoded = URLEncoder.encode(link, StandardCharsets.UTF_8);
-        String url = API_BASE_V2 + "/resolve?url=" + encoded + "&client_id=" + clientId;
+    @Throws(Exception::class)
+    override fun resolveLink(link: String): TrackInfo? {
+        val encoded = URLEncoder.encode(link, StandardCharsets.UTF_8)
+        val url = "$API_BASE_V2/resolve?url=$encoded&client_id=$clientId"
 
-        HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .GET()
-                .build();
+        val req = HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .GET()
+            .build()
 
-        HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+        val resp = IMusicProvider.HTTP.send(req, HttpResponse.BodyHandlers.ofString())
         if (resp.statusCode() != 200) {
-            throw new RuntimeException("SoundCloud resolve error: " + resp.body());
+            throw RuntimeException("SoundCloud resolve error: ${resp.body()}")
         }
 
-        JsonObject t = JsonParser.parseString(resp.body()).getAsJsonObject();
-        return toTrackInfo(t);
+        val t = JsonParser.parseString(resp.body()).asJsonObject
+        return toTrackInfo(t)
     }
 
-    private TrackInfo toTrackInfo(JsonObject t) {
-        String id = t.get("id").getAsString();
-        String title = t.get("title").getAsString();
+    private fun toTrackInfo(t: JsonObject): TrackInfo {
+        val id = t.str("id").orEmpty()
+        val title = t.str("title").orEmpty()
 
-        // ----- artist: publisher_metadata.artist > user.username -----
-        JsonObject pub = t.has("publisher_metadata") && t.get("publisher_metadata").isJsonObject()
-                ? t.getAsJsonObject("publisher_metadata")
-                : null;
-        JsonObject user = t.has("user") && t.get("user").isJsonObject()
-                ? t.getAsJsonObject("user")
-                : null;
+        val pub = t.obj("publisher_metadata")
+        val user = t.obj("user")
 
-        String artist = Stream.of(
-                        pub != null && pub.has("artist") && !pub.get("artist").isJsonNull()
-                                ? pub.get("artist").getAsString()
-                                : null,
-                        user != null && user.has("username") && !user.get("username").isJsonNull()
-                                ? user.get("username").getAsString()
-                                : null
-                )
-                .filter(s -> s != null && !s.isBlank())
-                .findFirst()
-                .orElse("");
+        val artist = firstNonBlank(
+            pub?.str("artist"),
+            user?.str("username")
+        )
 
-        String fromSets = null;
-        if (t.has("sets") && t.get("sets").isJsonArray()) {
-            JsonArray sets = t.getAsJsonArray("sets");
-            if (!sets.isEmpty() && sets.get(0).isJsonPrimitive()) {
-                String v = sets.get(0).getAsString();
-                if (v != null && !v.isBlank()) {
-                    fromSets = v;
-                }
-            }
-        }
+        val fromSets = t.arr("sets")
+            ?.takeIf { it.size() > 0 && it[0].isJsonPrimitive }
+            ?.get(0)?.asString
+            ?.takeIf { it.isNotBlank() }
 
-        String album = Stream.of(
-                        pub != null && pub.has("album_title") && !pub.get("album_title").isJsonNull()
-                                ? pub.get("album_title").getAsString()
-                                : null,
-                        pub != null && pub.has("release_title") && !pub.get("release_title").isJsonNull()
-                                ? pub.get("release_title").getAsString()
-                                : null,
-                        t.has("playlist") && !t.get("playlist").isJsonNull()
-                                ? t.get("playlist").getAsString()
-                                : null,
-                        fromSets
-                )
-                .filter(s -> s != null && !s.isBlank())
-                .findFirst()
-                .orElse("");
+        val album = firstNonBlank(
+            pub?.str("album_title"),
+            pub?.str("release_title"),
+            t.str("playlist"),
+            fromSets
+        )
 
-        // ----- cover -----
-        String cover = (t.has("artwork_url") && !t.get("artwork_url").isJsonNull())
-                ? t.get("artwork_url").getAsString()
-                : null;
+        val cover = t.str("artwork_url")
+        val url = t.str("permalink_url")
 
-        // ----- url -----
-        String url = (t.has("permalink_url") && !t.get("permalink_url").isJsonNull())
-                ? t.get("permalink_url").getAsString()
-                : null;
+        val duration = t.long("full_duration")
 
-        // ----- duration -----
-        long duration = 0L;
-        if (t.has("full_duration") && !t.get("full_duration").isJsonNull()) {
-            duration = t.get("full_duration").getAsLong();
-        } else if (t.has("duration") && !t.get("duration").isJsonNull()) {
-            duration = t.get("duration").getAsLong();
-        }
+        return TrackInfo(platform(), id, title, artist, album, cover, url, duration)
+    }
 
-        return new TrackInfo(platform(), id, title, artist, album, cover, url, duration);
+    private fun firstNonBlank(vararg candidates: String?): String =
+        candidates.firstOrNull { !it.isNullOrBlank() }.orEmpty()
+
+    private companion object {
+        private const val API_BASE_V2 = "https://api-v2.soundcloud.com"
     }
 }
