@@ -2,7 +2,7 @@ plugins {
     java
     kotlin("jvm") version "2.3.10"
     kotlin("plugin.spring") version "2.3.10"
-    kotlin("plugin.lombok") version "1.9.20"
+    kotlin("plugin.lombok") version "2.3.10"
     id("org.springframework.boot")
     id("io.spring.dependency-management")
 }
