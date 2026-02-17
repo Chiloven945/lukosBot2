@@ -51,7 +51,7 @@ public class MessageSenderHub {
     public void send(MessageOut out) {
         int att = (out.attachments() == null) ? 0 : out.attachments().size();
         log.info("OUT -> [{}] to chat={} text=\"{}\" attachments={}",
-                out.addr().platform(), out.addr().chatId(), StringUtils.truncate(out.text()), att);
+                out.addr().platform(), out.addr().chatId(), StringUtils.truncateText(out.text()), att);
         ISender s = routes.get(out.addr().platform());
         if (s == null) {
             log.warn("No Sender for platform: {}", out.addr().platform());

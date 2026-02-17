@@ -6,7 +6,6 @@ import java.nio.charset.StandardCharsets
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.math.max
 
 /**
  * Utility class for string manipulations.
@@ -23,24 +22,14 @@ object StringUtils {
      */
     @JvmStatic
     @JvmOverloads
-    fun truncate(s: String?, limit: Int = 200): String {
-        if (s == null) return ""
-        val t = s.replace("\\s+".toRegex(), " ").trim { it <= ' ' }
+    fun truncateText(s: String, limit: Int = 200): String {
         if (limit <= 0) return ""
-        return if (t.length > limit) t.substring(0, max(0, limit - 1)) + "…" else t
+        val t = s.replace(Regex("\\s+"), " ").trim()
+        return if (t.length > limit) "${t.take(limit - 1)}…" else t
     }
 
-    /**
-     * Replace null or blank string with a specified replacement.
-     * 
-     * @param s       the string to check
-     * @param replace the replacement string
-     * @return the original string or the replacement if null/blank
-     */
-    @JvmStatic
-    @JvmOverloads
-    fun replaceNull(s: String?, replace: String? = "-"): String? {
-        return if (s == null || s.isBlank()) replace else s
+    fun String.truncate(limit: Int = 200): String {
+        return truncateText(this, limit)
     }
 
     /**
@@ -53,11 +42,17 @@ object StringUtils {
     @JvmStatic
     @JvmOverloads
     fun formatNum(n: Long, pattern: String = "#0.0"): String {
-        val decFor = DecimalFormat(pattern)
-        if (n >= 1000000000L) return decFor.format(n / 1000000000.0) + "B"
-        if (n >= 1000000L) return decFor.format(n / 1000000.0) + "M"
-        if (n >= 1000L) return decFor.format(n / 1000.0) + "k"
-        return n.toString()
+        val df = DecimalFormat(pattern)
+        return when {
+            n >= 1_000_000_000L -> "${df.format(n / 1_000_000_000.0)}B"
+            n >= 1_000_000L -> "${df.format(n / 1_000_000.0)}M"
+            n >= 1_000L -> "${df.format(n / 1_000.0)}k"
+            else -> n.toString()
+        }
+    }
+
+    fun Long.fmtNum(pattern: String = "#0.0"): String {
+        return formatNum(this, pattern)
     }
 
     /**
@@ -73,6 +68,10 @@ object StringUtils {
     fun formatTime(millis: Long, pattern: String = "yyyy-MM-dd HH:mm:ss"): String? {
         if (millis <= 0) return "-"
         return SimpleDateFormat(pattern).format(Date(millis))
+    }
+
+    fun Long.fmtTime(pattern: String = "yyyy-MM-dd HH:mm:ss"): String? {
+        return formatTime(this, pattern)
     }
 
     @JvmStatic
