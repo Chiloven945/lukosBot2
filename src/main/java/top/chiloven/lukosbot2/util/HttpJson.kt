@@ -1,12 +1,10 @@
 package top.chiloven.lukosbot2.util
 
-import com.google.gson.JsonArray
-import com.google.gson.JsonElement
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
+import com.google.gson.*
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.apache.logging.log4j.LogManager
 import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.config.ProxyConfigProp
 import top.chiloven.lukosbot2.util.HttpJson.getAny
@@ -39,6 +37,7 @@ import java.util.zip.InflaterInputStream
  * Note: This object is stateful only for sharing a single [HttpClient] instance.
  */
 object HttpJson {
+    private val log = LogManager.getLogger(HttpJson::class.java)
     private const val DEFAULT_READ_TIMEOUT: Int = 10_000
 
     private val DEFAULT_HEADERS: Map<String, String> = mapOf(
@@ -174,6 +173,8 @@ object HttpJson {
         headers: Map<String, String>? = DEFAULT_HEADERS,
         readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
     ): JsonElement {
+        log.debug("Passed in a JSON HTTP request. uri={} param={} headers={}", uri, params, headers)
+
         val base = uri.toString().toHttpUrlOrNull()
             ?: throw IOException("Invalid URL: $uri")
 
@@ -219,6 +220,8 @@ object HttpJson {
             }
 
             if (code >= 400) throw IOException(extractErrorMessage(root, code))
+
+            log.debug("Result received. {}", GsonBuilder().create().toJson(root))
             return root
         }
     }

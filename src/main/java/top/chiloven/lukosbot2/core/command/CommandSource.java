@@ -1,5 +1,6 @@
 package top.chiloven.lukosbot2.core.command;
 
+import lombok.extern.log4j.Log4j2;
 import top.chiloven.lukosbot2.model.Address;
 import top.chiloven.lukosbot2.model.Attachment;
 import top.chiloven.lukosbot2.model.MessageIn;
@@ -8,6 +9,7 @@ import top.chiloven.lukosbot2.platform.ChatPlatform;
 
 import java.util.function.Consumer;
 
+@Log4j2
 public class CommandSource {
     private final MessageIn in;
     private final Consumer<MessageOut> sink;
@@ -29,6 +31,7 @@ public class CommandSource {
      * @param text the text to send
      */
     public void reply(String text) {
+        log.debug("OUT -> [{}] chat={} textLen={}", platform(), chatId(), text == null ? -1 : text.length());
         sink.accept(MessageOut.text(in.addr(), text));
     }
 
@@ -38,6 +41,7 @@ public class CommandSource {
      * @param out the MessageOut to send
      */
     public void reply(MessageOut out) {
+        log.debug("OUT -> [{}] chat={} messageOut={}", platform(), chatId(), out);
         sink.accept(out);
     }
 
@@ -47,7 +51,8 @@ public class CommandSource {
      * @param url the image URL
      */
     public void replyImageUrl(String url) {
-        sink.accept(MessageOut.text(in.addr(), null).with(Attachment.imageUrl(url)));
+        log.debug("OUT -> [{}] chat={} imageUrl={}", platform(), chatId(), url);
+        sink.accept(MessageOut.text(in.addr(), "").with(Attachment.imageUrl(url)));
     }
 
     /**
@@ -58,7 +63,8 @@ public class CommandSource {
      * @param mime  the MIME type (e.g. "image/png")
      */
     public void replyImageBytes(String name, byte[] bytes, String mime) {
-        sink.accept(MessageOut.text(in.addr(), null).with(Attachment.imageBytes(name, bytes, mime)));
+        log.debug("OUT -> [{}] chat={} imageBytes name={} bytes={} mime={}", platform(), chatId(), name, bytes == null ? -1 : bytes.length, mime);
+        sink.accept(MessageOut.text(in.addr(), "").with(Attachment.imageBytes(name, bytes, mime)));
     }
 
     /**
@@ -68,7 +74,7 @@ public class CommandSource {
      * @param url  the file URL
      */
     public void replyFileUrl(String name, String url) {
-        sink.accept(MessageOut.text(in.addr(), null).with(Attachment.fileUrl(name, url)));
+        sink.accept(MessageOut.text(in.addr(), "").with(Attachment.fileUrl(name, url)));
     }
 
     /**
@@ -79,7 +85,7 @@ public class CommandSource {
      * @param mime  the MIME type (e.g. "application/pdf")
      */
     public void replyFileBytes(String name, byte[] bytes, String mime) {
-        sink.accept(MessageOut.text(in.addr(), null).with(Attachment.fileBytes(name, bytes, mime)));
+        sink.accept(MessageOut.text(in.addr(), "").with(Attachment.fileBytes(name, bytes, mime)));
     }
 
     // ===== Convenience for help/usage =====
