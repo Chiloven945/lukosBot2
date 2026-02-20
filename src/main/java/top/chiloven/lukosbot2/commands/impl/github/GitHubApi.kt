@@ -57,7 +57,7 @@ class GitHubApi(token: String?) {
             token?.let { put("Authorization", "Bearer $it") }
         }
 
-        return HttpJson.getObject(url, headers, READ_TIMEOUT_MS)
+        return HttpJson.getObject(url, headers)
     }
 
     private fun MutableMap<String, String>.putIfNotBlank(key: String, value: String?) {
@@ -66,6 +66,5 @@ class GitHubApi(token: String?) {
 
     private companion object {
         private const val BASE = "https://api.github.com"
-        private const val READ_TIMEOUT_MS = 10_000
     }
 }

@@ -4,8 +4,10 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.config.ProxyConfigProp
 import top.chiloven.lukosbot2.util.HttpJson.getAny
 import top.chiloven.lukosbot2.util.HttpJson.getArray
@@ -43,6 +45,7 @@ object HttpJson {
         "Accept" to "application/json",
         "Accept-Encoding" to "identity"
     )
+    private const val UA: String = "Mozilla/5.0 (compatible; ${Constants.UA})"
 
     @Volatile
     private var cachedClient: OkHttpClient? = null
@@ -167,18 +170,25 @@ object HttpJson {
     @JvmOverloads
     fun getAny(
         uri: URI,
+        params: Map<String, String?>? = null,
         headers: Map<String, String>? = DEFAULT_HEADERS,
         readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
     ): JsonElement {
-        val request = try {
-            Request.Builder()
-                .url(uri.toString())
-                .get()
-                .apply { headers?.forEach { (k, v) -> header(k, v) } }
-                .build()
-        } catch (e: IllegalArgumentException) {
-            throw IOException("Invalid URL: $uri", e)
-        }
+        val base = uri.toString().toHttpUrlOrNull()
+            ?: throw IOException("Invalid URL: $uri")
+
+        val httpUrl = base.newBuilder().apply {
+            params?.forEach { (k, v) ->
+                if (v != null) addQueryParameter(k, v)
+            }
+        }.build()
+
+        val request = Request.Builder()
+            .url(httpUrl)
+            .get()
+            .header("User-Agent", UA)
+            .apply { headers?.forEach { (k, v) -> header(k, v) } }
+            .build()
 
         val callClient =
             if (readTimeoutMs == DEFAULT_READ_TIMEOUT) client
@@ -226,9 +236,10 @@ object HttpJson {
     @Throws(IOException::class)
     fun getAny(
         uri: String,
+        params: Map<String, String?>? = null,
         headers: Map<String, String>? = DEFAULT_HEADERS,
         readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
-    ): JsonElement = getAny(URI(uri), headers, readTimeoutMs)
+    ): JsonElement = getAny(URI(uri), params, headers, readTimeoutMs)
 
     /**
      * Sends a GET request and parses a JSON object response.
@@ -243,10 +254,11 @@ object HttpJson {
     @Throws(IOException::class)
     fun getObject(
         uri: URI,
+        params: Map<String, String?>? = null,
         headers: Map<String, String>? = DEFAULT_HEADERS,
         readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
     ): JsonObject {
-        val root = getAny(uri, headers, readTimeoutMs)
+        val root = getAny(uri, params, headers, readTimeoutMs)
         if (root.isJsonObject) return root.asJsonObject
         throw IllegalArgumentException("Response JSON is not an object (it is ${typeOf(root)})")
     }
@@ -265,9 +277,10 @@ object HttpJson {
     @Throws(IOException::class)
     fun getObject(
         uri: String,
+        params: Map<String, String?>? = null,
         headers: Map<String, String>? = DEFAULT_HEADERS,
         readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
-    ): JsonObject = getObject(URI(uri), headers, readTimeoutMs)
+    ): JsonObject = getObject(URI(uri), params, headers, readTimeoutMs)
 
     /**
      * Sends a GET request and parses a JSON array response.
@@ -282,10 +295,11 @@ object HttpJson {
     @Throws(IOException::class)
     fun getArray(
         uri: URI,
+        params: Map<String, String?>? = null,
         headers: Map<String, String>? = DEFAULT_HEADERS,
         readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
     ): JsonArray {
-        val root = getAny(uri, headers, readTimeoutMs)
+        val root = getAny(uri, params, headers, readTimeoutMs)
         if (root.isJsonArray) return root.asJsonArray
         throw IllegalArgumentException("Response JSON is not an array (it is ${typeOf(root)})")
     }
@@ -303,10 +317,11 @@ object HttpJson {
     @Throws(IOException::class)
     fun getArray(
         uri: String,
+        params: Map<String, String?>? = null,
         headers: Map<String, String>? = DEFAULT_HEADERS,
         readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
     ): JsonArray {
-        return getArray(URI(uri), headers, readTimeoutMs)
+        return getArray(URI(uri), params, headers, readTimeoutMs)
     }
 
     /**
