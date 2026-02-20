@@ -2,7 +2,6 @@ package top.chiloven.lukosbot2.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
 import top.chiloven.lukosbot2.core.command.CommandSource;
-import top.chiloven.lukosbot2.util.UsageImageUtils;
 
 /**
  * Contract for all bot commands.

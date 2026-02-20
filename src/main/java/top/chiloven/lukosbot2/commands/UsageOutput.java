@@ -5,7 +5,6 @@ import lombok.extern.log4j.Log4j2;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 import top.chiloven.lukosbot2.model.Attachment;
 import top.chiloven.lukosbot2.model.MessageOut;
-import top.chiloven.lukosbot2.util.UsageImageUtils;
 
 /**
  * Shared output strategy for rendering and sending command usage/help content.
@@ -116,7 +115,7 @@ public final class UsageOutput {
             );
 
             MessageOut out = MessageOut.text(src.in().addr(), "命令用法：%s%s".formatted(p, cmdName))
-                    .with(Attachment.imageBytes(img.filename(), img.bytes(), img.mime()));
+                    .with(Attachment.imageBytes(img.getFilename(), img.getBytes(), img.getMime()));
 
             src.reply(out);
         } catch (Exception e) {
