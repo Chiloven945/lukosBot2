@@ -47,6 +47,7 @@ dependencies {
     compileOnly("org.projectlombok:lombok:${property("lombok-version")}")
     annotationProcessor("org.projectlombok:lombok:${property("lombok-version")}")
     implementation("org.yaml:snakeyaml:2.5")
+    implementation("com.squareup.okhttp3:okhttp:5.3.2")
 
     implementation("org.apache.logging.log4j:log4j-api:${property("log4j2-version")}")
     implementation("org.apache.logging.log4j:log4j-core:${property("log4j2-version")}")

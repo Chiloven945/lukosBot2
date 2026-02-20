@@ -4,20 +4,22 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import top.chiloven.lukosbot2.config.ProxyConfigProp
 import top.chiloven.lukosbot2.util.HttpJson.getAny
 import top.chiloven.lukosbot2.util.HttpJson.getArray
 import top.chiloven.lukosbot2.util.HttpJson.getObject
+import top.chiloven.lukosbot2.util.spring.SpringBeans
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.URI
 import java.net.URLEncoder
 import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
-import java.time.Duration
+import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
 import java.util.zip.InflaterInputStream
 
@@ -42,10 +44,56 @@ object HttpJson {
         "Accept-Encoding" to "identity"
     )
 
-    private val client: HttpClient = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(10))
-        .followRedirects(HttpClient.Redirect.NORMAL)
-        .build()
+    @Volatile
+    private var cachedClient: OkHttpClient? = null
+
+    @Volatile
+    private var cachedKey: String? = null
+
+    private fun proxyKey(p: ProxyConfigProp): String =
+        listOf(
+            p.isEnabled,
+            p.type,
+            p.host,
+            p.port,
+            p.username,
+            p.password,
+            p.nonProxyHostsList?.joinToString("|")
+        ).joinToString("#")
+
+    private fun proxyOrNull(): ProxyConfigProp? = try {
+        SpringBeans.getBean(ProxyConfigProp::class.java)
+    } catch (_: Throwable) {
+        null
+    }
+
+    private val client: OkHttpClient
+        get() {
+            val proxy = proxyOrNull()
+            val key = if (proxy != null && proxy.isEnabled) proxyKey(proxy) else "NO_PROXY"
+
+            val c = cachedClient
+            if (c != null && cachedKey == key) return c
+
+            synchronized(this) {
+                val c2 = cachedClient
+                if (c2 != null && cachedKey == key) return c2
+
+                val b = OkHttpClient.Builder()
+                    .connectTimeout(10L, TimeUnit.SECONDS)
+                    .followRedirects(true)
+                    .followSslRedirects(true)
+
+                if (proxy != null && proxy.isEnabled) {
+                    proxy.applyTo(b)
+                }
+
+                val built = b.build()
+                cachedClient = built
+                cachedKey = key
+                return built
+            }
+        }
 
     @Throws(IOException::class)
     private fun decodeByContentEncoding(raw: ByteArray, encoding: String): ByteArray {
@@ -122,23 +170,30 @@ object HttpJson {
         headers: Map<String, String>? = DEFAULT_HEADERS,
         readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
     ): JsonElement {
-        try {
-            val b = HttpRequest.newBuilder()
-                .uri(uri)
-                .timeout(Duration.ofMillis(readTimeoutMs.toLong()))
-                .GET()
+        val request = try {
+            Request.Builder()
+                .url(uri.toString())
+                .get()
+                .apply { headers?.forEach { (k, v) -> header(k, v) } }
+                .build()
+        } catch (e: IllegalArgumentException) {
+            throw IOException("Invalid URL: $uri", e)
+        }
 
-            headers?.forEach { (k, v) -> b.header(k, v) }
+        val callClient =
+            if (readTimeoutMs == DEFAULT_READ_TIMEOUT) client
+            else client.newBuilder()
+                .callTimeout(readTimeoutMs.toLong(), TimeUnit.MILLISECONDS)
+                .build()
 
-            val resp: HttpResponse<ByteArray> = client.send(b.build(), HttpResponse.BodyHandlers.ofByteArray())
-            val code = resp.statusCode()
+        callClient.newCall(request).execute().use { resp ->
+            val code = resp.code
 
-            val encoding = resp.headers().firstValue("Content-Encoding").orElse("").trim().lowercase()
-            val contentType = resp.headers().firstValue("Content-Type").orElse("")
+            val encoding = resp.header("Content-Encoding").orEmpty().trim().lowercase()
+            val contentType = resp.header("Content-Type")
             val charsetName = extractCharset(contentType)
 
-            val raw = resp.body()
-            val plain = decodeByContentEncoding(raw, encoding)
+            val plain = decodeByContentEncoding(resp.body.bytes(), encoding)
 
             val body = try {
                 String(plain, Charset.forName(charsetName))
@@ -155,9 +210,6 @@ object HttpJson {
 
             if (code >= 400) throw IOException(extractErrorMessage(root, code))
             return root
-        } catch (e: InterruptedException) {
-            Thread.currentThread().interrupt()
-            throw IOException("Request interrupted", e)
         }
     }
 
@@ -271,9 +323,7 @@ object HttpJson {
         }
     }
 
-    private fun encode(s: String): String {
-        return URLEncoder.encode(s, StandardCharsets.UTF_8)
-    }
+    private fun encode(s: String): String = URLEncoder.encode(s, StandardCharsets.UTF_8)
 
     private fun extractErrorMessage(root: JsonElement?, code: Int): String {
         if (root != null && root.isJsonObject) {
@@ -282,7 +332,7 @@ object HttpJson {
             if (obj.has("message") && !obj["message"].isJsonNull) {
                 try {
                     val m = obj["message"].asString
-                    if (!m.isNullOrBlank()) return m
+                    if (m.isNotBlank()) return m
                 } catch (_: Exception) {
                 }
             }
@@ -291,7 +341,7 @@ object HttpJson {
                 if (obj.has(k) && !obj[k].isJsonNull) {
                     try {
                         val m = obj[k].asString
-                        if (!m.isNullOrBlank()) return m
+                        if (m.isNotBlank()) return m
                     } catch (_: Exception) {
                     }
                 }
@@ -300,14 +350,12 @@ object HttpJson {
         return "HTTP $code"
     }
 
-    private fun typeOf(el: JsonElement?): String {
-        if (el == null) return "null"
-        return when {
-            el.isJsonObject -> "object"
-            el.isJsonArray -> "array"
-            el.isJsonPrimitive -> "primitive"
-            el.isJsonNull -> "null"
-            else -> "unknown"
-        }
+    private fun typeOf(el: JsonElement?): String = when {
+        el == null -> "null"
+        el.isJsonObject -> "object"
+        el.isJsonArray -> "array"
+        el.isJsonPrimitive -> "primitive"
+        el.isJsonNull -> "null"
+        else -> "unknown"
     }
 }
