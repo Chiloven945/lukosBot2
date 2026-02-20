@@ -54,6 +54,7 @@ public class CommandProcessor implements IProcessor {
         } catch (CommandSyntaxException e) {
             outs.add(MessageOut.text(in.addr(), "命令错误: " + e.getRawMessage().getString()));
         } catch (Exception e) {
+            log.warn("Failed to execute command: {}", e.getMessage(), e);
             outs.add(MessageOut.text(in.addr(), "命令执行异常: " + e.getClass().getSimpleName()));
         }
         return outs;
