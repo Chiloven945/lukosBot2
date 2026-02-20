@@ -90,7 +90,7 @@ class SoundCloudMusicProvider(
         val cover = t.str("artwork_url")
         val url = t.str("permalink_url")
 
-        val duration = t.long("full_duration")
+        val duration = t.long("full_duration")!!
 
         return TrackInfo(platform(), id, title, artist, album, cover, url, duration)
     }

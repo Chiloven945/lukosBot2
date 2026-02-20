@@ -335,7 +335,7 @@ class BilibiliCommand : IBotCommand {
     }
 
     private fun publishDateMs(data: JsonObject): Long {
-        val sec = data.long("pubdate")
+        val sec = data.long("pubdate")!!
         return if (sec <= 0) 0L else sec * 1000L
     }
 

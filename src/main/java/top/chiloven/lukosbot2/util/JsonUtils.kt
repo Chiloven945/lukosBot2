@@ -159,23 +159,43 @@ object JsonUtils {
     }
 
     @JvmStatic
-    fun getLong(obj: JsonObject, key: String, def: Long = 0): Long {
+    fun getLong(obj: JsonObject, key: String, def: Long? = null): Long? {
         val el = obj.get(key) ?: return def
         return if (!el.isJsonNull) el.asLong else def
     }
 
-    fun JsonObject.long(key: String, def: Long = 0): Long {
+    fun JsonObject.long(key: String, def: Long? = null): Long? {
         return getLong(this, key, def)
     }
 
     @JvmStatic
-    fun getInt(obj: JsonObject, key: String, def: Int = 0): Int {
+    fun getInt(obj: JsonObject, key: String, def: Int? = null): Int? {
         val el = obj.get(key) ?: return def
         return if (!el.isJsonNull) el.asInt else def
     }
 
-    fun JsonObject.int(key: String, def: Int = 0): Int {
+    fun JsonObject.int(key: String, def: Int? = null): Int? {
         return getInt(this, key, def)
+    }
+
+    @JvmStatic
+    fun getFloat(obj: JsonObject, key: String, def: Float? = null): Float? {
+        val el = obj.get(key) ?: return def
+        return if (!el.isJsonNull) el.asFloat else def
+    }
+
+    fun JsonObject.float(key: String, def: Float? = null): Float? {
+        return getFloat(this, key, def)
+    }
+
+    @JvmStatic
+    fun getBoolean(obj: JsonObject, key: String, def: Boolean? = null): Boolean? {
+        val el = obj.get(key) ?: return def
+        return if (!el.isJsonNull) el.asBoolean else def
+    }
+
+    fun JsonObject.bool(key: String, def: Boolean? = null): Boolean? {
+        return getBoolean(this, key, def)
     }
 
     @JvmStatic

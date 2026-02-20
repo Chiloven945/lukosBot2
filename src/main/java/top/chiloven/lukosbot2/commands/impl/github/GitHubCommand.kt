@@ -172,9 +172,9 @@ private data class GitHubUser(
             login = obj.str("login").orEmpty(),
             name = obj.str("name"),
             htmlUrl = obj.str("html_url"),
-            publicRepos = obj.int("public_repos"),
-            followers = obj.int("followers"),
-            following = obj.int("following"),
+            publicRepos = obj.int("public_repos")!!,
+            followers = obj.int("followers")!!,
+            following = obj.int("following")!!,
         )
     }
 }
@@ -205,8 +205,8 @@ private data class GitHubRepo(
             fullName = obj.str("full_name"),
             htmlUrl = obj.str("html_url"),
             language = obj.str("language"),
-            stars = obj.int("stargazers_count"),
-            forks = obj.int("forks_count"),
+            stars = obj.int("stargazers_count")!!,
+            forks = obj.int("forks_count")!!,
             description = obj.str("description"),
         )
     }
@@ -242,7 +242,7 @@ private data class GitHubSearchResult(
                 }
             }
             return GitHubSearchResult(
-                totalCount = obj.int("total_count"),
+                totalCount = obj.int("total_count")!!,
                 items = repos
             )
         }
@@ -263,7 +263,7 @@ private data class GitHubRepoBrief(
         fun from(obj: JsonObject): GitHubRepoBrief = GitHubRepoBrief(
             fullName = obj.str("full_name"),
             htmlUrl = obj.str("html_url"),
-            stars = obj.int("stargazers_count"),
+            stars = obj.int("stargazers_count")!!,
         )
     }
 }
