@@ -4,14 +4,10 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
-import top.chiloven.lukosbot2.commands.IBotCommand;
-import top.chiloven.lukosbot2.commands.UsageNode;
-import top.chiloven.lukosbot2.commands.UsageOutput;
-import top.chiloven.lukosbot2.commands.UsageTextRenderer;
+import top.chiloven.lukosbot2.commands.*;
 import top.chiloven.lukosbot2.config.AppProperties;
 import top.chiloven.lukosbot2.core.command.CommandRegistry;
 import top.chiloven.lukosbot2.core.command.CommandSource;
-import top.chiloven.lukosbot2.util.UsageImageUtils;
 
 import static top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
 import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
