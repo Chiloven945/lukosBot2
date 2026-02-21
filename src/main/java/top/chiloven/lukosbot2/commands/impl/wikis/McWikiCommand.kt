@@ -15,8 +15,6 @@ import top.chiloven.lukosbot2.model.Attachment
 import top.chiloven.lukosbot2.model.MessageOut
 import top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal
 import top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument
-import top.chiloven.lukosbot2.util.feature.WebScreenshot
-import top.chiloven.lukosbot2.util.feature.WebToMarkdown
 import java.time.Duration
 
 @Service

@@ -1,7 +1,8 @@
-package top.chiloven.lukosbot2.util.feature
+package top.chiloven.lukosbot2.commands.impl.wikis
 
 import com.vladsch.flexmark.html2md.converter.FlexmarkHtmlConverter
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.config.ProxyConfigProp
@@ -56,7 +57,7 @@ object WebToMarkdown {
     fun fetchWikipediaMarkdown(url: String): ContentData =
         fetchAndConvertWithSelectors(url, "h1#firstHeading", "#content", "wikipedia")
 
-    private fun resolveTitle(docTitleFallback: String?, doc: org.jsoup.nodes.Document, titleSelector: String?): String {
+    private fun resolveTitle(docTitleFallback: String?, doc: Document, titleSelector: String?): String {
         val fallback = docTitleFallback?.takeIf { it.isNotBlank() } ?: "page"
         val selector = titleSelector?.trim().orEmpty()
         if (selector.isEmpty()) return fallback
@@ -66,7 +67,7 @@ object WebToMarkdown {
         return text.ifEmpty { fallback }
     }
 
-    private fun selectFirstByCsv(doc: org.jsoup.nodes.Document, csv: String?): Element? {
+    private fun selectFirstByCsv(doc: Document, csv: String?): Element? {
         val raw = csv?.trim().orEmpty()
         if (raw.isEmpty()) return null
 

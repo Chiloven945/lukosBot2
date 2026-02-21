@@ -1,4 +1,4 @@
-package top.chiloven.lukosbot2.util.feature
+package top.chiloven.lukosbot2.commands.impl.wikis
 
 import org.apache.logging.log4j.LogManager
 import org.jsoup.Jsoup
@@ -17,6 +17,8 @@ import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.nio.file.Paths
 import java.time.Duration
+import kotlin.math.max
+import kotlin.math.round
 
 object WebScreenshot {
     private val log = LogManager.getLogger(WebScreenshot::class.java)
@@ -243,7 +245,7 @@ object WebScreenshot {
     private fun toPx(v: Any?, fallback: Int): Int {
         val num = v as? Number ?: return fallback
         val d = num.toDouble()
-        return if (d.isFinite()) kotlin.math.max(1, kotlin.math.round(d).toInt()) else fallback
+        return if (d.isFinite()) max(1, round(d).toInt()) else fallback
     }
 
     private fun loadScript(resource: String): String {
