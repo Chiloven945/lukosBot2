@@ -6,7 +6,7 @@ import java.util.*
  * Singleton object for holding application-wide constants.
  */
 object Constants {
-    const val VERSION = "0.1.0-SNAPSHOT"
+    const val VERSION = "0.1.1-SNAPSHOT"
     const val APP_NAME = "lukosBot2"
     const val UA = "$APP_NAME/$VERSION"
 
