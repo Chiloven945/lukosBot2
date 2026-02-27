@@ -5,6 +5,7 @@ import top.chiloven.lukosbot2.util.HttpJson
 import java.io.IOException
 
 class GitHubApi(token: String?) {
+
     private val token: String? = token?.takeIf { it.isNotBlank() }
 
     @Throws(IOException::class)
@@ -67,4 +68,5 @@ class GitHubApi(token: String?) {
     private companion object {
         private const val BASE = "https://api.github.com"
     }
+
 }
