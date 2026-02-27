@@ -46,7 +46,7 @@ dependencies {
     implementation("com.google.code.gson:gson:${property("gson-version")}")
     compileOnly("org.projectlombok:lombok:${property("lombok-version")}")
     annotationProcessor("org.projectlombok:lombok:${property("lombok-version")}")
-    implementation("org.yaml:snakeyaml:2.5")
+    implementation("org.yaml:snakeyaml:2.6")
     implementation("com.squareup.okhttp3:okhttp:5.3.2")
 
     implementation("org.apache.logging.log4j:log4j-api:${property("log4j2-version")}")
