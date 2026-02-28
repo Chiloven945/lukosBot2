@@ -34,11 +34,11 @@ class E621Command : IBotCommand {
         .syntax(
             "获取信息",
             UsageNode.lit("get"),
-            UsageNode.optOneOf(
+            UsageNode.oneOf(
                 UsageNode.lit("artist"),
                 UsageNode.lit("post"),
             ),
-            UsageNode.optOneOf(
+            UsageNode.oneOf(
                 UsageNode.arg("id"),
                 UsageNode.arg("link"),
             )
@@ -46,7 +46,7 @@ class E621Command : IBotCommand {
         .syntax(
             "搜索信息",
             UsageNode.lit("search"),
-            UsageNode.optOneOf(
+            UsageNode.oneOf(
                 UsageNode.lit("artist"),
                 UsageNode.lit("post"),
             ),
