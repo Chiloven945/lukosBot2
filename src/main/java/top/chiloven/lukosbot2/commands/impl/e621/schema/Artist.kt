@@ -26,6 +26,7 @@ data class Artist(
     val domains: List<Domain>?,
     val urls: List<Url>?
 ) {
+
     companion object {
         fun fromJsonArray(arr: JsonArray): List<Artist> =
             arr.map { fromJsonObject(it.asJsonObject) }
@@ -137,5 +138,5 @@ data class Artist(
         fun getString(): String =
             "  - ${if (!isActive) "（失效）" else ""}$url"
     }
-}
 
+}

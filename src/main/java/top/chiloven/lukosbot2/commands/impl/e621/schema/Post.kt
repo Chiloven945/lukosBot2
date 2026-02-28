@@ -13,6 +13,7 @@ import top.chiloven.lukosbot2.util.StringUtils.appendLineIfNotEmpty
 import top.chiloven.lukosbot2.util.StringUtils.appendSectionIfNotEmpty
 import top.chiloven.lukosbot2.util.StringUtils.fmtBytes
 import top.chiloven.lukosbot2.util.StringUtils.fmtTimeSec
+import top.chiloven.lukosbot2.util.TimeUtils
 import top.chiloven.lukosbot2.util.TimeUtils.toLDT
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
@@ -44,6 +45,7 @@ data class Post(
     val duration: Float?,
     val uploaderName: String
 ) {
+
     companion object {
         fun fromJsonObject(obj: JsonObject): Post = Post(
             id = obj.int("id")!!,
@@ -85,8 +87,8 @@ data class Post(
     fun getString(): String =
         buildString {
             appendLine("帖子 $id")
-            appendLine("发布于：$createdAt")
-            appendLine("更新于：$updatedAt")
+            appendLine("发布于：${createdAt.format(TimeUtils.dtf())}")
+            appendLine("更新于：${updatedAt.format(TimeUtils.dtf())}")
             appendLine("分级：${rating.uppercase()}")
             appendLine()
             appendLineIfNotEmpty(description, blankLineAfter = true)
@@ -329,4 +331,5 @@ data class Post(
             }
         }
     }
+
 }
