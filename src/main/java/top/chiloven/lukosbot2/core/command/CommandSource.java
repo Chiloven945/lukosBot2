@@ -134,7 +134,7 @@ public class CommandSource {
     /**
      * ID of the user who sent this message.
      */
-    public long userId() {
+    public Long userId() {
         return in.userId();
     }
 

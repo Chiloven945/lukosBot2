@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    # Embedded H2 (file mode) by default: no extra service to deploy.
+    # NOTE: Keep the URL minimal for maximum compatibility across H2 versions.
+    url: jdbc:h2:file:./data/lukosbot2
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql

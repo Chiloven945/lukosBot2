@@ -97,7 +97,12 @@ public class TwentyFourCommand implements IBotCommand {
     }
 
     private void startGame(CommandSource src) {
-        long userId = src.userId();
+        Long uid = src.userId();
+        if (uid == null) {
+            src.reply("当前平台未提供 userId，无法开始 24 点游戏。请在支持 userId 的平台/会话中使用。");
+            return;
+        }
+        long userId = uid;
         long now = System.currentTimeMillis();
 
         Session existing = sessions.get(userId);
@@ -147,7 +152,12 @@ public class TwentyFourCommand implements IBotCommand {
             return;
         }
 
-        long userId = src.userId();
+        Long uid = src.userId();
+        if (uid == null) {
+            src.reply("当前平台未提供 userId，无法继续 24 点游戏。请在支持 userId 的平台/会话中使用。");
+            return;
+        }
+        long userId = uid;
         long now = System.currentTimeMillis();
         Session session = sessions.get(userId);
 
