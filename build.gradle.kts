@@ -86,5 +86,5 @@ configurations.all {
 }
 
 kotlin {
-    jvmToolchain(25)
+    jvmToolchain(javaVersionInt)
 }
