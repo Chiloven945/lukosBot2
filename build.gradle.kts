@@ -39,6 +39,8 @@ dependencies {
     }
     implementation("org.springframework.boot:spring-boot-starter-log4j2:${property("spring-boot-version")}")
     implementation("org.springframework.boot:spring-boot-starter-actuator:${property("spring-boot-version")}")
+    implementation("org.springframework.boot:spring-boot-starter-jdbc:${property("spring-boot-version")}")
+    runtimeOnly("com.h2database:h2")
 
     // Core Library
     implementation("com.mojang:brigadier:1.3.10")

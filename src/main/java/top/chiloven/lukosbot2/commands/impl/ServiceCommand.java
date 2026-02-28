@@ -111,7 +111,7 @@ public class ServiceCommand implements IBotCommand {
     private String renderList(CommandSource src) {
         Map<String, ServiceState> st = services.snapshotStates(src.addr());
 
-        return services.registry().all().stream()
+        return services.getRegistry().all().stream()
                 .filter(s -> services.isAllowed(s.name()))
                 .sorted(Comparator.comparing(IBotService::name))
                 .map(s -> {
@@ -133,7 +133,7 @@ public class ServiceCommand implements IBotCommand {
             return;
         }
 
-        var opt = services.registry().find(name);
+        var opt = services.getRegistry().find(name);
         if (opt.isEmpty()) {
             src.reply("未知的服务：" + name + "\n\n" + renderList(src));
             return;
@@ -152,7 +152,7 @@ public class ServiceCommand implements IBotCommand {
             return;
         }
 
-        if (services.registry().find(svc).isEmpty()) {
+        if (services.getRegistry().find(svc).isEmpty()) {
             src.reply("未知的服务：" + svc);
             return;
         }
@@ -173,7 +173,7 @@ public class ServiceCommand implements IBotCommand {
             return;
         }
 
-        if (services.registry().find(svc).isEmpty()) {
+        if (services.getRegistry().find(svc).isEmpty()) {
             src.reply("未知的服务：" + svc);
             return;
         }
@@ -181,4 +181,5 @@ public class ServiceCommand implements IBotCommand {
         services.setConfigValue(src.addr(), svc, key, value);
         src.reply("已更新（本聊天）%s.%s = %s".formatted(svc, key, value));
     }
+
 }
