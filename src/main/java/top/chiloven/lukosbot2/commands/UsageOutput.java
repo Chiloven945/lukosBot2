@@ -3,8 +3,11 @@ package top.chiloven.lukosbot2.commands;
 import lombok.NonNull;
 import lombok.extern.log4j.Log4j2;
 import top.chiloven.lukosbot2.core.command.CommandSource;
-import top.chiloven.lukosbot2.model.Attachment;
-import top.chiloven.lukosbot2.model.MessageOut;
+import top.chiloven.lukosbot2.model.message.media.BytesRef;
+import top.chiloven.lukosbot2.model.message.outbound.OutImage;
+import top.chiloven.lukosbot2.model.message.outbound.OutboundMessage;
+
+import java.util.List;
 
 /**
  * Shared output strategy for rendering and sending command usage/help content.
@@ -13,15 +16,13 @@ import top.chiloven.lukosbot2.model.MessageOut;
  * <ul>
  *   <li>Render usage as markdown text.</li>
  *   <li>Decide whether to send text or image based on mode and heuristics.</li>
- *   <li>When using image, render a PNG and send it as an image attachment with a title message.</li>
+ *   <li>When using image, render a PNG and send it as an image part (caption used as title when supported).</li>
  *   <li>If image rendering fails, fall back to text output.</li>
  * </ul>
- *
- * <p>By routing all usage outputs through this class, both {@code /help} and any command that wants
- * to show its own usage will behave consistently.</p>
  */
 @Log4j2
 public final class UsageOutput {
+
     public static final int AUTO_IMAGE_MAX_CHARS = 1400;
     public static final int AUTO_IMAGE_MAX_LINES = 32;
 
@@ -53,32 +54,7 @@ public final class UsageOutput {
     }
 
     /**
-     * Decide whether AUTO mode should use image for the given rendered output.
-     *
-     * <p>Matches HelpCommand heuristics:
-     * <ul>
-     *   <li>chars > {@link #AUTO_IMAGE_MAX_CHARS}</li>
-     *   <li>lines > {@link #AUTO_IMAGE_MAX_LINES}</li>
-     * </ul>
-     */
-    public static boolean shouldAutoUseImage(UsageTextRenderer.Result rendered) {
-        if (rendered == null) return false;
-        String md = rendered.markdownText();
-        int lines = rendered.lines() == null ? 0 : rendered.lines().size();
-        int chars = md == null ? 0 : md.length();
-        return chars > AUTO_IMAGE_MAX_CHARS || lines > AUTO_IMAGE_MAX_LINES;
-    }
-
-    /**
      * Render a {@link UsageNode} and send it to the user as text or image according to the mode.
-     *
-     * @param src             message sink
-     * @param prefix          command prefix (e.g. "/")
-     * @param cmdNameForTitle command name used in the image title line (e.g. "help", "wiki")
-     * @param node            usage node to render
-     * @param opt             renderer options (usually {@link UsageTextRenderer.Options#forHelp(String)} or forCommand)
-     * @param style           image style used when sending image
-     * @param mode            output mode
      */
     public static void sendUsage(
             @NonNull CommandSource src,
@@ -89,7 +65,6 @@ public final class UsageOutput {
             @NonNull UsageImageUtils.ImageStyle style,
             UseMode mode
     ) {
-
         String p = (prefix == null || prefix.isBlank()) ? "/" : prefix.trim();
         String cmdName = (cmdNameForTitle == null) ? "" : cmdNameForTitle.trim();
 
@@ -114,14 +89,34 @@ public final class UsageOutput {
                     style
             );
 
-            MessageOut out = MessageOut.text(src.in().addr(), "命令用法：%s%s".formatted(p, cmdName))
-                    .with(Attachment.imageBytes(img.getFilename(), img.getBytes(), img.getMime()));
+            String title = "命令用法：%s%s".formatted(p, cmdName);
+            BytesRef ref = new BytesRef(img.getFilename(), img.getBytes(), img.getMime());
+
+            OutImage part = new OutImage(ref, title, img.getFilename(), img.getMime());
+            OutboundMessage out = new OutboundMessage(src.addr(), List.of(part));
 
             src.reply(out);
         } catch (Exception e) {
             log.warn("Failed to render usage image: {}", e.getMessage(), e);
             src.reply(rendered.markdownText() + "\n\n（图片渲染失败，已回退到文字版：" + e.getMessage() + "）");
         }
+    }
+
+    /**
+     * Decide whether AUTO mode should use image for the given rendered output.
+     *
+     * <p>Matches the original heuristic:
+     * <ul>
+     *   <li>chars > {@link #AUTO_IMAGE_MAX_CHARS}</li>
+     *   <li>lines > {@link #AUTO_IMAGE_MAX_LINES}</li>
+     * </ul>
+     */
+    public static boolean shouldAutoUseImage(UsageTextRenderer.Result rendered) {
+        if (rendered == null) return false;
+        String md = rendered.markdownText();
+        int lines = rendered.lines() == null ? 0 : rendered.lines().size();
+        int chars = md == null ? 0 : md.length();
+        return chars > AUTO_IMAGE_MAX_CHARS || lines > AUTO_IMAGE_MAX_LINES;
     }
 
     /**
@@ -132,4 +127,5 @@ public final class UsageOutput {
         TEXT,
         IMAGE
     }
+
 }

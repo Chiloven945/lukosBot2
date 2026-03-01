@@ -5,14 +5,18 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.config.ServiceConfigProp;
 import top.chiloven.lukosbot2.core.MessageSenderHub;
+import top.chiloven.lukosbot2.core.command.CommandSource;
 import top.chiloven.lukosbot2.core.service.store.IServiceStateStore;
-import top.chiloven.lukosbot2.model.*;
+import top.chiloven.lukosbot2.model.ServiceConfig;
+import top.chiloven.lukosbot2.model.ServiceEvent;
+import top.chiloven.lukosbot2.model.ServiceStateDoc;
+import top.chiloven.lukosbot2.model.message.Address;
+import top.chiloven.lukosbot2.model.message.inbound.InboundMessage;
+import top.chiloven.lukosbot2.model.message.outbound.OutboundMessage;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
 import top.chiloven.lukosbot2.services.IBotService;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.*;
 
 @Service
@@ -46,10 +50,12 @@ public class ServiceManager {
      */
     private final ConcurrentMap<String, ServiceState> defaultStates = new ConcurrentHashMap<>();
 
-    public ServiceManager(ServiceRegistry registry,
-                          IServiceStateStore store,
-                          MessageSenderHub senderHub,
-                          ServiceConfigProp props) {
+    public ServiceManager(
+            ServiceRegistry registry,
+            IServiceStateStore store,
+            MessageSenderHub senderHub,
+            ServiceConfigProp props
+    ) {
         this.registry = registry;
         this.store = store;
         this.senderHub = senderHub;
@@ -189,7 +195,7 @@ public class ServiceManager {
 
         Runnable task = () -> {
             try {
-                ServiceContext ctx = new ServiceContext(senderHub, addr);
+                CommandSource ctx = CommandSource.forAddress(addr, senderHub::send);
                 s.onTick(ctx, new ServiceConfig(st.getConfig()));
             } catch (Exception e) {
                 log.warn("Service tick failed: {}", s.name(), e);
@@ -207,16 +213,21 @@ public class ServiceManager {
     /* ======================== incoming + triggers ======================== */
 
     /**
-     * Called by MessageDispatcher (incoming messages).
+     * Called by {@link top.chiloven.lukosbot2.core.MessageDispatcher} (incoming messages).
+     *
+     * @return outbound messages produced by services for this inbound message (may be empty)
      */
-    public void onMessage(MessageIn in) {
+    public List<OutboundMessage> onMessage(InboundMessage in) {
+        if (in == null || in.addr() == null) return List.of();
+
         String chatKey = chatKey(in.addr());
         ConcurrentMap<String, ServiceState> perChat = chatStates.computeIfAbsent(chatKey, k -> new ConcurrentHashMap<>());
 
         boolean changed = ensureDefaultsForChat(perChat);
         if (changed) persist();
 
-        ServiceContext ctx = new ServiceContext(senderHub, in.addr());
+        List<OutboundMessage> outs = new ArrayList<>();
+        CommandSource ctx = CommandSource.forInbound(in, outs::add);
         ServiceEvent ev = ServiceEvent.message(in);
 
         for (IBotService s : registry.all()) {
@@ -226,9 +237,15 @@ public class ServiceManager {
             if (st == null || !st.isEnabled()) continue;
 
             if (s.type() == ServiceType.TRIGGER) {
-                s.onEvent(ctx, new ServiceConfig(st.getConfig()), ev);
+                try {
+                    s.onEvent(ctx, new ServiceConfig(st.getConfig()), ev);
+                } catch (Exception e) {
+                    log.warn("Service {} failed on message: {}", s.name(), e.getMessage(), e);
+                }
             }
         }
+
+        return outs;
     }
 
     private static String chatKey(Address addr) {
@@ -239,6 +256,8 @@ public class ServiceManager {
      * External trigger: fire an event to a single chat.
      */
     public void fire(Address addr, String serviceName, ServiceEvent event) {
+        if (addr == null) return;
+
         String chatKey = chatKey(addr);
         ConcurrentMap<String, ServiceState> perChat = chatStates.computeIfAbsent(chatKey, k -> new ConcurrentHashMap<>());
 
@@ -255,7 +274,13 @@ public class ServiceManager {
         ServiceState st = perChat.get(serviceName);
         if (st == null || !st.isEnabled()) return;
 
-        ServiceContext ctx = new ServiceContext(senderHub, addr);
+        CommandSource ctx;
+        if (event != null && event.message() != null) {
+            ctx = CommandSource.forInbound(event.message(), senderHub::send);
+        } else {
+            ctx = CommandSource.forAddress(addr, senderHub::send);
+        }
+
         s.onEvent(ctx, new ServiceConfig(st.getConfig()), event);
     }
 
@@ -278,7 +303,7 @@ public class ServiceManager {
             ServiceState st = ce.getValue().get(serviceName);
             if (st == null || !st.isEnabled()) continue;
 
-            ServiceContext ctx = new ServiceContext(senderHub, addr);
+            CommandSource ctx = CommandSource.forAddress(addr, senderHub::send);
             s.onEvent(ctx, new ServiceConfig(st.getConfig()), event);
         }
     }
@@ -376,4 +401,5 @@ public class ServiceManager {
 
         persist();
     }
+
 }

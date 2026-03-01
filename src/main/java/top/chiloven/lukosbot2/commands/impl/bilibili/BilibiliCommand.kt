@@ -39,6 +39,7 @@ import java.time.Duration
     matchIfMissing = true
 )
 class BilibiliCommand : IBotCommand {
+
     private val log = LogManager.getLogger(BilibiliCommand::class.java)
 
     private companion object {
@@ -97,7 +98,7 @@ class BilibiliCommand : IBotCommand {
     private fun run(src: CommandSource, rawInput: String, detailed: Boolean): Int {
         log.info(
             "BilibiliCommand invoked by {} with input='{}', detailed={}",
-            src.`in`().addr(), rawInput, detailed
+            src.addr(), rawInput, detailed
         )
 
         val input = rawInput.trim()
@@ -346,4 +347,5 @@ class BilibiliCommand : IBotCommand {
         val byField = data?.int("videos") ?: 0
         return maxOf(1, maxOf(byArray, byField))
     }
+
 }

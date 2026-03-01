@@ -9,8 +9,8 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
- * Represents a structured, hierarchical “usage specification” for a command, designed to be rendered
- * consistently by a help system (e.g., {@code HelpCommand}) as either plain text or as an image.
+ * Represents a structured, hierarchical “usage specification” for a command, designed to be rendered consistently by a
+ * help system (e.g., {@code HelpCommand}) as either plain text or as an image.
  *
  * <p>This type replaces ad-hoc multi-line usage strings with a strongly-typed usage tree, so that:
  * <ul>
@@ -109,6 +109,15 @@ public final class UsageNode {
         this.children = List.copyOf(children == null ? List.of() : children);
     }
 
+    private static String requireNonBlank(String s, String field) {
+        Objects.requireNonNull(s, field);
+        String v = s.trim();
+        if (v.isBlank()) {
+            throw new IllegalArgumentException(field + " cannot be blank");
+        }
+        return v;
+    }
+
     /**
      * Creates a builder for a root usage node.
      *
@@ -197,8 +206,8 @@ public final class UsageNode {
      * Creates a grouped sequence of items.
      *
      * <p>Grouping is rendered as a space-separated sequence of its children, without adding extra
-     * delimiters. This is primarily useful when embedding multiple tokens inside {@link Opt} or
-     * {@link Choice} so they behave as a single conceptual unit.
+     * delimiters. This is primarily useful when embedding multiple tokens inside {@link Opt} or {@link Choice} so they
+     * behave as a single conceptual unit.
      *
      * @param items items to group (may be empty or {@code null})
      * @return a grouped item
@@ -281,15 +290,6 @@ public final class UsageNode {
         }
 
         return sb.toString().trim();
-    }
-
-    private static String requireNonBlank(String s, String field) {
-        Objects.requireNonNull(s, field);
-        String v = s.trim();
-        if (v.isBlank()) {
-            throw new IllegalArgumentException(field + " cannot be blank");
-        }
-        return v;
     }
 
     /**
@@ -397,8 +397,8 @@ public final class UsageNode {
      * A grouped sequence of items.
      *
      * <p>Grouping does not introduce its own delimiters; it renders as a space-separated sequence
-     * of its inner items. This is useful to treat multiple tokens as a single conceptual unit when
-     * embedded inside {@link Opt} or {@link Choice}.
+     * of its inner items. This is useful to treat multiple tokens as a single conceptual unit when embedded inside
+     * {@link Opt} or {@link Choice}.
      *
      * @param items grouped items (immutable snapshot)
      */
@@ -447,8 +447,7 @@ public final class UsageNode {
      * Tail representation based on a list of {@link Item} instances.
      *
      * <p>This is the recommended representation because it allows consistent rendering of optional
-     * segments, choices, parameter placeholders, and concatenation without manually writing bracket
-     * syntax.
+     * segments, choices, parameter placeholders, and concatenation without manually writing bracket syntax.
      *
      * @param items tail items (immutable snapshot)
      */
@@ -558,17 +557,6 @@ public final class UsageNode {
         }
 
         /**
-         * Sets the one-line description for the node being built.
-         *
-         * @param description node description; {@code null} becomes empty
-         * @return this builder
-         */
-        public Builder description(String description) {
-            this.description = description == null ? "" : description.trim();
-            return this;
-        }
-
-        /**
          * Adds a structured syntax line to the node being built (recommended).
          *
          * <p>The syntax “tail” is the part after the command path. The path itself is implied by the node
@@ -602,19 +590,6 @@ public final class UsageNode {
         }
 
         /**
-         * Adds a documented parameter entry.
-         *
-         * @param token       parameter token item (non-null)
-         * @param description parameter description (trimmed; may be empty)
-         * @return this builder
-         * @throws NullPointerException if {@code token} is {@code null}
-         */
-        public Builder parameter(Item token, String description) {
-            this.parameters.add(new Parameter(token, description));
-            return this;
-        }
-
-        /**
          * Convenience method to add a documented parameter using a placeholder name.
          *
          * <p>This method is equivalent to:
@@ -633,15 +608,15 @@ public final class UsageNode {
         }
 
         /**
-         * Adds a documented option/flag entry.
+         * Adds a documented parameter entry.
          *
-         * @param token       option token item (non-null)
-         * @param description option description (trimmed; may be empty)
+         * @param token       parameter token item (non-null)
+         * @param description parameter description (trimmed; may be empty)
          * @return this builder
          * @throws NullPointerException if {@code token} is {@code null}
          */
-        public Builder option(Item token, String description) {
-            this.options.add(new Option(token, description));
+        public Builder parameter(Item token, String description) {
+            this.parameters.add(new Parameter(token, description));
             return this;
         }
 
@@ -659,6 +634,19 @@ public final class UsageNode {
          */
         public Builder option(String flag, String description) {
             return option(lit(flag), description);
+        }
+
+        /**
+         * Adds a documented option/flag entry.
+         *
+         * @param token       option token item (non-null)
+         * @param description option description (trimmed; may be empty)
+         * @return this builder
+         * @throws NullPointerException if {@code token} is {@code null}
+         */
+        public Builder option(Item token, String description) {
+            this.options.add(new Option(token, description));
+            return this;
         }
 
         /**
@@ -786,6 +774,17 @@ public final class UsageNode {
         }
 
         /**
+         * Sets the one-line description for the node being built.
+         *
+         * @param description node description; {@code null} becomes empty
+         * @return this builder
+         */
+        public Builder description(String description) {
+            this.description = description == null ? "" : description.trim();
+            return this;
+        }
+
+        /**
          * Builds an immutable {@link UsageNode} snapshot from the builder state.
          *
          * <p>All lists are defensively copied into immutable lists. String fields are trimmed.
@@ -805,4 +804,5 @@ public final class UsageNode {
             );
         }
     }
+
 }

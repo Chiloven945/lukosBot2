@@ -1,169 +1,167 @@
 package top.chiloven.lukosbot2.core.command;
 
-import lombok.extern.log4j.Log4j2;
-import top.chiloven.lukosbot2.model.Address;
-import top.chiloven.lukosbot2.model.Attachment;
-import top.chiloven.lukosbot2.model.MessageIn;
-import top.chiloven.lukosbot2.model.MessageOut;
-import top.chiloven.lukosbot2.platform.ChatPlatform;
+import lombok.Getter;
+import lombok.NonNull;
+import lombok.experimental.Accessors;
+import org.jspecify.annotations.Nullable;
+import top.chiloven.lukosbot2.model.message.Address;
+import top.chiloven.lukosbot2.model.message.inbound.*;
+import top.chiloven.lukosbot2.model.message.media.MediaRef;
+import top.chiloven.lukosbot2.model.message.outbound.OutFile;
+import top.chiloven.lukosbot2.model.message.outbound.OutImage;
+import top.chiloven.lukosbot2.model.message.outbound.OutPart;
+import top.chiloven.lukosbot2.model.message.outbound.OutboundMessage;
+import top.chiloven.lukosbot2.util.message.TextExtractor;
 
+import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 
-@Log4j2
-public class CommandSource {
-    private final MessageIn in;
-    private final Consumer<MessageOut> sink;
+/**
+ * Unified execution context for both commands and services.
+ *
+ * <p>This class intentionally keeps the name {@code CommandSource} so it can be used
+ * as the Brigadier command source type, while also replacing the old {@code ServiceContext}.</p>
+ *
+ * <p>A {@code CommandSource} may or may not have an associated inbound message:
+ * for scheduled services, only the target {@link Address} is available.</p>
+ */
+@Accessors(fluent = true)
+public final class CommandSource {
 
-    public CommandSource(MessageIn in, Consumer<MessageOut> sink) {
-        this.in = in;
+    @Getter
+    private final Address addr;
+    @Getter
+    private final InboundMessage inbound;
+    private final Consumer<OutboundMessage> sink;
+
+    private CommandSource(
+            @NonNull Address addr,
+            @Nullable InboundMessage inbound,
+            @NonNull Consumer<OutboundMessage> sink
+    ) {
+        this.addr = addr;
+        this.inbound = inbound;
         this.sink = sink;
     }
 
-    public MessageIn in() {
-        return in;
+    /**
+     * Create a source for an inbound message.
+     */
+    public static CommandSource forInbound(
+            @NonNull InboundMessage in,
+            Consumer<OutboundMessage> sink
+    ) {
+        Objects.requireNonNull(in.addr(), "in.addr");
+        return new CommandSource(in.addr(), in, sink);
     }
 
-    // ===== Reply =====
+    /**
+     * Create a source for a known address without an inbound message (e.g. service tick).
+     */
+    public static CommandSource forAddress(
+            Address addr,
+            Consumer<OutboundMessage> sink
+    ) {
+        return new CommandSource(addr, null, sink);
+    }
+
+    public Chat chat() {
+        return inbound == null ? new Chat(addr, null) : inbound.chat();
+    }
+
+    public MessageMeta meta() {
+        return inbound == null ? MessageMeta.empty() : inbound.meta();
+    }
+
+    public List<InPart> parts() {
+        return inbound == null ? List.of() : inbound.partsSafe();
+    }
 
     /**
-     * Reply with a simple text message (no attachments).
+     * Extract the "primary" text from the inbound message.
      *
-     * @param text the text to send
+     * <p>Rules are implemented in {@link TextExtractor} (caption first, otherwise first text part).</p>
      */
+    public String primaryText() {
+        return inbound == null ? "" : TextExtractor.primaryText(inbound);
+    }
+
+    /**
+     * Returns user id, or 0 if missing.
+     *
+     * <p>Prefer {@link #userIdOrNull()} when you need to distinguish missing IDs.</p>
+     */
+    public long userId() {
+        Long id = userIdOrNull();
+        return id == null ? 0L : id;
+    }
+
+    /**
+     * Returns user id if present, otherwise {@code null}.
+     */
+    public Long userIdOrNull() {
+        return sender().id();
+    }
+
+    public Sender sender() {
+        return inbound == null ? Sender.unknown() : inbound.sender();
+    }
+
+    public long chatId() {
+        return addr.chatId();
+    }
+
+    public boolean isGroup() {
+        return addr.group();
+    }
+
+    // ---- reply helpers ----
+
     public void reply(String text) {
-        log.debug("OUT -> [{}] chat={} textLen={}", platform(), chatId(), text == null ? -1 : text.length());
-        sink.accept(MessageOut.text(in.addr(), text));
+        if (text == null) return;
+        sink.accept(OutboundMessage.text(addr, text));
     }
 
-    /**
-     * Reply with a full MessageOut (can include attachments).
-     *
-     * @param out the MessageOut to send
-     */
-    public void reply(MessageOut out) {
-        log.debug("OUT -> [{}] chat={} messageOut={}", platform(), chatId(), out);
+    public void reply(OutboundMessage out) {
+        if (out == null) return;
         sink.accept(out);
     }
 
+    public void replyParts(List<OutPart> parts) {
+        if (parts == null || parts.isEmpty()) return;
+        sink.accept(new OutboundMessage(addr, parts));
+    }
+
+    public void replyImage(MediaRef ref, String caption) {
+        if (ref == null) return;
+        sink.accept(new OutboundMessage(
+                addr,
+                List.of(new OutImage(ref, caption, null, null))
+        ));
+    }
+
+    public void replyFile(MediaRef ref, String name, String caption) {
+        if (ref == null) return;
+        sink.accept(new OutboundMessage(
+                addr,
+                List.of(new OutFile(ref, name, null, caption))
+        ));
+    }
+
     /**
-     * Reply with an image from a URL.
+     * Send a message to another address using the same sink.
      *
-     * @param url the image URL
+     * <p>This is useful for services or admin commands that broadcast to different chats.</p>
      */
-    public void replyImageUrl(String url) {
-        log.debug("OUT -> [{}] chat={} imageUrl={}", platform(), chatId(), url);
-        sink.accept(MessageOut.text(in.addr(), "").with(Attachment.imageUrl(url)));
+    public void send(Address to, OutboundMessage out) {
+        if (to == null || out == null) return;
+        sink.accept(new OutboundMessage(to, out.parts()));
     }
 
-    /**
-     * Reply with an image from byte array.
-     *
-     * @param name  the image name (for filename)
-     * @param bytes the image bytes
-     * @param mime  the MIME type (e.g. "image/png")
-     */
-    public void replyImageBytes(String name, byte[] bytes, String mime) {
-        log.debug("OUT -> [{}] chat={} imageBytes name={} bytes={} mime={}", platform(), chatId(), name, bytes == null ? -1 : bytes.length, mime);
-        sink.accept(MessageOut.text(in.addr(), "").with(Attachment.imageBytes(name, bytes, mime)));
-    }
-
-    /**
-     * Reply with a file from a URL.
-     *
-     * @param name the file name (for filename)
-     * @param url  the file URL
-     */
-    public void replyFileUrl(String name, String url) {
-        sink.accept(MessageOut.text(in.addr(), "").with(Attachment.fileUrl(name, url)));
-    }
-
-    /**
-     * Reply with a file from byte array.
-     *
-     * @param name  the file name (for filename)
-     * @param bytes the file bytes
-     * @param mime  the MIME type (e.g. "application/pdf")
-     */
-    public void replyFileBytes(String name, byte[] bytes, String mime) {
-        sink.accept(MessageOut.text(in.addr(), "").with(Attachment.fileBytes(name, bytes, mime)));
-    }
-
-    // ===== Convenience for help/usage =====
-
-    /**
-     * Returns the command prefix for this chat.
-     *
-     * <p>Current implementation uses a fixed prefix {@code "/"}.
-     * If you later support per-chat prefix, change it here and all help rendering will follow.</p>
-     */
-    public String prefix() {
-        return "/";
-    }
-
-    /**
-     * Returns the maximum safe text length for a single message on the current platform.
-     *
-     * <p>This is used by help/usage rendering to decide whether to send text or fall back to an image.</p>
-     */
-    public int maxTextLength() {
-        return switch (platform()) {
-            case TELEGRAM -> 3500; // Telegram text limit is larger, but keep some margin for markdown/formatting
-            case DISCORD -> 1800;  // Discord message limit is 2000; keep margin
-            case ONEBOT -> 1800;   // varies; keep conservative
-        };
-    }
-
-    /**
-     * Sends a PNG image as an image attachment.
-     *
-     * <p>Centralized helper to keep callers (HelpCommand, IBotCommand) consistent.</p>
-     */
-    public void sendImagePng(String filename, byte[] pngBytes) {
-        replyImageBytes(filename, pngBytes, "image/png");
-    }
-
-    /**
-     * Sends an arbitrary file attachment.
-     */
-    public void sendFile(String filename, byte[] bytes, String mime) {
-        replyFileBytes(filename, bytes, mime);
-    }
-
-    // ===== Getters =====
-
-    /**
-     * ID of the user who sent this message.
-     */
-    public long userId() {
-        return in.userId();
-    }
-
-    /**
-     * Chat ID (group ID or private chat ID) of this message.
-     */
-    public long chatId() {
-        return in.addr().chatId();
-    }
-
-    /**
-     * Platform of this message (TELEGRAM / DISCORD / ONEBOT ...).
-     */
-    public ChatPlatform platform() {
-        return in.addr().platform();
-    }
-
-    /**
-     * Full address object of this message.
-     */
-    public Address addr() {
-        return in.addr();
-    }
-
-    /**
-     * Raw text content of this message.
-     */
-    public String text() {
-        return in.text();
+    public void send(Address to, String text) {
+        if (to == null || text == null) return;
+        sink.accept(OutboundMessage.text(to, text));
     }
 
 }

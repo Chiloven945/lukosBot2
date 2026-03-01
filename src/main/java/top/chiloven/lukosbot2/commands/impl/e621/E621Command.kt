@@ -11,6 +11,9 @@ import top.chiloven.lukosbot2.commands.UsageNode
 import top.chiloven.lukosbot2.commands.impl.e621.schema.Artist
 import top.chiloven.lukosbot2.commands.impl.e621.schema.Post
 import top.chiloven.lukosbot2.core.command.CommandSource
+import top.chiloven.lukosbot2.model.message.media.BytesRef
+import top.chiloven.lukosbot2.model.message.outbound.OutImage
+import top.chiloven.lukosbot2.model.message.outbound.OutboundMessage
 import top.chiloven.lukosbot2.util.StringUtils.isUrl
 import top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal
 import top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument
@@ -238,7 +241,20 @@ class E621Command : IBotCommand {
                     try {
                         val png = SearchGridRenderer.render(search, page, posts)
                         log.debug("[e621] Grid rendered bytes={}", png.size)
-                        sendImagePng("e621-posts-$page.png", png)
+
+                        val msg = OutboundMessage(
+                            addr(),
+                            listOf(
+                                OutImage(
+                                    BytesRef(png),
+                                    null,
+                                    "e621-posts-$page.png",
+                                    null
+                                )
+                            )
+                        )
+                        this.reply(msg)
+
                         log.debug("[e621] Grid sent")
                     } catch (e: Exception) {
                         log.warn("[e621] Grid render/send failed.", e)

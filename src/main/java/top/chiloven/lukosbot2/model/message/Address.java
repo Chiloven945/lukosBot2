@@ -1,4 +1,4 @@
-package top.chiloven.lukosbot2.model;
+package top.chiloven.lukosbot2.model.message;
 
 import top.chiloven.lukosbot2.platform.ChatPlatform;
 
