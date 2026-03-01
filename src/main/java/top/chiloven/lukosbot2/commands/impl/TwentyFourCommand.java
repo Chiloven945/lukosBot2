@@ -10,8 +10,8 @@ import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.config.CommandConfigProp;
 import top.chiloven.lukosbot2.core.MessageSenderHub;
 import top.chiloven.lukosbot2.core.command.CommandSource;
-import top.chiloven.lukosbot2.model.Address;
-import top.chiloven.lukosbot2.model.MessageOut;
+import top.chiloven.lukosbot2.model.message.Address;
+import top.chiloven.lukosbot2.model.message.outbound.OutboundMessage;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -48,52 +48,6 @@ public class TwentyFourCommand implements IBotCommand {
     public TwentyFourCommand(MessageSenderHub senderHub, CommandConfigProp config) {
         this.senderHub = senderHub;
         this.timeLimit = config.getTwentyFour().getTimeLimit();
-    }
-
-    @Override
-    public String name() {
-        return "24";
-    }
-
-    @Override
-    public String description() {
-        return "玩 24 点游戏";
-    }
-
-    @Override
-    public UsageNode usage() {
-        return UsageNode.root(name())
-                .description(description())
-                .syntax("开始一场新游戏")
-                .syntax("提交答案表达式", UsageNode.arg("expression"))
-                .syntax("放弃作答并公布答案", UsageNode.lit("giveup"))
-                .param("expression", "表达式（可使用 + - * / ()，并使用全部给出的 4 个数字）")
-                .example(
-                        "24",
-                        "24 (2+1)*7+3",
-                        "24 giveup"
-                )
-                .build();
-    }
-
-    @Override
-    public void register(CommandDispatcher<CommandSource> dispatcher) {
-        dispatcher.register(
-                literal(name())
-                        // /24
-                        .executes(ctx -> {
-                            startGame(ctx.getSource());
-                            return 1;
-                        })
-                        // /24 <input>
-                        .then(argument("input", StringArgumentType.greedyString())
-                                .executes(ctx -> {
-                                    String input = StringArgumentType.getString(ctx, "input");
-                                    handleInput(ctx.getSource(), input);
-                                    return 1;
-                                })
-                        )
-        );
     }
 
     private void startGame(CommandSource src) {
@@ -145,6 +99,34 @@ public class TwentyFourCommand implements IBotCommand {
                 """.formatted(timeLimit / 1000, formatNums(puzzle.nums())));
     }
 
+    private void onTimeout(long userId, Session session) {
+        long now = System.currentTimeMillis();
+        Session current = sessions.get(userId);
+        if (current != session || !session.isExpired(now)) {
+            return;
+        }
+
+        sessions.remove(userId, session);
+
+        String msg = """
+                24 点游戏时间到了（%d 秒）。
+                题目数字：%s
+                一个可能的答案是：
+                %s = 24
+                """.formatted(
+                timeLimit / 1000,
+                formatNums(session.nums),
+                session.solution
+        );
+
+        senderHub.send(OutboundMessage.text(session.addr, msg));
+    }
+
+    @Override
+    public String name() {
+        return "24";
+    }
+
     private void handleInput(CommandSource src, String rawInput) {
         String input = rawInput == null ? "" : rawInput.trim();
         if (input.isEmpty()) {
@@ -177,6 +159,11 @@ public class TwentyFourCommand implements IBotCommand {
         checkAnswer(src, userId, session, input);
     }
 
+    @Override
+    public String description() {
+        return "玩 24 点游戏";
+    }
+
     private void giveUp(CommandSource src, long userId, Session session) {
         cancelSession(userId, session);
 
@@ -189,6 +176,22 @@ public class TwentyFourCommand implements IBotCommand {
                 formatNums(session.nums),
                 session.solution
         ));
+    }
+
+    @Override
+    public UsageNode usage() {
+        return UsageNode.root(name())
+                .description(description())
+                .syntax("开始一场新游戏")
+                .syntax("提交答案表达式", UsageNode.arg("expression"))
+                .syntax("放弃作答并公布答案", UsageNode.lit("giveup"))
+                .param("expression", "表达式（可使用 + - * / ()，并使用全部给出的 4 个数字）")
+                .example(
+                        "24",
+                        "24 (2+1)*7+3",
+                        "24 giveup"
+                )
+                .build();
     }
 
     private void checkAnswer(CommandSource src, long userId, Session session, String expr) {
@@ -242,28 +245,27 @@ public class TwentyFourCommand implements IBotCommand {
         ));
     }
 
-    private void onTimeout(long userId, Session session) {
-        long now = System.currentTimeMillis();
-        Session current = sessions.get(userId);
-        if (current != session || !session.isExpired(now)) {
-            return;
-        }
-
-        sessions.remove(userId, session);
-
-        String msg = """
-                24 点游戏时间到了（%d 秒）。
-                题目数字：%s
-                一个可能的答案是：
-                %s = 24
-                """.formatted(
-                timeLimit / 1000,
-                formatNums(session.nums),
-                session.solution
+    @Override
+    public void register(CommandDispatcher<CommandSource> dispatcher) {
+        dispatcher.register(
+                literal(name())
+                        // /24
+                        .executes(ctx -> {
+                            startGame(ctx.getSource());
+                            return 1;
+                        })
+                        // /24 <input>
+                        .then(argument("input", StringArgumentType.greedyString())
+                                .executes(ctx -> {
+                                    String input = StringArgumentType.getString(ctx, "input");
+                                    handleInput(ctx.getSource(), input);
+                                    return 1;
+                                })
+                        )
         );
-
-        senderHub.send(MessageOut.text(session.addr, msg));
     }
+
+
 
     private void cancelSession(long userId, Session session) {
         sessions.remove(userId, session);
@@ -488,4 +490,5 @@ public class TwentyFourCommand implements IBotCommand {
             return now >= expiresAtMillis;
         }
     }
+
 }

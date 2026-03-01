@@ -11,8 +11,10 @@ import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.commands.UsageNode
 import top.chiloven.lukosbot2.core.command.CommandSource
-import top.chiloven.lukosbot2.model.Attachment
-import top.chiloven.lukosbot2.model.MessageOut
+import top.chiloven.lukosbot2.model.message.media.BytesRef
+import top.chiloven.lukosbot2.model.message.outbound.OutFile
+import top.chiloven.lukosbot2.model.message.outbound.OutImage
+import top.chiloven.lukosbot2.model.message.outbound.OutboundMessage
 import top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal
 import top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument
 import top.chiloven.lukosbot2.util.feature.WebScreenshot
@@ -124,7 +126,7 @@ class McWikiCommand : IWikiishCommand {
                 }
             }
 
-            src.reply(MessageOut.text(src.`in`().addr(), text))
+            src.reply(text)
         } catch (e: Exception) {
             log.warn("McWiki summary failed: {}", linkOrTitle, e)
             src.reply("获取失败：${e.message}")
@@ -146,8 +148,11 @@ class McWikiCommand : IWikiishCommand {
                 defaultTitleBase = "mcwiki"
             )
 
-            val out = MessageOut.text(src.`in`().addr(), "已转换为 Markdown")
-                .with(Attachment.fileBytes(md.filename(), md.bytes(), md.mime()))
+            val ref = BytesRef(md.filename(), md.bytes(), md.mime())
+            val out = OutboundMessage(
+                src.addr(),
+                listOf(OutFile(ref, "已转换为 Markdown", md.filename(), md.mime()))
+            )
             src.reply(out)
         } catch (e: Exception) {
             log.warn("McWiki md failed: {}", linkOrTitle, e)
@@ -164,8 +169,11 @@ class McWikiCommand : IWikiishCommand {
             }
 
             val cd = WebScreenshot.screenshotMcWiki(url)
-            val out = MessageOut.text(src.`in`().addr(), "截图如下：")
-                .with(Attachment.imageBytes(cd.filename(), cd.bytes(), cd.mime()))
+            val ref = BytesRef(cd.filename(), cd.bytes(), cd.mime())
+            val out = OutboundMessage(
+                src.addr(),
+                listOf(OutImage(ref, "截图如下：", cd.filename(), cd.mime()))
+            )
             src.reply(out)
         } catch (e: Exception) {
             log.warn("McWiki screenshot failed: {}", linkOrTitle, e)
@@ -203,4 +211,5 @@ class McWikiCommand : IWikiishCommand {
     }
 
     private fun Element?.textOrEmpty(): String = this?.text()?.trim().orEmpty()
+
 }

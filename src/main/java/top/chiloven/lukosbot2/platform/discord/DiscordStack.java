@@ -3,8 +3,6 @@ package top.chiloven.lukosbot2.platform.discord;
 import lombok.extern.log4j.Log4j2;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
-import net.dv8tion.jda.api.entities.User;
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -15,24 +13,23 @@ import okhttp3.OkHttpClient;
 import top.chiloven.lukosbot2.commands.IBotCommand;
 import top.chiloven.lukosbot2.config.ProxyConfigProp;
 import top.chiloven.lukosbot2.core.command.CommandRegistry;
-import top.chiloven.lukosbot2.model.Address;
-import top.chiloven.lukosbot2.model.MessageIn;
-import top.chiloven.lukosbot2.model.MessageOut;
+import top.chiloven.lukosbot2.model.message.Address;
+import top.chiloven.lukosbot2.model.message.inbound.*;
+import top.chiloven.lukosbot2.model.message.media.UrlRef;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
 import top.chiloven.lukosbot2.util.spring.SpringBeans;
 
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Consumer;
 
 @Log4j2
 final class DiscordStack implements AutoCloseable {
+
     private final String token;
     private final ProxyConfigProp proxyConfigProp;
 
     JDA jda;
-    private Consumer<MessageIn> sink = __ -> {
+    private Consumer<InboundMessage> sink = _ -> {
     };
 
     DiscordStack(String token, ProxyConfigProp proxyConfigProp) {
@@ -40,8 +37,8 @@ final class DiscordStack implements AutoCloseable {
         this.proxyConfigProp = proxyConfigProp;
     }
 
-    void setSink(Consumer<MessageIn> sink) {
-        this.sink = (sink != null) ? sink : __ -> {
+    void setSink(Consumer<InboundMessage> sink) {
+        this.sink = (sink != null) ? sink : _ -> {
         };
     }
 
@@ -57,9 +54,8 @@ final class DiscordStack implements AutoCloseable {
         JDABuilder builder = JDABuilder.createLight(token, intents)
                 .addEventListeners(new Listener());
 
-        ProxyConfigProp proxy = SpringBeans.getBean(ProxyConfigProp.class);
         OkHttpClient.Builder http = new OkHttpClient.Builder();
-        proxy.applyTo(http);
+        if (proxyConfigProp != null) proxyConfigProp.applyTo(http);
         builder.setHttpClientBuilder(http);
 
         jda = builder.build().awaitReady();
@@ -102,20 +98,8 @@ final class DiscordStack implements AutoCloseable {
         if (jda != null) jda.shutdown();
     }
 
-    void send(MessageOut out) {
-        if (out.addr().group()) {
-            TextChannel ch = jda.getTextChannelById(out.addr().chatId());
-            if (ch != null) ch.sendMessage(out.text()).queue();
-        } else {
-            long userId = out.addr().chatId();
-            jda.retrieveUserById(userId)
-                    .flatMap(User::openPrivateChannel)
-                    .flatMap(pc -> pc.sendMessage(out.text()))
-                    .queue();
-        }
-    }
-
     private final class Listener extends ListenerAdapter {
+
         @Override
         public void onSlashCommandInteraction(SlashCommandInteractionEvent e) {
             if (e.getUser().isBot()) return;
@@ -131,7 +115,15 @@ final class DiscordStack implements AutoCloseable {
             String text = sb.toString();
 
             Address addr = new Address(ChatPlatform.DISCORD, chatId, isGuild);
-            sink.accept(new MessageIn(addr, userId, text));
+
+            Sender sender = new Sender(userId, e.getUser().getName(), e.getUser().getName(), e.getUser().isBot());
+            Chat chat = new Chat(addr, null);
+            MessageMeta meta = new MessageMeta(String.valueOf(e.getIdLong()), System.currentTimeMillis(), null, "slash");
+
+            List<InPart> parts = new ArrayList<>();
+            parts.add(new InText(text));
+
+            sink.accept(new InboundMessage(addr, sender, chat, meta, parts, Map.of("slash", true)));
 
             e.reply("（推荐直接发送消息）").queue();
         }
@@ -139,15 +131,57 @@ final class DiscordStack implements AutoCloseable {
         @Override
         public void onMessageReceived(MessageReceivedEvent e) {
             if (e.getAuthor().isBot()) return;
-            String text = e.getMessage().getContentRaw();
-            if (text.isBlank()) return;
 
             boolean isGuild = e.isFromGuild();
             long chatId = isGuild ? e.getChannel().getIdLong() : e.getAuthor().getIdLong();
             long userId = e.getAuthor().getIdLong();
 
             Address addr = new Address(ChatPlatform.DISCORD, chatId, isGuild);
-            sink.accept(new MessageIn(addr, userId, text));
+
+            String display = (e.getMember() != null) ? e.getMember().getEffectiveName() : e.getAuthor().getName();
+            Sender sender = new Sender(userId, e.getAuthor().getName(), display, e.getAuthor().isBot());
+            Chat chat = new Chat(addr, null);
+
+            String msgId = String.valueOf(e.getMessageIdLong());
+            Long ts = null;
+            try {
+                ts = e.getMessage().getTimeCreated().toInstant().toEpochMilli();
+            } catch (Exception ignored) {
+            }
+            MessageMeta meta = new MessageMeta(msgId, ts, null, null);
+
+            List<InPart> parts = new ArrayList<>();
+
+            String text = e.getMessage().getContentRaw();
+            if (!text.isBlank()) {
+                parts.add(new InText(text));
+            }
+
+            // attachments
+            var atts = e.getMessage().getAttachments();
+            for (var a : atts) {
+                if (a == null) continue;
+                String url = a.getUrl();
+                String name = a.getFileName();
+                String mime = a.getContentType();
+                Long size = (long) a.getSize();
+                if (a.isImage()) {
+                    if (!url.isBlank()) {
+                        parts.add(new InImage(new UrlRef(url), null, name, mime));
+                    }
+                } else {
+                    if (!url.isBlank()) {
+                        parts.add(new InFile(new UrlRef(url), name, mime, size, null));
+                    }
+                }
+            }
+
+            // ignore empty messages
+            if (parts.isEmpty()) return;
+
+            sink.accept(new InboundMessage(addr, sender, chat, meta, parts, Map.of()));
         }
+
     }
+
 }

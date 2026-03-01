@@ -5,7 +5,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.core.state.definition.StateDefinition;
 import top.chiloven.lukosbot2.core.state.store.IStateStore;
-import top.chiloven.lukosbot2.model.Address;
+import top.chiloven.lukosbot2.model.message.Address;
 
 import java.time.Instant;
 

@@ -1,7 +1,8 @@
 package top.chiloven.lukosbot2.core.state;
 
 import org.jspecify.annotations.NonNull;
-import top.chiloven.lukosbot2.model.Address;
+
+import top.chiloven.lukosbot2.model.message.Address;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
 
 /**

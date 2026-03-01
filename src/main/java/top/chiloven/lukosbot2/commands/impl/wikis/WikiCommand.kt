@@ -8,8 +8,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.UsageNode
 import top.chiloven.lukosbot2.core.command.CommandSource
-import top.chiloven.lukosbot2.model.Attachment
-import top.chiloven.lukosbot2.model.MessageOut
+import top.chiloven.lukosbot2.model.message.media.BytesRef
+import top.chiloven.lukosbot2.model.message.outbound.OutFile
+import top.chiloven.lukosbot2.model.message.outbound.OutImage
+import top.chiloven.lukosbot2.model.message.outbound.OutboundMessage
 import top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal
 import top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument
 import top.chiloven.lukosbot2.util.feature.WebScreenshot
@@ -89,8 +91,11 @@ class WikiCommand : IWikiishCommand {
                 return
             }
             val img = WebScreenshot.screenshotWikipedia(url)
-            val out = MessageOut.text(src.`in`().addr(), null)
-                .with(Attachment.imageBytes(img.filename(), img.bytes(), img.mime()))
+            val ref = BytesRef(img.filename(), img.bytes(), img.mime())
+            val out = OutboundMessage(
+                src.addr(),
+                listOf(OutImage(ref, null, img.filename(), img.mime()))
+            )
             src.reply(out)
         } catch (e: Exception) {
             log.warn("Wiki screenshot failed: {}", linkOrTitle, e)
@@ -106,12 +111,16 @@ class WikiCommand : IWikiishCommand {
                 return
             }
             val md = WebToMarkdown.fetchWikipediaMarkdown(url)
-            val out = MessageOut.text(src.`in`().addr(), "已转换为 Markdown")
-                .with(Attachment.fileBytes(md.filename(), md.bytes(), md.mime()))
+            val ref = BytesRef(md.filename(), md.bytes(), md.mime())
+            val out = OutboundMessage(
+                src.addr(),
+                listOf(OutFile(ref, md.filename(), md.mime(), "已转换为 Markdown"))
+            )
             src.reply(out)
         } catch (e: Exception) {
             log.warn("Wiki md failed: {}", linkOrTitle, e)
             src.reply("转换失败：${e.message}")
         }
     }
+
 }

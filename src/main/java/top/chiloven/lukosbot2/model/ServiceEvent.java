@@ -1,20 +1,22 @@
 package top.chiloven.lukosbot2.model;
 
+import top.chiloven.lukosbot2.model.message.inbound.InboundMessage;
+
 public final class ServiceEvent {
 
     private final Kind kind;
-    private final MessageIn message;
+    private final InboundMessage message;
     private final String key;
     private final Object payload;
 
-    private ServiceEvent(Kind kind, MessageIn message, String key, Object payload) {
+    private ServiceEvent(Kind kind, InboundMessage message, String key, Object payload) {
         this.kind = kind;
         this.message = message;
         this.key = key;
         this.payload = payload;
     }
 
-    public static ServiceEvent message(MessageIn in) {
+    public static ServiceEvent message(InboundMessage in) {
         return new ServiceEvent(Kind.MESSAGE, in, null, null);
     }
 
@@ -26,7 +28,7 @@ public final class ServiceEvent {
         return kind;
     }
 
-    public MessageIn message() {
+    public InboundMessage message() {
         return message;
     }
 
@@ -42,4 +44,5 @@ public final class ServiceEvent {
         MESSAGE,
         EXTERNAL
     }
+
 }

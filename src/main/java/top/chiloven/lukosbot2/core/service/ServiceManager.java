@@ -7,19 +7,19 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.config.ServiceConfigProp;
 import top.chiloven.lukosbot2.core.MessageSenderHub;
+import top.chiloven.lukosbot2.core.command.CommandSource;
 import top.chiloven.lukosbot2.core.state.Scope;
 import top.chiloven.lukosbot2.core.state.ScopeType;
 import top.chiloven.lukosbot2.core.state.store.IStateStore;
-import top.chiloven.lukosbot2.model.Address;
-import top.chiloven.lukosbot2.model.MessageIn;
 import top.chiloven.lukosbot2.model.ServiceConfig;
 import top.chiloven.lukosbot2.model.ServiceEvent;
+import top.chiloven.lukosbot2.model.message.Address;
+import top.chiloven.lukosbot2.model.message.inbound.InboundMessage;
+import top.chiloven.lukosbot2.model.message.outbound.OutboundMessage;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
 import top.chiloven.lukosbot2.services.IBotService;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.*;
 
 @Service
@@ -30,6 +30,7 @@ public class ServiceManager {
 
     @Getter
     private final ServiceRegistry registry;
+
     private final IStateStore store;
     private final MessageSenderHub senderHub;
     private final ServiceConfigProp props;
@@ -58,10 +59,12 @@ public class ServiceManager {
      */
     private final ConcurrentMap<String, ServiceState> defaultStates = new ConcurrentHashMap<>();
 
-    public ServiceManager(ServiceRegistry registry,
-                          IStateStore store,
-                          MessageSenderHub senderHub,
-                          ServiceConfigProp props) {
+    public ServiceManager(
+            ServiceRegistry registry,
+            IStateStore store,
+            MessageSenderHub senderHub,
+            ServiceConfigProp props
+    ) {
         this.registry = registry;
         this.store = store;
         this.senderHub = senderHub;
@@ -81,6 +84,8 @@ public class ServiceManager {
         }
     }
 
+    /* ======================== load/persist ======================== */
+
     private void loadFromStore() {
         // defaults
         defaultStates.clear();
@@ -88,7 +93,7 @@ public class ServiceManager {
             try {
                 ServiceState st = gson.fromJson(json, ServiceState.class);
                 if (st != null) defaultStates.put(serviceName, st);
-            } catch (Exception _) {
+            } catch (Exception ignore) {
             }
         });
 
@@ -101,7 +106,7 @@ public class ServiceManager {
                     try {
                         ServiceState st = gson.fromJson(json, ServiceState.class);
                         if (st != null) cm.put(serviceName, st);
-                    } catch (Exception _) {
+                    } catch (Exception ignore) {
                     }
                 });
             }
@@ -109,8 +114,37 @@ public class ServiceManager {
         });
     }
 
+    private void persistAll() {
+        // defaults
+        for (var de : defaultStates.entrySet()) {
+            persistDefault(de.getKey(), de.getValue());
+        }
+
+        // chats
+        for (var ce : chatStates.entrySet()) {
+            persistChatAll(ce.getKey(), ce.getValue());
+        }
+    }
+
+    private void persistDefault(String serviceName, ServiceState st) {
+        store.upsertJson(Scope.global(), NS_SERVICE, serviceName, gson.toJson(st), null);
+    }
+
+    private void persistChatAll(String chatKey, Map<String, ServiceState> perChat) {
+        if (perChat == null) return;
+        for (var e : perChat.entrySet()) {
+            persistChatState(chatKey, e.getKey(), e.getValue());
+        }
+    }
+
+    private void persistChatState(String chatKey, String serviceName, ServiceState st) {
+        store.upsertJson(new Scope(ScopeType.CHAT, chatKey), NS_SERVICE, serviceName, gson.toJson(st), null);
+    }
+
     /**
-     * Ensure: - defaultStates has entries for every allowed service - every chat has entries for every allowed service
+     * Ensure:
+     * - defaultStates has entries for every allowed service
+     * - every chat has entries for every allowed service
      */
     private boolean ensureDefaultsEverywhere() {
         boolean changed = false;
@@ -137,68 +171,6 @@ public class ServiceManager {
         }
 
         return changed;
-    }
-
-    private void rescheduleAllChats() {
-        for (String chatKey : chatStates.keySet()) {
-            Address addr = parseChatKey(chatKey);
-            if (addr == null) continue;
-
-            ConcurrentMap<String, ServiceState> perChat = chatStates.get(chatKey);
-
-            for (IBotService s : registry.all()) {
-                if (!props.isAllowed(s.name())) continue;
-                if (s.type() != ServiceType.TIME_BASED) continue;
-
-                ServiceState st = perChat.get(s.name());
-                refreshSchedule(chatKey, addr, s, st);
-            }
-        }
-    }
-
-    private void persistAll() {
-        // defaults
-        for (var de : defaultStates.entrySet()) {
-            persistDefault(de.getKey(), de.getValue());
-        }
-
-        // chats
-        for (var ce : chatStates.entrySet()) {
-            persistChatAll(ce.getKey(), ce.getValue());
-        }
-    }
-
-    private void persistDefault(String serviceName, ServiceState st) {
-        store.upsertJson(Scope.global(), NS_SERVICE, serviceName, gson.toJson(st), null);
-    }
-
-    /**
-     * Called by MessageDispatcher (incoming messages).
-     */
-    public void onMessage(MessageIn in) {
-        String chatKey = chatKey(in.addr());
-        ConcurrentMap<String, ServiceState> perChat = chatStates.computeIfAbsent(chatKey, k -> new ConcurrentHashMap<>());
-
-        boolean changed = ensureDefaultsForChat(perChat);
-        if (changed) persistChatAll(chatKey, perChat);
-
-        ServiceContext ctx = new ServiceContext(senderHub, in.addr());
-        ServiceEvent ev = ServiceEvent.message(in);
-
-        for (IBotService s : registry.all()) {
-            if (!props.isAllowed(s.name())) continue;
-
-            ServiceState st = perChat.get(s.name());
-            if (st == null || !st.isEnabled()) continue;
-
-            if (s.type() == ServiceType.TRIGGER) {
-                s.onEvent(ctx, new ServiceConfig(st.getConfig()), ev);
-            }
-        }
-    }
-
-    private static String chatKey(Address addr) {
-        return Scope.chatKey(addr);
     }
 
     private boolean ensureDefaultsForChat(ConcurrentMap<String, ServiceState> perChat) {
@@ -229,21 +201,94 @@ public class ServiceManager {
 
     /* ======================== scheduling ======================== */
 
-    private void persistChatAll(String chatKey, Map<String, ServiceState> perChat) {
-        if (perChat == null) return;
-        for (var e : perChat.entrySet()) {
-            persistChatState(chatKey, e.getKey(), e.getValue());
+    private void rescheduleAllChats() {
+        for (String chatKey : chatStates.keySet()) {
+            Address addr = parseChatKey(chatKey);
+            if (addr == null) continue;
+
+            ConcurrentMap<String, ServiceState> perChat = chatStates.get(chatKey);
+
+            for (IBotService s : registry.all()) {
+                if (!props.isAllowed(s.name())) continue;
+                if (s.type() != ServiceType.TIME_BASED) continue;
+
+                ServiceState st = perChat.get(s.name());
+                refreshSchedule(chatKey, addr, s, st);
+            }
         }
     }
 
-    private void persistChatState(String chatKey, String serviceName, ServiceState st) {
-        store.upsertJson(new Scope(ScopeType.CHAT, chatKey), NS_SERVICE, serviceName, gson.toJson(st), null);
+    private void refreshSchedule(String chatKey, Address addr, IBotService s, ServiceState st) {
+        String sk = scheduleKey(chatKey, s.name());
+
+        ScheduledFuture<?> old = schedules.remove(sk);
+        if (old != null) old.cancel(false);
+
+        if (st == null || !st.isEnabled()) return;
+
+        long intervalMs = new ServiceConfig(st.getConfig()).intervalMs(60_000L);
+
+        Runnable task = () -> {
+            try {
+                CommandSource ctx = CommandSource.forAddress(addr, senderHub::send);
+                s.onTick(ctx, new ServiceConfig(st.getConfig()));
+            } catch (Exception e) {
+                log.warn("Service tick failed: {}", s.name(), e);
+            }
+        };
+
+        ScheduledFuture<?> f = scheduler.scheduleAtFixedRate(task, intervalMs, intervalMs, TimeUnit.MILLISECONDS);
+        schedules.put(sk, f);
+    }
+
+    private static String scheduleKey(String chatKey, String serviceName) {
+        return chatKey + "|" + serviceName;
+    }
+
+    /* ======================== incoming + triggers ======================== */
+
+    /**
+     * Called by MessageDispatcher (incoming messages).
+     *
+     * @return outbound messages produced by services for this inbound message (may be empty)
+     */
+    public List<OutboundMessage> onMessage(InboundMessage in) {
+        if (in == null || in.addr() == null) return List.of();
+
+        String chatKey = chatKey(in.addr());
+        ConcurrentMap<String, ServiceState> perChat = chatStates.computeIfAbsent(chatKey, k -> new ConcurrentHashMap<>());
+
+        boolean changed = ensureDefaultsForChat(perChat);
+        if (changed) persistChatAll(chatKey, perChat);
+
+        List<OutboundMessage> outs = new ArrayList<>();
+        CommandSource ctx = CommandSource.forInbound(in, outs::add);
+        ServiceEvent ev = ServiceEvent.message(in);
+
+        for (IBotService s : registry.all()) {
+            if (!props.isAllowed(s.name())) continue;
+
+            ServiceState st = perChat.get(s.name());
+            if (st == null || !st.isEnabled()) continue;
+
+            if (s.type() == ServiceType.TRIGGER) {
+                try {
+                    s.onEvent(ctx, new ServiceConfig(st.getConfig()), ev);
+                } catch (Exception e) {
+                    log.warn("Service {} failed on message: {}", s.name(), e.getMessage(), e);
+                }
+            }
+        }
+
+        return outs;
     }
 
     /**
      * External trigger: fire an event to a single chat.
      */
     public void fire(Address addr, String serviceName, ServiceEvent event) {
+        if (addr == null) return;
+
         String chatKey = chatKey(addr);
         ConcurrentMap<String, ServiceState> perChat = chatStates.computeIfAbsent(chatKey, k -> new ConcurrentHashMap<>());
 
@@ -260,11 +305,15 @@ public class ServiceManager {
         ServiceState st = perChat.get(serviceName);
         if (st == null || !st.isEnabled()) return;
 
-        ServiceContext ctx = new ServiceContext(senderHub, addr);
+        CommandSource ctx;
+        if (event != null && event.message() != null) {
+            ctx = CommandSource.forInbound(event.message(), senderHub::send);
+        } else {
+            ctx = CommandSource.forAddress(addr, senderHub::send);
+        }
+
         s.onEvent(ctx, new ServiceConfig(st.getConfig()), event);
     }
-
-    /* ======================== incoming + triggers ======================== */
 
     /**
      * External trigger: fire an event to ALL chats that enabled the given service.
@@ -285,22 +334,12 @@ public class ServiceManager {
             ServiceState st = ce.getValue().get(serviceName);
             if (st == null || !st.isEnabled()) continue;
 
-            ServiceContext ctx = new ServiceContext(senderHub, addr);
+            CommandSource ctx = CommandSource.forAddress(addr, senderHub::send);
             s.onEvent(ctx, new ServiceConfig(st.getConfig()), event);
         }
     }
 
-    private static Address parseChatKey(String key) {
-        try {
-            String[] p = key.split(":", 3);
-            ChatPlatform platform = ChatPlatform.valueOf(p[0]);
-            boolean group = "g".equalsIgnoreCase(p[1]);
-            long chatId = Long.parseLong(p[2]);
-            return new Address(platform, chatId, group);
-        } catch (Exception e) {
-            return null;
-        }
-    }
+    /* ======================== /service command API ======================== */
 
     public boolean isAllowed(String serviceName) {
         return props.isAllowed(serviceName);
@@ -328,11 +367,11 @@ public class ServiceManager {
     public void setEnabled(Address addr, String serviceName, boolean enabled) {
         if (!props.isAllowed(serviceName)) return;
 
+        String chatKey = chatKey(addr);
         ConcurrentMap<String, ServiceState> perChat = getOrCreateChatStates(addr);
 
         ServiceState st = perChat.get(serviceName);
         if (st == null) {
-            // prefer defaults, then service.defaultConfig
             ServiceState d = defaultStates.get(serviceName);
             if (d != null) {
                 st = new ServiceState(d.isEnabled(), new LinkedHashMap<>(d.getConfig()));
@@ -346,51 +385,22 @@ public class ServiceManager {
 
         st.setEnabled(enabled);
 
-        // update schedules for TIME_BASED
         IBotService svc = registry.find(serviceName).orElse(null);
         if (svc != null && svc.type() == ServiceType.TIME_BASED) {
-            refreshSchedule(chatKey(addr), addr, svc, st);
+            refreshSchedule(chatKey, addr, svc, st);
         }
 
-        persistChatState(chatKey(addr), serviceName, st);
-    }
-
-    private void refreshSchedule(String chatKey, Address addr, IBotService s, ServiceState st) {
-        String sk = scheduleKey(chatKey, s.name());
-
-        ScheduledFuture<?> old = schedules.remove(sk);
-        if (old != null) old.cancel(false);
-
-        if (st == null || !st.isEnabled()) return;
-
-        // default 60s
-        long intervalMs = new ServiceConfig(st.getConfig()).intervalMs(60_000L);
-
-        Runnable task = () -> {
-            try {
-                ServiceContext ctx = new ServiceContext(senderHub, addr);
-                s.onTick(ctx, new ServiceConfig(st.getConfig()));
-            } catch (Exception e) {
-                log.warn("Service tick failed: {}", s.name(), e);
-            }
-        };
-
-        ScheduledFuture<?> f = scheduler.scheduleAtFixedRate(task, intervalMs, intervalMs, TimeUnit.MILLISECONDS);
-        schedules.put(sk, f);
-    }
-
-    private static String scheduleKey(String chatKey, String serviceName) {
-        return chatKey + "|" + serviceName;
+        persistChatState(chatKey, serviceName, st);
     }
 
     public void setConfigValue(Address addr, String serviceName, String key, String value) {
         if (!props.isAllowed(serviceName)) return;
 
+        String chatKey = chatKey(addr);
         ConcurrentMap<String, ServiceState> perChat = getOrCreateChatStates(addr);
 
         ServiceState st = perChat.get(serviceName);
         if (st == null) {
-            // create with defaults
             ServiceState d = defaultStates.get(serviceName);
             if (d != null) {
                 st = new ServiceState(d.isEnabled(), new LinkedHashMap<>(d.getConfig()));
@@ -409,13 +419,29 @@ public class ServiceManager {
         if (value == null) st.getConfig().remove(key);
         else st.getConfig().put(key, value);
 
-        // if TIME_BASED and interval changed, reschedule
         IBotService svc = registry.find(serviceName).orElse(null);
         if (svc != null && svc.type() == ServiceType.TIME_BASED) {
-            refreshSchedule(chatKey(addr), addr, svc, st);
+            refreshSchedule(chatKey, addr, svc, st);
         }
 
-        persistChatState(chatKey(addr), serviceName, st);
+        persistChatState(chatKey, serviceName, st);
     }
 
+    /* ======================== helpers ======================== */
+
+    private static String chatKey(Address addr) {
+        return Scope.chatKey(addr);
+    }
+
+    private static Address parseChatKey(String key) {
+        try {
+            String[] p = key.split(":", 3);
+            ChatPlatform platform = ChatPlatform.valueOf(p[0]);
+            boolean group = "g".equalsIgnoreCase(p[1]);
+            long chatId = Long.parseLong(p[2]);
+            return new Address(platform, chatId, group);
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }

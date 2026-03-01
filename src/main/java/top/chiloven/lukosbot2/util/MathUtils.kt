@@ -8,6 +8,7 @@ import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 object MathUtils {
+
     /**
      * Approximate counts for each outcome in a multinomial distribution using a normal approximation on sequential
      * binomial draws.
@@ -130,4 +131,32 @@ object MathUtils {
         val offset = (nonNegative % range).toInt()
         return min + offset
     }
+
+    /**
+     * Calculates the smallest power of two that is greater than or equal to the given integer.
+     *
+     * This method effectively rounds up the input to the next "binary milestone" (1, 2, 4, 8, 16...).
+     * It uses a non-branching, bit-spreading algorithm for $O(1)$ performance.
+     *
+     * Examples:
+     * - `ceilPowerOfTwo(3)` returns `4`
+     * - `ceilPowerOfTwo(8)` returns `8`
+     * - `ceilPowerOfTwo(0)` returns `1`
+     *
+     * @param n the integer to round up
+     * @return the smallest power of two $\ge n$. If $n \le 0$, returns 1.
+     */
+    @JvmStatic
+    fun ceilPowerOfTwo(n: Int): Int {
+        var n = n
+        if (n <= 0) return 1
+        n--
+        n = n or (n shr 1)
+        n = n or (n shr 2)
+        n = n or (n shr 4)
+        n = n or (n shr 8)
+        n = n or (n shr 16)
+        return n + 1
+    }
+
 }

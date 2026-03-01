@@ -145,7 +145,7 @@ public class PrefCommand implements IBotCommand {
             };
 
             // If the userId is missing but preferred scope is USER, make it obvious
-            if (def.preferredScope() == ScopeType.USER && src.userId() == null) {
+            if (def.preferredScope() == ScopeType.USER) {
                 scopeHint += "(no userId -> fallback)";
             }
 

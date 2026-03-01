@@ -12,6 +12,7 @@ import top.chiloven.lukosbot2.commands.IBotCommand;
 import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.config.ProxyConfigProp;
 import top.chiloven.lukosbot2.core.command.CommandSource;
+import top.chiloven.lukosbot2.model.message.outbound.OutboundMessage;
 import top.chiloven.lukosbot2.util.spring.SpringBeans;
 
 import java.io.*;
@@ -36,27 +37,30 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuil
 @Log4j2
 public class MotdCommand implements IBotCommand {
 
-    @Override
-    public String name() {
-        return "motd";
-    }
+    public record MotdData(
+            String version,
+            int protocol,
+            int max,
+            int online,
+            String desc,
+            String favicon
+    ) {
 
-    @Override
-    public String description() {
-        return "获取 Minecraft MOTD 信息";
-    }
+        public String formatted() {
+            return String.format("""
+                            描述：
+                            %s
+                            版本：%s（%d）
+                            玩家：%d/%d
+                            """,
+                    (desc != null && !desc.isBlank()) ? desc : "A Minecraft Server",
+                    version,
+                    protocol,
+                    online,
+                    max
+            );
+        }
 
-    @Override
-    public UsageNode usage() {
-        return UsageNode.root(name())
-                .description(description())
-                .syntax("查询 Minecraft Java 版服务器 MOTD", UsageNode.arg("address[:port]"))
-                .param("address[:port]", "服务器地址（可选端口，默认 25565）")
-                .example(
-                        "motd play.example.com",
-                        "motd play.example.com:25565"
-                )
-                .build();
     }
 
     @Override
@@ -84,7 +88,11 @@ public class MotdCommand implements IBotCommand {
                                             String base64 = favicon.substring("data:image/png;base64,".length());
                                             byte[] bytes = Base64.getDecoder().decode(base64);
 
-                                            src.replyImageBytes("favicon.png", bytes, "image/png");
+                                            src.reply(OutboundMessage.imageBytesPng(
+                                                    src.addr(),
+                                                    bytes,
+                                                    "favicon.png"
+                                            ));
                                         }
 
                                     } catch (IllegalArgumentException e) {
@@ -99,6 +107,30 @@ public class MotdCommand implements IBotCommand {
                         )
         );
     }
+
+    @Override
+    public String name() {
+        return "motd";
+    }
+
+    @Override
+    public String description() {
+        return "获取 Minecraft MOTD 信息";
+    }
+
+    @Override
+    public UsageNode usage() {
+        return UsageNode.root(name())
+                .description(description())
+                .syntax("查询 Minecraft Java 版服务器 MOTD", UsageNode.arg("address[:port]"))
+                .param("address[:port]", "服务器地址（可选端口，默认 25565）")
+                .example(
+                        "motd play.example.com",
+                        "motd play.example.com:25565"
+                )
+                .build();
+    }
+
 
     private MotdData query(String address) throws IOException {
         Matcher matcher = Pattern
@@ -269,27 +301,5 @@ public class MotdCommand implements IBotCommand {
         return result;
     }
 
-    public record MotdData(
-            String version,
-            int protocol,
-            int max,
-            int online,
-            String desc,
-            String favicon
-    ) {
-        public String formatted() {
-            return String.format("""
-                            描述：
-                            %s
-                            版本：%s（%d）
-                            玩家：%d/%d
-                            """,
-                    (desc != null && !desc.isBlank()) ? desc : "A Minecraft Server",
-                    version,
-                    protocol,
-                    online,
-                    max
-            );
-        }
-    }
+
 }
