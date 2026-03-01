@@ -1,6 +1,6 @@
 package top.chiloven.lukosbot2.platform.telegram;
 
-import top.chiloven.lukosbot2.model.MessageIn;
+import top.chiloven.lukosbot2.model.message.inbound.InboundMessage;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
 import top.chiloven.lukosbot2.platform.IReceiver;
 import top.chiloven.lukosbot2.platform.ISender;
@@ -8,8 +8,9 @@ import top.chiloven.lukosbot2.platform.ISender;
 import java.util.function.Consumer;
 
 public final class TelegramReceiver implements IReceiver {
+
     private final TelegramStack stack;
-    private Consumer<MessageIn> sink = __ -> {
+    private Consumer<InboundMessage> sink = _ -> {
     };
 
     public TelegramReceiver(String token, String username) {
@@ -22,8 +23,8 @@ public final class TelegramReceiver implements IReceiver {
     }
 
     @Override
-    public void bind(Consumer<MessageIn> sink) {
-        this.sink = (sink != null) ? sink : __ -> {
+    public void bind(Consumer<InboundMessage> sink) {
+        this.sink = (sink != null) ? sink : _ -> {
         };
         if (stack.bot != null) stack.bot.setSink(this.sink);
     }
@@ -35,10 +36,16 @@ public final class TelegramReceiver implements IReceiver {
     }
 
     @Override
-    public void stop() { /* Telegram SDK 无显式 stop，可忽略 */ }
+    public void stop() {
+        try {
+            stack.close();
+        } catch (Exception ignored) {
+        }
+    }
 
     public ISender sender() throws Exception {
         start();                           // 确保已启动（幂等）
         return new TelegramSender(stack);  // TelegramSender 复用同一个 stack.bot 发送
     }
+
 }
