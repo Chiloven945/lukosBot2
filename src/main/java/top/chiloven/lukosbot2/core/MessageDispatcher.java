@@ -3,24 +3,21 @@ package top.chiloven.lukosbot2.core;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.core.service.ServiceManager;
-import top.chiloven.lukosbot2.model.message.Address;
 import top.chiloven.lukosbot2.model.message.inbound.InboundMessage;
 import top.chiloven.lukosbot2.model.message.outbound.OutboundMessage;
-import top.chiloven.lukosbot2.util.concurrent.StripedExecutor;
+import top.chiloven.lukosbot2.util.concurrent.Execs;
 import top.chiloven.lukosbot2.util.message.MessageIoLog;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 /**
  * Entry point for inbound messages.
  *
- * <p>Responsibilities:</p>
- * <ul>
- *   <li>Provide <b>per-chat</b> serialization for message handling to avoid race conditions.</li>
- *   <li>Invoke services and command pipeline.</li>
- *   <li>Send produced outbound messages via {@link MessageSenderHub}.</li>
- * </ul>
+ * <p>Unlike the previous per-chat single-lane dispatcher, this dispatcher processes messages concurrently so multiple
+ * commands can run at the same time (even in the same chat). Outbound sending is still serialized per chat by
+ * {@link MessageSenderHub}.</p>
  */
 @Service
 @Log4j2
@@ -29,7 +26,11 @@ public class MessageDispatcher {
     private final MessageSenderHub senderHub;
     private final PipelineProcessor pipeline;
     private final ServiceManager services;
-    StripedExecutor lanes = new StripedExecutor(32, "lane-%02d");
+
+    /**
+     * Concurrent executor for message processing.
+     */
+    private final ExecutorService exec = Execs.newVirtualExecutor("proc-");
 
     public MessageDispatcher(MessageSenderHub senderHub, PipelineProcessor pipeline, ServiceManager services) {
         this.senderHub = senderHub;
@@ -40,8 +41,9 @@ public class MessageDispatcher {
     public void receive(InboundMessage in) {
         if (in == null || in.addr() == null) return;
 
-        lanes.submit(chatKey(in.addr()), () -> {
-            MessageIoLog.inbound(in);
+        MessageIoLog.inbound(in);
+
+        exec.submit(() -> {
             try {
                 List<OutboundMessage> outs = new ArrayList<>();
 
@@ -67,11 +69,6 @@ public class MessageDispatcher {
                 log.warn("Unexpected dispatcher error: {}", e.getMessage(), e);
             }
         });
-    }
-
-    private static String chatKey(Address addr) {
-        if (addr == null) return "unknown";
-        return addr.platform().name() + ":" + (addr.group() ? "g" : "p") + ":" + addr.chatId();
     }
 
 }
