@@ -17,13 +17,13 @@ object MessageIoLog {
     @JvmStatic
     fun inbound(`in`: InboundMessage?) {
         if (!log.isDebugEnabled || `in` == null) return
-        log.debug("[I] {}", briefInbound(`in`))
+        log.info("[IN ] {}", briefInbound(`in`))
     }
 
     @JvmStatic
     fun outbound(out: OutboundMessage?) {
         if (!log.isDebugEnabled || out == null) return
-        log.debug("[O] {}", briefOutbound(out))
+        log.info("[OUT] {}", briefOutbound(out))
     }
 
     private fun briefInbound(`in`: InboundMessage): String {
