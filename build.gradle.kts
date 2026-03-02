@@ -66,6 +66,15 @@ dependencies {
     implementation("io.github.bonigarcia:webdrivermanager:${property("webdrivermanager-version")}")
 
     implementation(kotlin("stdlib"))
+
+    constraints {
+        implementation("com.fasterxml.jackson.core:jackson-core:2.21.1") {
+            because("jackson-core: Number Length Constraint Bypass in Async Parser Leads to Potential DoS Condition, GHSA-72hv-8253-57qq")
+        }
+        implementation("tools.jackson.core:jackson-core:3.1.0") {
+            because("jackson-core: Number Length Constraint Bypass in Async Parser Leads to Potential DoS Condition, GHSA-72hv-8253-57qq")
+        }
+    }
 }
 
 tasks.withType<JavaCompile>().configureEach {
