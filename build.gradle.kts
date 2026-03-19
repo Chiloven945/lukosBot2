@@ -44,7 +44,7 @@ dependencies {
 
     // Core Library
     implementation("com.mojang:brigadier:1.3.10")
-    implementation("commons-net:commons-net:3.12.0")
+    implementation("commons-net:commons-net:3.13.0")
     implementation("com.google.code.gson:gson:${property("gson-version")}")
     compileOnly("org.projectlombok:lombok:${property("lombok-version")}")
     annotationProcessor("org.projectlombok:lombok:${property("lombok-version")}")
