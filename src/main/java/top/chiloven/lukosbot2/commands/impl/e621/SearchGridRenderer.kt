@@ -37,7 +37,7 @@ object SearchGridRenderer {
         return try {
             http.newCall(req).execute().use { resp ->
                 if (!resp.isSuccessful) return null
-                val body = resp.body ?: return null
+                val body = resp.body
                 ImageIO.read(body.bytes().inputStream())
             }
         } catch (_: Exception) {
