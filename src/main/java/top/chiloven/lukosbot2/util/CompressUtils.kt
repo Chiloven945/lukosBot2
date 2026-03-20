@@ -12,6 +12,11 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.zip.ZipOutputStream
 
+/**
+ * Compressing related utils for creating zip files. More format support can be implemented in future.
+ *
+ * @author Chiloven945
+ */
 object CompressUtils {
 
     private val log = LogManager.getLogger(CompressUtils::class.java)

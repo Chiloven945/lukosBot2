@@ -9,6 +9,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import org.apache.logging.log4j.LogManager
+import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.config.ProxyConfigProp
 import top.chiloven.lukosbot2.util.concurrent.Coroutines
 import top.chiloven.lukosbot2.util.spring.SpringBeans
@@ -31,6 +32,11 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.max
 import kotlin.math.min
 
+/**
+ * Utils for downloading files.
+ *
+ * @author Chiloven945
+ */
 object DownloadUtils {
 
     private val log = LogManager.getLogger(DownloadUtils::class.java)
@@ -46,7 +52,6 @@ object DownloadUtils {
     const val DEFAULT_PROGRESS_LOG_INTERVAL_MS: Long = 1_000
 
     private const val BUF_SIZE: Int = 64 * 1024
-    private const val UA: String = "LukosBot/kemono"
 
     @Volatile
     private var cachedClient: OkHttpClient? = null
@@ -1001,7 +1006,7 @@ object DownloadUtils {
     ): Request {
         val builder = Request.Builder()
             .url(url.toString())
-            .header("User-Agent", UA)
+            .header("User-Agent", Constants.UA)
             .header("Accept", "*/*")
             .method(method, null)
 

@@ -6,13 +6,15 @@ import java.security.NoSuchAlgorithmException
 /**
  * SHA utility class.
  * 
- * 
- * Features: 1) SHA-256/512 hashing (byte[]/String) 2) Hexadecimal string output for hashed data 3) Hash validation
- * methods
+ * Features:
+ *
+ * 1) SHA-256/512 hashing (byte[]/String)
+ * 2) Hexadecimal string output for hashed data
+ * 3) Hash validation methods
  * 
  * @author Chiloven945
  */
-object SHAUtils {
+object ShaUtils {
 
     /**
      * Validate if the given hash matches the expected hash.
@@ -26,8 +28,8 @@ object SHAUtils {
         if (originalData == null || expectedHash == null || algorithm == null) return false
 
         val hashedData = when (algorithm.uppercase()) {
-            "SHA-256" -> hashSHA256ToHex(originalData)
-            "SHA-512" -> hashSHA512ToHex(originalData)
+            "SHA-256" -> hashSha256ToHex(originalData)
+            "SHA-512" -> hashSha512ToHex(originalData)
             else -> null
         }
 
@@ -40,9 +42,20 @@ object SHAUtils {
      * @param text plain text
      * @return SHA-256 hashed hexadecimal string, or empty string if input is null/empty
      */
-    fun hashSHA256ToHex(text: String?): String {
+    fun hashSha256ToHex(text: String?): String {
         if (text.isNullOrEmpty()) return ""
-        return bytesToHex(hashSHA256(text.toByteArray()))
+        return bytesToHex(hashSha256(text.toByteArray()))
+    }
+
+    /**
+     * Hash a ByteArray using SHA-256 and return the result as a hexadecimal string.
+     *
+     * @param data byte array
+     * @return SHA-256 hashed hexadecimal string, or empty string if input is null/empty
+     */
+    fun hashSha256ToHex(data: ByteArray?): String {
+        if (data == null || data.isEmpty()) return ""
+        return bytesToHex(hashSha256(data))
     }
 
     /**
@@ -51,9 +64,20 @@ object SHAUtils {
      * @param text plain text
      * @return SHA-512 hashed hexadecimal string, or empty string if input is null/empty
      */
-    fun hashSHA512ToHex(text: String?): String {
+    fun hashSha512ToHex(text: String?): String {
         if (text.isNullOrEmpty()) return ""
-        return bytesToHex(hashSHA512(text.toByteArray()))
+        return bytesToHex(hashSha512(text.toByteArray()))
+    }
+
+    /**
+     * Hash a ByteArray using SHA-512 and return the result as a hexadecimal string.
+     *
+     * @param data byte array
+     * @return SHA-512 hashed hexadecimal string, or empty string if input is null/empty
+     */
+    fun hashSha512ToHex(data: ByteArray?): String {
+        if (data == null || data.isEmpty()) return ""
+        return bytesToHex(hashSha512(data))
     }
 
     /**
@@ -72,7 +96,7 @@ object SHAUtils {
      * @param data raw bytes
      * @return SHA-256 hashed bytes, or empty array if input is null/empty
      */
-    fun hashSHA256(data: ByteArray?): ByteArray {
+    fun hashSha256(data: ByteArray?): ByteArray {
         if (data == null || data.isEmpty()) return byteArrayOf()
         return getDigest("SHA-256").digest(data)
     }
@@ -83,7 +107,7 @@ object SHAUtils {
      * @param data raw bytes
      * @return SHA-512 hashed bytes, or empty array if input is null/empty
      */
-    fun hashSHA512(data: ByteArray?): ByteArray {
+    fun hashSha512(data: ByteArray?): ByteArray {
         if (data == null || data.isEmpty()) return byteArrayOf()
         return getDigest("SHA-512").digest(data)
     }
