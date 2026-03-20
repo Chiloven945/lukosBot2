@@ -50,6 +50,7 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok:${property("lombok-version")}")
     implementation("org.yaml:snakeyaml:2.6")
     implementation("com.squareup.okhttp3:okhttp:5.3.2")
+    implementation("net.lingala.zip4j:zip4j:2.11.6")
 
     implementation("org.apache.logging.log4j:log4j-api:${property("log4j2-version")}")
     implementation("org.apache.logging.log4j:log4j-core:${property("log4j2-version")}")
@@ -66,6 +67,7 @@ dependencies {
     implementation("io.github.bonigarcia:webdrivermanager:${property("webdrivermanager-version")}")
 
     implementation(kotlin("stdlib"))
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
 
     constraints {
         implementation("com.fasterxml.jackson.core:jackson-core:2.21.1") {

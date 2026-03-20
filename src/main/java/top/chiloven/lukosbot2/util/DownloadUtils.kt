@@ -1,1110 +1,1238 @@
-package top.chiloven.lukosbot2.util;
+package top.chiloven.lukosbot2.util
 
-import lombok.extern.log4j.Log4j2;
-import org.jspecify.annotations.Nullable;
-import top.chiloven.lukosbot2.config.ProxyConfigProp;
-import top.chiloven.lukosbot2.core.Execs;
-import top.chiloven.lukosbot2.util.spring.SpringBeans;
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import okhttp3.Headers
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import org.apache.logging.log4j.LogManager
+import top.chiloven.lukosbot2.config.ProxyConfigProp
+import top.chiloven.lukosbot2.util.concurrent.Coroutines
+import top.chiloven.lukosbot2.util.spring.SpringBeans
+import java.io.IOException
+import java.io.RandomAccessFile
+import java.net.URI
+import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
+import java.nio.file.*
+import java.time.Duration
+import java.time.Instant
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.*
+import java.util.concurrent.Callable
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.ThreadLocalRandom
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.max
+import kotlin.math.min
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.RandomAccessFile;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.file.*;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
+object DownloadUtils {
 
-@Log4j2
-public final class DownloadUtils {
+    private val log = LogManager.getLogger(DownloadUtils::class.java)
 
-    /**
-     * 批量下载：默认最多同时下载多少个文件（建议 4~16 之间按网络情况调）
-     */
-    public static final int DEFAULT_MAX_CONCURRENT_FILES = 8;
+    const val DEFAULT_MAX_CONCURRENT_FILES: Int = 8
+    const val DEFAULT_CHUNK_THREADS: Int = 4
+    const val DEFAULT_MIN_SIZE_FOR_CHUNKING_BYTES: Long = 8L * 1024 * 1024
+    const val DEFAULT_MIN_PART_SIZE_BYTES: Long = 2L * 1024 * 1024
+    const val DEFAULT_MAX_RETRIES: Int = 3
+    const val DEFAULT_RETRY_BASE_DELAY_MS: Long = 350
+    const val DEFAULT_RETRY_MAX_DELAY_MS: Long = 8_000
+    const val DEFAULT_RETRY_AFTER_CAP_MS: Long = 30_000
+    const val DEFAULT_PROGRESS_LOG_INTERVAL_MS: Long = 1_000
 
-    /**
-     * 单文件分块：默认并发 Range 连接数（建议 2~8 之间）
-     */
-    public static final int DEFAULT_CHUNK_THREADS = 4;
+    private const val BUF_SIZE: Int = 64 * 1024
+    private const val UA: String = "LukosBot/kemono"
 
-    /**
-     * 小于该大小就不分块（分块有额外请求开销）
-     */
-    public static final long DEFAULT_MIN_SIZE_FOR_CHUNKING_BYTES = 8L * 1024 * 1024; // 8 MiB
+    @Volatile
+    private var cachedClient: OkHttpClient? = null
 
-    /**
-     * 每个分块最小大小，用于限制分块数量（避免分得太碎）
-     */
-    public static final long DEFAULT_MIN_PART_SIZE_BYTES = 2L * 1024 * 1024; // 2 MiB
+    @Volatile
+    private var cachedKey: String? = null
 
-    /**
-     * 默认最大重试次数（0 表示不重试；总尝试次数 = 1 + maxRetries）
-     */
-    public static final int DEFAULT_MAX_RETRIES = 3;
-
-    /**
-     * 指数退避基础延迟（毫秒）
-     */
-    public static final long DEFAULT_RETRY_BASE_DELAY_MS = 350;
-
-    /**
-     * 指数退避最大延迟（毫秒）
-     */
-    public static final long DEFAULT_RETRY_MAX_DELAY_MS = 8_000;
-
-    /**
-     * Retry-After 最大等待（毫秒），避免被服务端写个很大的值卡死线程
-     */
-    public static final long DEFAULT_RETRY_AFTER_CAP_MS = 30_000;
-
-    /**
-     * debug 进度日志间隔（毫秒）
-     */
-    public static final long DEFAULT_PROGRESS_LOG_INTERVAL_MS = 1_000;
-
-    private static final HttpClient CLIENT = SpringBeans.getBean(ProxyConfigProp.class).applyTo(
-            HttpClient.newBuilder()
-                    .followRedirects(HttpClient.Redirect.NORMAL)
-                    .connectTimeout(Duration.ofSeconds(20))
-    ).build();
-
-    private static final int BUF_SIZE = 64 * 1024;
-
-    private DownloadUtils() {
+    private fun proxyOrNull(): ProxyConfigProp? = try {
+        SpringBeans.getBean(ProxyConfigProp::class.java)
+    } catch (_: Throwable) {
+        null
     }
 
-    /**
-     * 解析下载 URL：
-     * - path 是完整 URL => 直接用
-     * - path 是 /xx/yy => server.resolve(path)
-     * - path 是 xx/yy  => server.resolve("/" + path)
-     */
-    public static URI resolveUrl(URI server, String pathOrUrl) {
-        Objects.requireNonNull(server, "server");
-        String p = Objects.requireNonNull(pathOrUrl, "pathOrUrl").trim();
+    private fun proxyKey(proxy: ProxyConfigProp): String = listOf(
+        proxy.isEnabled,
+        proxy.type,
+        proxy.host,
+        proxy.port,
+        proxy.username,
+        proxy.password,
+        proxy.nonProxyHostsList?.joinToString("|")
+    ).joinToString("#")
 
-        if (p.startsWith("http://") || p.startsWith("https://")) return URI.create(p);
-        if (p.startsWith("/")) return server.resolve(p);
+    private val client: OkHttpClient
+        get() {
+            val proxy = proxyOrNull()
+            val key = if (proxy != null && proxy.isEnabled) proxyKey(proxy) else "NO_PROXY"
 
-        return server.resolve("/" + p);
-    }
+            cachedClient?.let { existing ->
+                if (cachedKey == key) return existing
+            }
 
-    /**
-     * 批量下载到同一目录（串行）
-     * - 单个失败不会中断整体
-     * - 返回成功数 + 失败文件名列表
-     */
-    public static BatchResult downloadAllToDir(
-            List<NamedUrl> items,
-            Path dir,
-            @Nullable Map<String, String> headers,
-            int timeoutMs
-    ) throws IOException {
-        Objects.requireNonNull(dir, "dir");
-        Files.createDirectories(dir);
+            synchronized(this) {
+                cachedClient?.let { existing ->
+                    if (cachedKey == key) return existing
+                }
 
-        int ok = 0;
-        List<String> failed = new ArrayList<>();
+                val builder = OkHttpClient.Builder()
+                    .connectTimeout(20, TimeUnit.SECONDS)
+                    .followRedirects(true)
+                    .followSslRedirects(true)
 
-        if (items == null || items.isEmpty()) {
-            return new BatchResult(0, failed);
+                if (proxy != null && proxy.isEnabled) {
+                    proxy.applyTo(builder)
+                }
+
+                return builder.build().also {
+                    cachedClient = it
+                    cachedKey = key
+                }
+            }
         }
 
-        log.debug("[DL-BATCH] Downloading {} items to {}", items.size(), dir);
-        items.forEach(it -> log.debug("[DL-BATCH] item={}", it));
+    @JvmStatic
+    fun resolveUrl(server: URI, pathOrUrl: String): URI {
+        val path = pathOrUrl.trim()
+        if (path.startsWith("http://") || path.startsWith("https://")) return URI.create(path)
+        if (path.startsWith('/')) return server.resolve(path)
+        return server.resolve("/$path")
+    }
 
-        for (NamedUrl it : items) {
-            if (it == null) continue;
+    @JvmStatic
+    @Throws(IOException::class)
+    fun downloadAllToDir(
+        items: List<NamedUrl?>?,
+        dir: Path,
+        headers: Map<String, String>?,
+        timeoutMs: Int,
+    ): BatchResult {
+        Files.createDirectories(dir)
+        if (items.isNullOrEmpty()) return BatchResult(0, emptyList())
 
-            String name = (it.name() == null) ? "" : it.name().trim();
-            URI url = it.url();
+        var ok = 0
+        val failed = mutableListOf<String>()
 
-            if (name.isEmpty() || url == null) {
-                failed.add(name.isEmpty() ? "file" : name);
-                continue;
+        log.debug("[DL-BATCH] Downloading {} items to {}", items.size, dir)
+        items.forEach { log.debug("[DL-BATCH] item={}", it) }
+
+        for (item in items) {
+            if (item == null) continue
+            val name = item.name.trim()
+            val url = item.url
+
+            if (name.isEmpty()) {
+                failed += "file"
+                continue
             }
 
             try {
-                downloadToDir(url, dir, name, headers, timeoutMs);
-                ok++;
-            } catch (Exception ex) {
-                failed.add(name);
-                log.warn("[DL-BATCH] Download failed: name={}, url={}, err={}", name, url, ex.toString());
+                downloadToDir(url, dir, name, headers, timeoutMs)
+                ok++
+            } catch (ex: Exception) {
+                failed += name
+                log.warn("[DL-BATCH] Download failed: name={}, url={}, err={}", name, url, ex.toString())
             }
         }
 
-        log.debug("[DL-BATCH] Done: ok={}, failed={}", ok, failed.size());
-        return new BatchResult(ok, failed);
+        log.debug("[DL-BATCH] Done: ok={}, failed={}", ok, failed.size)
+        return BatchResult(ok, failed)
     }
 
-    public static BatchResult downloadAllToDirConcurrent(
-            List<NamedUrl> items,
-            Path dir,
-            @Nullable Map<String, String> headers,
-            int timeoutMs,
-            int maxConcurrentFiles
-    ) throws IOException {
-        return downloadAllToDirConcurrent(items, dir, headers, timeoutMs, maxConcurrentFiles, 1, DEFAULT_MAX_RETRIES);
-    }
+    @JvmStatic
+    @Throws(IOException::class)
+    fun downloadAllToDirConcurrent(
+        items: List<NamedUrl?>?,
+        dir: Path,
+        headers: Map<String, String>?,
+        timeoutMs: Int,
+        maxConcurrentFiles: Int,
+    ): BatchResult =
+        downloadAllToDirConcurrent(items, dir, headers, timeoutMs, maxConcurrentFiles, 1, DEFAULT_MAX_RETRIES)
 
-    public static BatchResult downloadAllToDirConcurrent(
-            List<NamedUrl> items,
-            Path dir,
-            @Nullable Map<String, String> headers,
-            int timeoutMs,
-            int maxConcurrentFiles,
-            int chunkThreadsPerFile
-    ) throws IOException {
-        return downloadAllToDirConcurrent(items, dir, headers, timeoutMs, maxConcurrentFiles, chunkThreadsPerFile, DEFAULT_MAX_RETRIES);
-    }
+    @JvmStatic
+    @Throws(IOException::class)
+    fun downloadAllToDirConcurrent(
+        items: List<NamedUrl?>?,
+        dir: Path,
+        headers: Map<String, String>?,
+        timeoutMs: Int,
+        maxConcurrentFiles: Int,
+        chunkThreadsPerFile: Int,
+    ): BatchResult = downloadAllToDirConcurrent(
+        items,
+        dir,
+        headers,
+        timeoutMs,
+        maxConcurrentFiles,
+        chunkThreadsPerFile,
+        DEFAULT_MAX_RETRIES
+    )
 
-    /**
-     * 批量并发下载（多线程/虚拟线程），可选启用单文件分块下载 + 重试
-     *
-     * @param maxConcurrentFiles  同时并发下载的文件数（建议 4~16）
-     * @param chunkThreadsPerFile 单文件分块并发数：<=1 表示不分块；>1 表示尝试 Range 分块（建议 2~8）
-     * @param maxRetries          最大重试次数（0 表示不重试）
-     */
-    public static BatchResult downloadAllToDirConcurrent(
-            List<NamedUrl> items,
-            Path dir,
-            @Nullable Map<String, String> headers,
-            int timeoutMs,
-            int maxConcurrentFiles,
-            int chunkThreadsPerFile,
-            int maxRetries
-    ) throws IOException {
-        Objects.requireNonNull(dir, "dir");
-        Files.createDirectories(dir);
+    @JvmStatic
+    @Throws(IOException::class)
+    fun downloadAllToDirConcurrent(
+        items: List<NamedUrl?>?,
+        dir: Path,
+        headers: Map<String, String>?,
+        timeoutMs: Int,
+        maxConcurrentFiles: Int,
+        chunkThreadsPerFile: Int,
+        maxRetries: Int,
+    ): BatchResult {
+        Files.createDirectories(dir)
+        if (items.isNullOrEmpty()) return BatchResult(0, emptyList())
 
-        if (items == null || items.isEmpty()) {
-            return new BatchResult(0, List.of());
-        }
+        val maxConc = max(1, maxConcurrentFiles)
+        val chunkThreads = max(1, chunkThreadsPerFile)
+        val retries = max(0, maxRetries)
+        val ok = AtomicInteger(0)
+        val failed = ConcurrentLinkedQueue<String>()
 
-        int maxConc = Math.max(1, maxConcurrentFiles);
-        int chunkThreads = Math.max(1, chunkThreadsPerFile);
-        int retries = Math.max(0, maxRetries);
+        log.debug(
+            "[DL-BATCH] Concurrent downloading {} items to {}, maxConc={}, chunkThreadsPerFile={}, maxRetries={}",
+            items.size,
+            dir,
+            maxConc,
+            chunkThreads,
+            retries
+        )
 
-        Semaphore sem = new Semaphore(maxConc);
+        Coroutines.runBlockingIo {
+            Coroutines.forEachLimited(items.filterNotNull(), maxConc) { item ->
+                val name = item.name.trim()
+                val url = item.url
 
-        AtomicInteger ok = new AtomicInteger(0);
-        ConcurrentLinkedQueue<String> failed = new ConcurrentLinkedQueue<>();
-
-        log.debug("[DL-BATCH] Concurrent downloading {} items to {}, maxConc={}, chunkThreadsPerFile={}, maxRetries={}",
-                items.size(), dir, maxConc, chunkThreads, retries);
-
-        try (ExecutorService exec = Execs.newVirtualExecutor("dl-file-")) {
-            List<Future<?>> futures = new ArrayList<>(items.size());
-
-            for (NamedUrl it : items) {
-                if (it == null) continue;
-
-                String name = (it.name() == null) ? "" : it.name().trim();
-                URI url = it.url();
-
-                if (name.isEmpty() || url == null) {
-                    failed.add(name.isEmpty() ? "file" : name);
-                    continue;
+                if (name.isEmpty()) {
+                    failed += "file"
+                    return@forEachLimited
                 }
 
-                futures.add(exec.submit(() -> {
-                    boolean acquired = false;
-                    try {
-                        sem.acquire();
-                        acquired = true;
-
-                        long t0 = System.nanoTime();
-
-                        if (chunkThreads > 1) {
-                            downloadToDirFast(url, dir, name, headers, timeoutMs, chunkThreads, retries);
-                        } else {
-                            downloadToDir(url, dir, name, headers, timeoutMs, retries);
-                        }
-
-                        long dtMs = (System.nanoTime() - t0) / 1_000_000;
-                        log.debug("[DL-BATCH] OK name={}, url={}, cost={}ms", name, url, dtMs);
-
-                        ok.incrementAndGet();
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        failed.add(name);
-                        log.warn("[DL-BATCH] Download interrupted: name={}, url={}", name, url);
-                    } catch (Exception ex) {
-                        failed.add(name);
-                        log.warn("[DL-BATCH] Download failed: name={}, url={}, err={}", name, url, ex.toString());
-                    } finally {
-                        if (acquired) sem.release();
-                    }
-                }));
-            }
-
-            for (Future<?> f : futures) {
                 try {
-                    f.get();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new IOException("Batch download interrupted", e);
-                } catch (ExecutionException e) {
-                    throw new IOException("Batch download task crashed", e.getCause());
+                    val startNs = System.nanoTime()
+
+                    if (chunkThreads > 1) {
+                        downloadToDirFast(url, dir, name, headers, timeoutMs, chunkThreads, retries)
+                    } else {
+                        downloadToDir(url, dir, name, headers, timeoutMs, retries)
+                    }
+
+                    val costMs = (System.nanoTime() - startNs) / 1_000_000
+                    log.debug("[DL-BATCH] OK name={}, url={}, cost={}ms", name, url, costMs)
+                    ok.incrementAndGet()
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    failed += name
+                    log.warn("[DL-BATCH] Download interrupted: name={}, url={}", name, url)
+                } catch (ex: Exception) {
+                    failed += name
+                    log.warn("[DL-BATCH] Download failed: name={}, url={}, err={}", name, url, ex.toString())
                 }
             }
         }
 
-        log.debug("[DL-BATCH] Done: ok={}, failed={}", ok.get(), failed.size());
-        return new BatchResult(ok.get(), new ArrayList<>(failed));
+        log.debug("[DL-BATCH] Done: ok={}, failed={}", ok.get(), failed.size)
+        return BatchResult(ok.get(), failed.toList())
     }
 
-    public static void downloadToFile(
-            URI url,
-            Path targetFile,
-            @Nullable Map<String, String> headers,
-            int timeoutMs
-    ) throws IOException {
-        downloadToFile(url, targetFile, headers, timeoutMs, DEFAULT_MAX_RETRIES);
+    @JvmStatic
+    @Throws(IOException::class)
+    fun downloadNamedUrlsToDirConcurrent(
+        items: List<NamedUrl?>?,
+        dir: Path,
+        headers: Map<String, String>?,
+        timeoutMs: Int,
+    ): BatchResult = downloadNamedUrlsToDirConcurrent(
+        items,
+        dir,
+        headers,
+        timeoutMs,
+        DEFAULT_MAX_CONCURRENT_FILES,
+        DEFAULT_CHUNK_THREADS,
+        DEFAULT_MAX_RETRIES
+    )
+
+    @JvmStatic
+    @Throws(IOException::class)
+    fun downloadNamedUrlsToDirConcurrent(
+        items: List<NamedUrl?>?,
+        dir: Path,
+        headers: Map<String, String>?,
+        timeoutMs: Int,
+        maxConcurrentFiles: Int,
+        chunkThreadsPerFile: Int,
+        maxRetries: Int,
+    ): BatchResult {
+        Files.createDirectories(dir)
+        if (items.isNullOrEmpty()) return BatchResult(0, emptyList())
+
+        val maxConc = max(1, maxConcurrentFiles)
+        val chunkThreads = max(1, chunkThreadsPerFile)
+        val retries = max(0, maxRetries)
+        val ok = AtomicInteger(0)
+        val failed = ConcurrentLinkedQueue<String>()
+        val usedNames = Collections.synchronizedSet(mutableSetOf<String>())
+
+        log.debug(
+            "[DL-BATCH-NAMED] Concurrent downloading {} items to {}, maxConc={}, chunkThreadsPerFile={}, maxRetries={}",
+            items.size,
+            dir,
+            maxConc,
+            chunkThreads,
+            retries
+        )
+
+        Coroutines.runBlockingIo {
+            Coroutines.forEachLimited(items.filterNotNull(), maxConc) { item ->
+                val entryName = item.name.trim()
+                val url = item.url
+
+                if (entryName.isEmpty()) {
+                    failed += "file"
+                    return@forEachLimited
+                }
+
+                try {
+                    val uniqueEntryName = uniqueEntryName(entryName, usedNames)
+                    val target = resolveNamedTarget(dir, uniqueEntryName)
+                    target.parent?.let(Files::createDirectories)
+
+                    val startNs = System.nanoTime()
+                    if (chunkThreads > 1) {
+                        downloadToFileFast(
+                            url,
+                            target,
+                            headers,
+                            timeoutMs,
+                            chunkThreads,
+                            DEFAULT_MIN_SIZE_FOR_CHUNKING_BYTES,
+                            DEFAULT_MIN_PART_SIZE_BYTES,
+                            retries
+                        )
+                    } else {
+                        downloadToFile(url, target, headers, timeoutMs, retries)
+                    }
+
+                    val costMs = (System.nanoTime() - startNs) / 1_000_000
+                    log.debug("[DL-BATCH-NAMED] OK entry={}, url={}, cost={}ms", uniqueEntryName, url, costMs)
+                    ok.incrementAndGet()
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    failed += entryName
+                    log.warn("[DL-BATCH-NAMED] Download interrupted: entry={}, url={}", entryName, url)
+                } catch (ex: Exception) {
+                    failed += entryName
+                    log.warn(
+                        "[DL-BATCH-NAMED] Download failed: entry={}, url={}, err={}",
+                        entryName,
+                        url,
+                        ex.toString()
+                    )
+                }
+            }
+        }
+
+        log.debug("[DL-BATCH-NAMED] Done: ok={}, failed={}", ok.get(), failed.size)
+        return BatchResult(ok.get(), failed.toList())
     }
 
-    /**
-     * 下载到指定文件路径（带 temp + move 原子替换）。
-     * 新增：
-     * - debug 速度/进度日志
-     * - 对 429/5xx/408 等进行重试
-     * - 同一次调用内的失败重试：优先从 .part 继续（Range + If-Range），不支持则回退重下
-     *
-     * @param maxRetries 最大重试次数（0 表示不重试；总尝试次数=1+maxRetries）
-     */
-    public static void downloadToFile(
-            URI url,
-            Path targetFile,
-            @Nullable Map<String, String> headers,
-            int timeoutMs,
-            int maxRetries
-    ) throws IOException {
-        Objects.requireNonNull(url, "url");
-        Objects.requireNonNull(targetFile, "targetFile");
+    @JvmStatic
+    @Throws(IOException::class)
+    fun downloadToFile(
+        url: URI,
+        targetFile: Path,
+        headers: Map<String, String>?,
+        timeoutMs: Int,
+    ) {
+        downloadToFile(url, targetFile, headers, timeoutMs, DEFAULT_MAX_RETRIES)
+    }
 
-        int retries = Math.max(0, maxRetries);
-        int maxAttempts = 1 + retries;
+    @JvmStatic
+    @Throws(IOException::class)
+    fun downloadToFile(
+        url: URI,
+        targetFile: Path,
+        headers: Map<String, String>?,
+        timeoutMs: Int,
+        maxRetries: Int,
+    ) {
+        val retries = max(0, maxRetries)
+        val maxAttempts = 1 + retries
 
-        Path parent = targetFile.getParent();
-        if (parent != null) Files.createDirectories(parent);
+        targetFile.parent?.let(Files::createDirectories)
+        val tmp = tempPathOf(targetFile)
 
-        Path tmp = (parent != null)
-                ? parent.resolve(targetFile.getFileName().toString() + ".part")
-                : Paths.get(targetFile.getFileName().toString() + ".part");
-
-        boolean success = false;
-
-        String ifRangeToken = null;
-
-        long totalStartNs = System.nanoTime();
+        var success = false
+        var ifRangeToken: String? = null
+        val totalStartNs = System.nanoTime()
 
         try {
-            for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-                long attemptStartNs = System.nanoTime();
-
-                long resumeFrom = 0L;
+            for (attempt in 1..maxAttempts) {
+                val attemptStartNs = System.nanoTime()
+                var resumeFrom = 0L
                 if (attempt > 1 && Files.exists(tmp)) {
-                    try {
-                        resumeFrom = Files.size(tmp);
-                    } catch (Exception ignored) {
-                        resumeFrom = 0L;
-                    }
+                    resumeFrom = runCatching { Files.size(tmp) }.getOrDefault(0L)
                 }
 
-                boolean askedResume = resumeFrom > 0;
-
                 try {
-                    if (log.isDebugEnabled()) {
-                        log.debug("[DL] start attempt {}/{} url={} -> {}{}",
-                                attempt, maxAttempts, url, targetFile,
-                                askedResume ? (" (resume@" + resumeFrom + ")") : "");
+                    if (log.isDebugEnabled) {
+                        log.debug(
+                            "[DL] start attempt {}/{} url={} -> {}{}",
+                            attempt,
+                            maxAttempts,
+                            url,
+                            targetFile,
+                            if (resumeFrom > 0) " (resume@$resumeFrom)" else ""
+                        )
                     }
 
-                    HttpResponse<InputStream> resp;
-                    long finalResumeFrom = resumeFrom;
-                    boolean usedRange = askedResume;
+                    var finalResumeFrom = resumeFrom
+                    var usedRange = finalResumeFrom > 0
 
-                    for (; ; ) {
-                        HttpRequest.Builder b = HttpRequest.newBuilder()
-                                .uri(url)
-                                .GET()
-                                .timeout(Duration.ofMillis(Math.max(1, timeoutMs)));
+                    while (true) {
+                        var restart = false
+                        execute(
+                            buildRequest(url, headers, timeoutMs, usedRange, finalResumeFrom, ifRangeToken, null),
+                            timeoutMs
+                        ).use { response ->
+                            val code = response.code
+                            pickIfRangeToken(response.headers)?.let { ifRangeToken = it }
+                            debugResponseSummary(url, code, response.headers, usedRange, finalResumeFrom)
 
-                        applyCommonHeaders(b, headers, usedRange);
-
-                        if (usedRange) {
-                            b.setHeader("Range", "bytes=" + finalResumeFrom + "-");
-                            if (ifRangeToken != null && !ifRangeToken.isBlank()) {
-                                b.setHeader("If-Range", ifRangeToken);
+                            if (usedRange && code == 416) {
+                                log.debug(
+                                    "[DL] HTTP 416 for resume range, restart from scratch: url={}, tmp={}",
+                                    url,
+                                    tmp
+                                )
+                                safeDelete(tmp)
+                                usedRange = false
+                                finalResumeFrom = 0L
+                                restart = true
+                                return@use
                             }
-                        }
 
-                        resp = CLIENT.send(b.build(), HttpResponse.BodyHandlers.ofInputStream());
-                        int code = resp.statusCode();
+                            if (usedRange && code == 200) {
+                                log.debug(
+                                    "[DL] server ignored Range (got 200). Will restart writing from 0: url={}",
+                                    url
+                                )
+                                usedRange = false
+                                finalResumeFrom = 0L
+                            }
 
-                        String tokenNow = pickIfRangeToken(resp.headers());
-                        if (tokenNow != null) ifRangeToken = tokenNow;
+                            if (code >= 400) {
+                                throw HttpStatusException(
+                                    code,
+                                    parseRetryAfterMs(response.header("Retry-After")),
+                                    "HTTP $code"
+                                )
+                            }
 
-                        debugResponseSummary(url, code, resp.headers(), usedRange, finalResumeFrom);
+                            val totalSize = guessTotalSize(code, response.headers)
+                            val expectedBodyLen = response.body.contentLength()
+                            val options: Array<OpenOption> = if (finalResumeFrom > 0) {
+                                arrayOf(StandardOpenOption.CREATE, StandardOpenOption.WRITE)
+                            } else {
+                                arrayOf(
+                                    StandardOpenOption.CREATE,
+                                    StandardOpenOption.WRITE,
+                                    StandardOpenOption.TRUNCATE_EXISTING
+                                )
+                            }
 
-                        if (usedRange && code == 416) {
-                            closeQuietly(resp.body());
-                            log.debug("[DL] HTTP 416 for resume range, restart from scratch: url={}, tmp={}", url, tmp);
-                            safeDelete(tmp);
-                            usedRange = false;
-                            finalResumeFrom = 0L;
-                            continue;
-                        }
+                            var writtenThisAttempt = 0L
+                            var lastLogNs = System.nanoTime()
+                            var lastLogBytes = finalResumeFrom
+                            val buffer = ByteArray(BUF_SIZE)
 
-                        if (usedRange && code == 200) {
-                            log.debug("[DL] server ignored Range (got 200). Will restart writing from 0: url={}", url);
-                            usedRange = false;
-                            finalResumeFrom = 0L;
-                        }
+                            response.body.byteStream().use { input ->
+                                FileChannel.open(tmp, *options).use { channel ->
+                                    var pos = finalResumeFrom
+                                    while (true) {
+                                        val read = input.read(buffer)
+                                        if (read == -1) break
 
-                        if (code >= 400) {
-                            Long raMs = parseRetryAfterMs(resp.headers().firstValue("retry-after").orElse(null));
-                            closeQuietly(resp.body());
-                            throw new HttpStatusException(code, raMs, "HTTP " + code);
-                        }
+                                        val bb = ByteBuffer.wrap(buffer, 0, read)
+                                        while (bb.hasRemaining()) {
+                                            val written = channel.write(bb, pos)
+                                            if (written <= 0) throw IOException("FileChannel write returned $written")
+                                            pos += written
+                                            writtenThisAttempt += written
+                                        }
 
-                        long totalSize = guessTotalSize(code, resp.headers());
-                        long expectedBodyLen = resp.headers().firstValueAsLong("content-length").orElse(-1L);
+                                        if (log.isDebugEnabled) {
+                                            val now = System.nanoTime()
+                                            val intervalNs =
+                                                Duration.ofMillis(DEFAULT_PROGRESS_LOG_INTERVAL_MS).toNanos()
+                                            if (now - lastLogNs >= intervalNs) {
+                                                val deltaBytes = pos - lastLogBytes
+                                                val deltaNs = now - lastLogNs
+                                                val pct = if (totalSize > 0) String.format(
+                                                    Locale.ROOT,
+                                                    "%.1f%%",
+                                                    pos * 100.0 / totalSize
+                                                ) else "?"
 
-                        OpenOption[] opts = (finalResumeFrom > 0)
-                                ? new OpenOption[]{StandardOpenOption.CREATE, StandardOpenOption.WRITE}
-                                : new OpenOption[]{StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING};
+                                                log.debug(
+                                                    "[DL] progress {} -> {}: {} / {} ({}), instSpeed={}",
+                                                    url,
+                                                    targetFile,
+                                                    formatBytes(pos),
+                                                    if (totalSize > 0) formatBytes(totalSize) else "?",
+                                                    pct,
+                                                    formatSpeed(deltaBytes, deltaNs)
+                                                )
 
-                        long writtenThisAttempt = 0L;
-                        long lastLogNs = System.nanoTime();
-                        long lastLogBytes = finalResumeFrom;
-
-                        byte[] buf = new byte[BUF_SIZE];
-
-                        try (InputStream in = resp.body();
-                             FileChannel ch = FileChannel.open(tmp, opts)) {
-
-                            long pos = finalResumeFrom;
-
-                            int n;
-                            while ((n = in.read(buf)) != -1) {
-                                ByteBuffer bb = ByteBuffer.wrap(buf, 0, n);
-                                while (bb.hasRemaining()) {
-                                    int w = ch.write(bb, pos);
-                                    if (w <= 0) throw new IOException("FileChannel write returned " + w);
-                                    pos += w;
-                                    writtenThisAttempt += w;
-                                }
-
-                                if (log.isDebugEnabled()) {
-                                    long now = System.nanoTime();
-                                    long intervalNs = Duration.ofMillis(DEFAULT_PROGRESS_LOG_INTERVAL_MS).toNanos();
-                                    if (now - lastLogNs >= intervalNs) {
-                                        long deltaBytes = pos - lastLogBytes;
-                                        long deltaNs = now - lastLogNs;
-
-                                        String pct = (totalSize > 0)
-                                                ? String.format(Locale.ROOT, "%.1f%%", pos * 100.0 / totalSize)
-                                                : "?";
-
-                                        log.debug("[DL] progress {} -> {}: {} / {} ({}), instSpeed={}",
-                                                url, targetFile,
-                                                formatBytes(pos),
-                                                (totalSize > 0 ? formatBytes(totalSize) : "?"),
-                                                pct,
-                                                formatSpeed(deltaBytes, deltaNs));
-
-                                        lastLogBytes = pos;
-                                        lastLogNs = now;
+                                                lastLogBytes = pos
+                                                lastLogNs = now
+                                            }
+                                        }
                                     }
+
+                                    if (expectedBodyLen > 0 && writtenThisAttempt != expectedBodyLen) {
+                                        throw IOException("Body length mismatch: expected=$expectedBodyLen, got=$writtenThisAttempt")
+                                    }
+
+                                    if (totalSize > 0 && pos != totalSize) {
+                                        throw IOException("Final size mismatch: expectedTotal=$totalSize, got=$pos")
+                                    }
+
+                                    val attemptMs = (System.nanoTime() - attemptStartNs) / 1_000_000
+                                    log.debug(
+                                        "[DL] done url={} -> {}, bytes={}, cost={}ms, avgSpeed={}",
+                                        url,
+                                        targetFile,
+                                        formatBytes(pos),
+                                        attemptMs,
+                                        formatSpeed(pos, System.nanoTime() - attemptStartNs)
+                                    )
                                 }
                             }
-
-                            if (expectedBodyLen > 0 && writtenThisAttempt != expectedBodyLen) {
-                                throw new IOException("Body length mismatch: expected=" + expectedBodyLen + ", got=" + writtenThisAttempt);
-                            }
-
-                            if (totalSize > 0) {
-                                if (pos != totalSize) {
-                                    throw new IOException("Final size mismatch: expectedTotal=" + totalSize + ", got=" + pos);
-                                }
-                            }
-
-                            long attemptMs = (System.nanoTime() - attemptStartNs) / 1_000_000;
-                            long finalBytes = pos;
-
-                            log.debug("[DL] done url={} -> {}, bytes={}, cost={}ms, avgSpeed={}",
-                                    url, targetFile,
-                                    formatBytes(finalBytes),
-                                    attemptMs,
-                                    formatSpeed(finalBytes, System.nanoTime() - attemptStartNs));
                         }
 
-                        moveReplace(tmp, targetFile);
-                        success = true;
+                        if (restart) continue
 
-                        long totalMs = (System.nanoTime() - totalStartNs) / 1_000_000;
-                        long finalSize;
-                        try {
-                            finalSize = Files.size(targetFile);
-                        } catch (Exception ignored) {
-                            finalSize = -1L;
-                        }
+                        moveReplace(tmp, targetFile)
+                        success = true
 
-                        log.debug("[DL] success url={} -> {}, finalSize={}, totalCost={}ms, totalAvgSpeed={}",
-                                url, targetFile,
-                                (finalSize >= 0 ? formatBytes(finalSize) : "?"),
-                                totalMs,
-                                (finalSize >= 0 ? formatSpeed(finalSize, System.nanoTime() - totalStartNs) : "?"));
-
-                        return;
+                        val totalMs = (System.nanoTime() - totalStartNs) / 1_000_000
+                        val finalSize = runCatching { Files.size(targetFile) }.getOrDefault(-1L)
+                        log.debug(
+                            "[DL] success url={} -> {}, finalSize={}, totalCost={}ms, totalAvgSpeed={}",
+                            url,
+                            targetFile,
+                            if (finalSize >= 0) formatBytes(finalSize) else "?",
+                            totalMs,
+                            if (finalSize >= 0) formatSpeed(finalSize, System.nanoTime() - totalStartNs) else "?"
+                        )
+                        return
                     }
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new IOException("Request interrupted", e);
-                } catch (IOException e) {
-                    boolean willRetry = (attempt < maxAttempts) && isRetryableException(e);
-                    long delayMs = willRetry ? computeRetryDelayMs(e, attempt) : 0L;
+                } catch (e: IOException) {
+                    val willRetry = attempt < maxAttempts && isRetryableException(e)
+                    val delayMs = if (willRetry) computeRetryDelayMs(e, attempt) else 0L
 
                     if (willRetry) {
-                        log.warn("[DL] attempt {}/{} failed, will retry in {}ms: url={}, target={}, err={}",
-                                attempt, maxAttempts, delayMs, url, targetFile, e.toString());
-                        sleepMs(delayMs);
-                        continue;
+                        log.warn(
+                            "[DL] attempt {}/{} failed, will retry in {}ms: url={}, target={}, err={}",
+                            attempt,
+                            maxAttempts,
+                            delayMs,
+                            url,
+                            targetFile,
+                            e.toString()
+                        )
+                        sleepMs(delayMs)
+                        continue
                     }
 
-                    log.warn("[DL] failed (no more retries): url={}, target={}, err={}", url, targetFile, e.toString());
-                    throw e;
+                    log.warn("[DL] failed (no more retries): url={}, target={}, err={}", url, targetFile, e.toString())
+                    throw e
                 }
             }
 
-            throw new IOException("Download failed unexpectedly (should not reach here)");
+            throw IOException("Download failed unexpectedly (should not reach here)")
         } finally {
-            if (!success) {
-                safeDelete(tmp);
-            }
+            if (!success) safeDelete(tmp)
         }
     }
 
-    public static Path downloadToDir(
-            URI url,
-            Path dir,
-            String fileName,
-            @Nullable Map<String, String> headers,
-            int timeoutMs
-    ) throws IOException {
-        return downloadToDir(url, dir, fileName, headers, timeoutMs, DEFAULT_MAX_RETRIES);
+    @JvmStatic
+    @Throws(IOException::class)
+    fun downloadToDir(
+        url: URI,
+        dir: Path,
+        fileName: String,
+        headers: Map<String, String>?,
+        timeoutMs: Int,
+    ): Path = downloadToDir(url, dir, fileName, headers, timeoutMs, DEFAULT_MAX_RETRIES)
+
+    @JvmStatic
+    @Throws(IOException::class)
+    fun downloadToDir(
+        url: URI,
+        dir: Path,
+        fileName: String,
+        headers: Map<String, String>?,
+        timeoutMs: Int,
+        maxRetries: Int,
+    ): Path {
+        Files.createDirectories(dir)
+        val target = dir.resolve(sanitizeFileName(fileName))
+        downloadToFile(url, target, headers, timeoutMs, maxRetries)
+        return target
     }
 
-    public static Path downloadToDir(
-            URI url,
-            Path dir,
-            String fileName,
-            @Nullable Map<String, String> headers,
-            int timeoutMs,
-            int maxRetries
-    ) throws IOException {
-        Objects.requireNonNull(dir, "dir");
-        Files.createDirectories(dir);
-
-        String safeName = sanitizeFileName(fileName);
-        Path target = dir.resolve(safeName);
-
-        downloadToFile(url, target, headers, timeoutMs, maxRetries);
-        return target;
+    @JvmStatic
+    @Throws(IOException::class)
+    fun downloadToFileFast(
+        url: URI,
+        targetFile: Path,
+        headers: Map<String, String>?,
+        timeoutMs: Int,
+    ) {
+        downloadToFileFast(
+            url,
+            targetFile,
+            headers,
+            timeoutMs,
+            DEFAULT_CHUNK_THREADS,
+            DEFAULT_MIN_SIZE_FOR_CHUNKING_BYTES,
+            DEFAULT_MIN_PART_SIZE_BYTES,
+            DEFAULT_MAX_RETRIES
+        )
     }
 
-    public static void downloadToFileFast(
-            URI url,
-            Path targetFile,
-            @Nullable Map<String, String> headers,
-            int timeoutMs
-    ) throws IOException {
-        downloadToFileFast(url, targetFile, headers, timeoutMs,
-                DEFAULT_CHUNK_THREADS,
-                DEFAULT_MIN_SIZE_FOR_CHUNKING_BYTES,
-                DEFAULT_MIN_PART_SIZE_BYTES,
-                DEFAULT_MAX_RETRIES);
+    @JvmStatic
+    @Throws(IOException::class)
+    fun downloadToFileFast(
+        url: URI,
+        targetFile: Path,
+        headers: Map<String, String>?,
+        timeoutMs: Int,
+        chunkThreads: Int,
+        minSizeForChunking: Long,
+        minPartSizeBytes: Long,
+    ) {
+        downloadToFileFast(
+            url,
+            targetFile,
+            headers,
+            timeoutMs,
+            chunkThreads,
+            minSizeForChunking,
+            minPartSizeBytes,
+            DEFAULT_MAX_RETRIES
+        )
     }
 
-    public static void downloadToFileFast(
-            URI url,
-            Path targetFile,
-            @Nullable Map<String, String> headers,
-            int timeoutMs,
-            int chunkThreads,
-            long minSizeForChunking,
-            long minPartSizeBytes
-    ) throws IOException {
-        downloadToFileFast(url, targetFile, headers, timeoutMs,
-                chunkThreads, minSizeForChunking, minPartSizeBytes, DEFAULT_MAX_RETRIES);
-    }
-
-    /**
-     * 单文件分块下载：服务器支持 Range 且文件足够大时，自动并发分块；否则回退到 downloadToFile。
-     *
-     * @param chunkThreads       并发分块数（建议 2~8）
-     * @param minSizeForChunking 小于该大小不分块
-     * @param minPartSizeBytes   每块最小大小
-     * @param maxRetries         最大重试次数（0 表示不重试）
-     */
-    public static void downloadToFileFast(
-            URI url,
-            Path targetFile,
-            @Nullable Map<String, String> headers,
-            int timeoutMs,
-            int chunkThreads,
-            long minSizeForChunking,
-            long minPartSizeBytes,
-            int maxRetries
-    ) throws IOException {
-        Objects.requireNonNull(url, "url");
-        Objects.requireNonNull(targetFile, "targetFile");
-
-        int threads = Math.max(1, chunkThreads);
+    @JvmStatic
+    @Throws(IOException::class)
+    fun downloadToFileFast(
+        url: URI,
+        targetFile: Path,
+        headers: Map<String, String>?,
+        timeoutMs: Int,
+        chunkThreads: Int,
+        minSizeForChunking: Long,
+        minPartSizeBytes: Long,
+        maxRetries: Int,
+    ) {
+        val threads = max(1, chunkThreads)
         if (threads == 1) {
-            log.debug("[DL-FAST] chunkThreads<=1, fallback to single: url={}", url);
-            downloadToFile(url, targetFile, headers, timeoutMs, maxRetries);
-            return;
+            log.debug("[DL-FAST] chunkThreads<=1, fallback to single: url={}", url)
+            downloadToFile(url, targetFile, headers, timeoutMs, maxRetries)
+            return
         }
 
-        long probeStartNs = System.nanoTime();
-        RangeMeta meta;
-        try {
-            meta = probeRangeMeta(url, headers, timeoutMs);
-        } catch (Exception e) {
-            log.debug("[DL-FAST] Range probe failed, fallback to single: url={}, err={}", url, e.toString());
-            downloadToFile(url, targetFile, headers, timeoutMs, maxRetries);
-            return;
+        val probeStartNs = System.nanoTime()
+        val meta = try {
+            probeRangeMeta(url, headers, timeoutMs)
+        } catch (ex: Exception) {
+            log.debug("[DL-FAST] Range probe failed, fallback to single: url={}, err={}", url, ex.toString())
+            downloadToFile(url, targetFile, headers, timeoutMs, maxRetries)
+            return
         } finally {
-            long probeMs = (System.nanoTime() - probeStartNs) / 1_000_000;
-            log.debug("[DL-FAST] probe cost={}ms, url={}", probeMs, url);
+            val probeMs = (System.nanoTime() - probeStartNs) / 1_000_000
+            log.debug("[DL-FAST] probe cost={}ms, url={}", probeMs, url)
         }
 
-        log.debug("[DL-FAST] rangeMeta url={}, acceptRanges={}, length={}, ifRangeToken={}",
-                url, meta.acceptRanges(), meta.length(),
-                (meta.ifRangeToken() != null ? "yes" : "no"));
+        log.debug(
+            "[DL-FAST] rangeMeta url={}, acceptRanges={}, length={}, ifRangeToken={}",
+            url,
+            meta.acceptRanges,
+            meta.length,
+            if (meta.ifRangeToken != null) "yes" else "no"
+        )
 
-        if (!meta.acceptRanges() || meta.length() <= 0 || meta.length() < Math.max(1, minSizeForChunking)) {
-            log.debug("[DL-FAST] not chunking (acceptRanges={}, len={}, min={}): url={}",
-                    meta.acceptRanges(), meta.length(), minSizeForChunking, url);
-            downloadToFile(url, targetFile, headers, timeoutMs, maxRetries);
-            return;
+        if (!meta.acceptRanges || meta.length <= 0 || meta.length < max(1L, minSizeForChunking)) {
+            log.debug(
+                "[DL-FAST] not chunking (acceptRanges={}, len={}, min={}): url={}",
+                meta.acceptRanges,
+                meta.length,
+                minSizeForChunking,
+                url
+            )
+            downloadToFile(url, targetFile, headers, timeoutMs, maxRetries)
+            return
         }
 
-        long total = meta.length();
+        val total = meta.length
+        val minPart = max(256 * 1024L, minPartSizeBytes)
+        val partsBySize = min(Int.MAX_VALUE.toLong(), max(1L, total / minPart)).toInt()
+        val parts = max(2, min(threads, partsBySize))
 
-        long minPart = Math.max(256 * 1024L, minPartSizeBytes);
-        long partsBySizeL = Math.max(1L, total / minPart);
-        int partsBySize = (int) Math.min(Integer.MAX_VALUE, partsBySizeL);
-
-        int parts = Math.max(2, Math.min(threads, partsBySize));
-
-        Path parent = targetFile.getParent();
-        if (parent != null) Files.createDirectories(parent);
-
-        Path tmp = (parent != null)
-                ? parent.resolve(targetFile.getFileName().toString() + ".part")
-                : Paths.get(targetFile.getFileName().toString() + ".part");
-
-        boolean chunkOk = false;
-        long fileStartNs = System.nanoTime();
+        targetFile.parent?.let(Files::createDirectories)
+        val tmp = tempPathOf(targetFile)
+        var chunkOk = false
+        val fileStartNs = System.nanoTime()
 
         try {
-            safeDelete(tmp);
+            safeDelete(tmp)
+            RandomAccessFile(tmp.toFile(), "rw").use { it.setLength(total) }
 
-            try (RandomAccessFile raf = new RandomAccessFile(tmp.toFile(), "rw")) {
-                raf.setLength(total);
-            }
+            val partSize = (total + parts - 1) / parts
+            val tasks = mutableListOf<Callable<Void>>()
+            var actualParts = 0
 
-            long partSize = (total + parts - 1) / parts; // ceil
-            List<Callable<Void>> tasks = new ArrayList<>(parts);
+            for (i in 0 until parts) {
+                val start = i * partSize
+                val end = min(total - 1, start + partSize - 1)
+                if (start > end) break
 
-            int actualParts = 0;
-            for (int i = 0; i < parts; i++) {
-                long start = i * partSize;
-                long end = Math.min(total - 1, start + partSize - 1);
-                if (start > end) break;
-
-                final int partIndex = i + 1;
-                actualParts++;
-
-                tasks.add(() -> {
-                    downloadRangeToFile(url, tmp, start, end, headers, timeoutMs, maxRetries, partIndex, meta.ifRangeToken());
-                    return null;
-                });
-            }
-
-            log.debug("[DL-FAST] plan url={}, total={}, parts={}, partSize~={}, tmp={}",
-                    url, formatBytes(total), actualParts, formatBytes(partSize), tmp);
-
-            try (ExecutorService exec = Execs.newVirtualExecutor("dl-part-")) {
-                List<Future<Void>> futures = exec.invokeAll(tasks);
-                for (Future<Void> f : futures) {
-                    try {
-                        f.get();
-                    } catch (ExecutionException e) {
-                        Throwable c = e.getCause();
-                        if (c instanceof IOException io) throw io;
-                        throw new IOException("Part download failed", c);
-                    }
+                val partIndex = i + 1
+                actualParts++
+                tasks += Callable {
+                    downloadRangeToFile(
+                        url,
+                        tmp,
+                        start,
+                        end,
+                        headers,
+                        timeoutMs,
+                        maxRetries,
+                        partIndex,
+                        meta.ifRangeToken
+                    )
+                    null
                 }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new IOException("Request interrupted", e);
             }
 
-            moveReplace(tmp, targetFile);
-            chunkOk = true;
+            log.debug(
+                "[DL-FAST] plan url={}, total={}, parts={}, partSize~={}, tmp={}",
+                url,
+                formatBytes(total),
+                actualParts,
+                formatBytes(partSize),
+                tmp
+            )
 
-            long ms = (System.nanoTime() - fileStartNs) / 1_000_000;
-            log.debug("[DL-FAST] success url={} -> {}, bytes={}, cost={}ms, avgSpeed={}",
-                    url, targetFile, formatBytes(total), ms, formatSpeed(total, System.nanoTime() - fileStartNs));
-        } catch (IOException e) {
-            long ms = (System.nanoTime() - fileStartNs) / 1_000_000;
-            log.warn("[DL-FAST] chunked download failed after {}ms, will fallback to single: url={}, err={}", ms, url, e.toString());
+            Coroutines.runBlockingIo {
+                coroutineScope {
+                    tasks.map { task ->
+                        async(Dispatchers.IO) {
+                            task.call()
+                        }
+                    }.awaitAll()
+                }
+            }
+
+            moveReplace(tmp, targetFile)
+            chunkOk = true
+
+            val costMs = (System.nanoTime() - fileStartNs) / 1_000_000
+            log.debug(
+                "[DL-FAST] success url={} -> {}, bytes={}, cost={}ms, avgSpeed={}",
+                url,
+                targetFile,
+                formatBytes(total),
+                costMs,
+                formatSpeed(total, System.nanoTime() - fileStartNs)
+            )
+        } catch (ex: IOException) {
+            val costMs = (System.nanoTime() - fileStartNs) / 1_000_000
+            log.warn(
+                "[DL-FAST] chunked download failed after {}ms, will fallback to single: url={}, err={}",
+                costMs,
+                url,
+                ex.toString()
+            )
         } finally {
-            if (!chunkOk) {
-                safeDelete(tmp);
-            }
+            if (!chunkOk) safeDelete(tmp)
         }
 
         if (!chunkOk) {
-            downloadToFile(url, targetFile, headers, timeoutMs, maxRetries);
+            downloadToFile(url, targetFile, headers, timeoutMs, maxRetries)
         }
     }
 
-    public static Path downloadToDirFast(
-            URI url,
-            Path dir,
-            String fileName,
-            @Nullable Map<String, String> headers,
-            int timeoutMs,
-            int chunkThreads
-    ) throws IOException {
-        return downloadToDirFast(url, dir, fileName, headers, timeoutMs, chunkThreads, DEFAULT_MAX_RETRIES);
+    @JvmStatic
+    @Throws(IOException::class)
+    fun downloadToDirFast(
+        url: URI,
+        dir: Path,
+        fileName: String,
+        headers: Map<String, String>?,
+        timeoutMs: Int,
+        chunkThreads: Int,
+    ): Path = downloadToDirFast(url, dir, fileName, headers, timeoutMs, chunkThreads, DEFAULT_MAX_RETRIES)
+
+    @JvmStatic
+    @Throws(IOException::class)
+    fun downloadToDirFast(
+        url: URI,
+        dir: Path,
+        fileName: String,
+        headers: Map<String, String>?,
+        timeoutMs: Int,
+        chunkThreads: Int,
+        maxRetries: Int,
+    ): Path {
+        Files.createDirectories(dir)
+        val target = dir.resolve(sanitizeFileName(fileName))
+        downloadToFileFast(
+            url,
+            target,
+            headers,
+            timeoutMs,
+            chunkThreads,
+            DEFAULT_MIN_SIZE_FOR_CHUNKING_BYTES,
+            DEFAULT_MIN_PART_SIZE_BYTES,
+            maxRetries
+        )
+        return target
     }
 
-    public static Path downloadToDirFast(
-            URI url,
-            Path dir,
-            String fileName,
-            @Nullable Map<String, String> headers,
-            int timeoutMs,
-            int chunkThreads,
-            int maxRetries
-    ) throws IOException {
-        Objects.requireNonNull(dir, "dir");
-        Files.createDirectories(dir);
-
-        String safeName = sanitizeFileName(fileName);
-        Path target = dir.resolve(safeName);
-
-        downloadToFileFast(url, target, headers, timeoutMs,
-                chunkThreads,
-                DEFAULT_MIN_SIZE_FOR_CHUNKING_BYTES,
-                DEFAULT_MIN_PART_SIZE_BYTES,
-                maxRetries);
-
-        return target;
+    @JvmStatic
+    fun sanitizeFileName(name: String?): String {
+        var sanitized = name?.trim().orEmpty()
+        sanitized = sanitized.replace('\\', '_').replace('/', '_')
+        sanitized = sanitized.replace(Regex("[<>:\"|?*]"), "_")
+        sanitized = sanitized.replace(Regex("\\p{Cntrl}"), "_")
+        if (sanitized.isBlank()) sanitized = "file"
+        return sanitized
     }
 
-    private static void downloadRangeToFile(
-            URI url,
-            Path tmpFile,
-            long start,
-            long end,
-            @Nullable Map<String, String> headers,
-            int timeoutMs,
-            int maxRetries,
-            int partIndex,
-            @Nullable String ifRangeToken
-    ) throws IOException {
-        long expected = end - start + 1;
-        if (expected <= 0) return;
+    @Throws(IOException::class)
+    private fun downloadRangeToFile(
+        url: URI,
+        tmpFile: Path,
+        start: Long,
+        end: Long,
+        headers: Map<String, String>?,
+        timeoutMs: Int,
+        maxRetries: Int,
+        partIndex: Int,
+        ifRangeToken: String?,
+    ) {
+        val expected = end - start + 1
+        if (expected <= 0) return
 
-        int retries = Math.max(0, maxRetries);
-        int maxAttempts = 1 + retries;
+        val retries = max(0, maxRetries)
+        val maxAttempts = 1 + retries
 
-        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-            long t0 = System.nanoTime();
+        for (attempt in 1..maxAttempts) {
+            val startedNs = System.nanoTime()
             try {
-                if (log.isDebugEnabled()) {
-                    log.debug("[DL-PART] start part#{} range {}-{} ({}), attempt {}/{} url={}",
-                            partIndex, start, end, formatBytes(expected), attempt, maxAttempts, url);
+                if (log.isDebugEnabled) {
+                    log.debug(
+                        "[DL-PART] start part#{} range {}-{} ({}), attempt {}/{} url={}",
+                        partIndex,
+                        start,
+                        end,
+                        formatBytes(expected),
+                        attempt,
+                        maxAttempts,
+                        url
+                    )
                 }
 
-                HttpRequest.Builder b = HttpRequest.newBuilder()
-                        .uri(url)
-                        .GET()
-                        .timeout(Duration.ofMillis(Math.max(1, timeoutMs)));
+                execute(
+                    buildRequest(url, headers, timeoutMs, true, start, ifRangeToken, end),
+                    timeoutMs
+                ).use { response ->
+                    val code = response.code
+                    debugResponseSummary(url, code, response.headers, true, start)
 
-                applyCommonHeaders(b, headers, true);
-                b.setHeader("Range", "bytes=" + start + "-" + end);
-                if (ifRangeToken != null && !ifRangeToken.isBlank()) {
-                    b.setHeader("If-Range", ifRangeToken);
-                }
+                    if (code >= 400) {
+                        throw HttpStatusException(code, parseRetryAfterMs(response.header("Retry-After")), "HTTP $code")
+                    }
+                    if (code != 206) {
+                        throw IOException("Expected HTTP 206, got HTTP $code")
+                    }
 
-                HttpResponse<InputStream> resp = CLIENT.send(b.build(), HttpResponse.BodyHandlers.ofInputStream());
-                int code = resp.statusCode();
+                    var written = 0L
+                    val buffer = ByteArray(BUF_SIZE)
+                    response.body.byteStream().use { input ->
+                        FileChannel.open(tmpFile, StandardOpenOption.WRITE, StandardOpenOption.CREATE).use { channel ->
+                            var pos = start
+                            while (true) {
+                                val read = input.read(buffer)
+                                if (read == -1) break
 
-                debugResponseSummary(url, code, resp.headers(), true, start);
-
-                if (code >= 400) {
-                    Long raMs = parseRetryAfterMs(resp.headers().firstValue("retry-after").orElse(null));
-                    closeQuietly(resp.body());
-                    throw new HttpStatusException(code, raMs, "HTTP " + code);
-                }
-
-                if (code != 206) {
-                    closeQuietly(resp.body());
-                    throw new IOException("Expected HTTP 206, got HTTP " + code);
-                }
-
-                long written = 0L;
-                byte[] buf = new byte[BUF_SIZE];
-
-                try (InputStream in = resp.body();
-                     FileChannel ch = FileChannel.open(tmpFile, StandardOpenOption.WRITE, StandardOpenOption.CREATE)) {
-
-                    long pos = start;
-                    int n;
-                    while ((n = in.read(buf)) != -1) {
-                        ByteBuffer bb = ByteBuffer.wrap(buf, 0, n);
-                        while (bb.hasRemaining()) {
-                            int w = ch.write(bb, pos);
-                            if (w <= 0) throw new IOException("FileChannel write returned " + w);
-                            pos += w;
-                            written += w;
+                                val bb = ByteBuffer.wrap(buffer, 0, read)
+                                while (bb.hasRemaining()) {
+                                    val count = channel.write(bb, pos)
+                                    if (count <= 0) throw IOException("FileChannel write returned $count")
+                                    pos += count
+                                    written += count
+                                }
+                            }
                         }
+                    }
+
+                    if (written != expected) {
+                        throw IOException("Range bytes mismatch: expected=$expected, got=$written, range=$start-$end")
                     }
                 }
 
-                if (written != expected) {
-                    throw new IOException("Range bytes mismatch: expected=" + expected + ", got=" + written +
-                            ", range=" + start + "-" + end);
-                }
-
-                long dtNs = System.nanoTime() - t0;
-                log.debug("[DL-PART] done part#{} range {}-{}, bytes={}, cost={}ms, avgSpeed={}",
-                        partIndex, start, end,
-                        formatBytes(written),
-                        dtNs / 1_000_000,
-                        formatSpeed(written, dtNs));
-
-                return;
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new IOException("Request interrupted", e);
-            } catch (IOException e) {
-                boolean willRetry = (attempt < maxAttempts) && isRetryableException(e);
-                long delayMs = willRetry ? computeRetryDelayMs(e, attempt) : 0L;
-
+                val elapsedNs = System.nanoTime() - startedNs
+                log.debug(
+                    "[DL-PART] done part#{} range {}-{}, bytes={}, cost={}ms, avgSpeed={}",
+                    partIndex,
+                    start,
+                    end,
+                    formatBytes(expected),
+                    elapsedNs / 1_000_000,
+                    formatSpeed(expected, elapsedNs)
+                )
+                return
+            } catch (e: IOException) {
+                val willRetry = attempt < maxAttempts && isRetryableException(e)
+                val delayMs = if (willRetry) computeRetryDelayMs(e, attempt) else 0L
                 if (willRetry) {
-                    log.warn("[DL-PART] part#{} attempt {}/{} failed, retry in {}ms: url={}, err={}",
-                            partIndex, attempt, maxAttempts, delayMs, url, e.toString());
-                    sleepMs(delayMs);
-                    continue;
+                    log.warn(
+                        "[DL-PART] part#{} attempt {}/{} failed, retry in {}ms: url={}, err={}",
+                        partIndex,
+                        attempt,
+                        maxAttempts,
+                        delayMs,
+                        url,
+                        e.toString()
+                    )
+                    sleepMs(delayMs)
+                    continue
                 }
 
-                log.warn("[DL-PART] part#{} failed (no more retries): url={}, err={}", partIndex, url, e.toString());
-                throw e;
+                log.warn("[DL-PART] part#{} failed (no more retries): url={}, err={}", partIndex, url, e.toString())
+                throw e
             }
         }
 
-        throw new IOException("Part download failed unexpectedly (should not reach here)");
+        throw IOException("Part download failed unexpectedly (should not reach here)")
     }
 
-    private static RangeMeta probeRangeMeta(URI url, @Nullable Map<String, String> headers, int timeoutMs) throws IOException {
+    @Throws(IOException::class)
+    private fun probeRangeMeta(url: URI, headers: Map<String, String>?, timeoutMs: Int): RangeMeta {
         try {
-            HttpRequest.Builder hb = HttpRequest.newBuilder()
-                    .uri(url)
-                    .method("HEAD", HttpRequest.BodyPublishers.noBody())
-                    .timeout(Duration.ofMillis(Math.max(1, timeoutMs)));
+            execute(
+                buildRequest(url, headers, timeoutMs, false, null, null, null, method = "HEAD"),
+                timeoutMs
+            ).use { response ->
+                val code = response.code
+                debugResponseSummary(url, code, response.headers, false, 0)
+                if (code < 400) {
+                    val len = response.header("Content-Length")?.toLongOrNull() ?: -1L
+                    val accept = response.header("Accept-Ranges")?.contains("bytes", ignoreCase = true) == true
+                    val token = pickIfRangeToken(response.headers)
+                    if (accept && len > 0) {
+                        log.debug("[DL-PROBE] HEAD says acceptRanges=true len={} url={}", formatBytes(len), url)
+                        return RangeMeta(len, true, token)
+                    }
 
-            applyCommonHeaders(hb, headers, false);
-
-            HttpResponse<Void> resp = CLIENT.send(hb.build(), HttpResponse.BodyHandlers.discarding());
-            int code = resp.statusCode();
-
-            debugResponseSummary(url, code, resp.headers(), false, 0);
-
-            if (code < 400) {
-                long len = resp.headers().firstValueAsLong("content-length").orElse(-1L);
-                boolean accept = resp.headers().firstValue("accept-ranges")
-                        .map(v -> v.toLowerCase(Locale.ROOT).contains("bytes"))
-                        .orElse(false);
-
-                String token = pickIfRangeToken(resp.headers());
-
-                if (accept && len > 0) {
-                    log.debug("[DL-PROBE] HEAD says acceptRanges=true len={} url={}", formatBytes(len), url);
-                    return new RangeMeta(len, true, token);
+                    log.debug(
+                        "[DL-PROBE] HEAD insufficient (acceptRanges={}, len={}) url={}",
+                        accept,
+                        if (len > 0) formatBytes(len) else "unknown",
+                        url
+                    )
                 }
-
-                log.debug("[DL-PROBE] HEAD insufficient (acceptRanges={}, len={}) url={}",
-                        accept, (len > 0 ? formatBytes(len) : "unknown"), url);
             }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException("Request interrupted", e);
-        } catch (Exception ignored) {
-            log.debug("[DL-PROBE] HEAD failed, will try Range probe: url={}", url);
+        } catch (_: Exception) {
+            log.debug("[DL-PROBE] HEAD failed, will try Range probe: url={}", url)
         }
 
-        HttpRequest.Builder pb = HttpRequest.newBuilder()
-                .uri(url)
-                .GET()
-                .timeout(Duration.ofMillis(Math.max(1, timeoutMs)));
-
-        applyCommonHeaders(pb, headers, true);
-        pb.setHeader("Range", "bytes=0-0");
-
-        try {
-            HttpResponse<InputStream> resp = CLIENT.send(pb.build(), HttpResponse.BodyHandlers.ofInputStream());
-            int code = resp.statusCode();
-
-            debugResponseSummary(url, code, resp.headers(), true, 0);
-
-            closeQuietly(resp.body());
-
+        execute(buildRequest(url, headers, timeoutMs, true, 0L, null, 0L), timeoutMs).use { response ->
+            val code = response.code
+            debugResponseSummary(url, code, response.headers, true, 0)
             if (code == 206) {
-                long total = resp.headers().firstValue("content-range")
-                        .map(DownloadUtils::parseTotalFromContentRange)
-                        .orElse(-1L);
-
-                String token = pickIfRangeToken(resp.headers());
-
+                val total = response.header("Content-Range")?.let(::parseTotalFromContentRange) ?: -1L
+                val token = pickIfRangeToken(response.headers)
                 if (total > 0) {
-                    log.debug("[DL-PROBE] Range probe OK: acceptRanges=true total={} url={}", formatBytes(total), url);
-                    return new RangeMeta(total, true, token);
+                    log.debug("[DL-PROBE] Range probe OK: acceptRanges=true total={} url={}", formatBytes(total), url)
+                    return RangeMeta(total, true, token)
                 }
 
-                log.debug("[DL-PROBE] Range probe OK but total unknown: url={}", url);
-                return new RangeMeta(-1L, true, token);
+                log.debug("[DL-PROBE] Range probe OK but total unknown: url={}", url)
+                return RangeMeta(-1L, true, token)
             }
 
-            log.debug("[DL-PROBE] Range probe not supported (code={}): url={}", code, url);
-            return new RangeMeta(-1L, false, null);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException("Request interrupted", e);
+            log.debug("[DL-PROBE] Range probe not supported (code={}): url={}", code, url)
+            return RangeMeta(-1L, false, null)
         }
     }
 
-    private static void moveReplace(Path tmp, Path targetFile) throws IOException {
-        try {
-            Files.move(tmp, targetFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-        } catch (AtomicMoveNotSupportedException e) {
-            Files.move(tmp, targetFile, StandardCopyOption.REPLACE_EXISTING);
-        }
-    }
+    @Throws(IOException::class)
+    private fun execute(request: Request, timeoutMs: Int): Response =
+        client.newBuilder()
+            .callTimeout(max(1, timeoutMs).toLong(), TimeUnit.MILLISECONDS)
+            .build()
+            .newCall(request)
+            .execute()
 
-    private static void applyCommonHeaders(HttpRequest.Builder b, @Nullable Map<String, String> headers, boolean forceIdentityEncoding) {
-        b.setHeader("User-Agent", "LukosBot/kemono");
-        b.setHeader("Accept", "*/*");
+    private fun buildRequest(
+        url: URI,
+        headers: Map<String, String>?,
+        timeoutMs: Int,
+        forceIdentityEncoding: Boolean,
+        rangeStart: Long?,
+        ifRangeToken: String?,
+        rangeEnd: Long?,
+        method: String = "GET",
+    ): Request {
+        val builder = Request.Builder()
+            .url(url.toString())
+            .header("User-Agent", UA)
+            .header("Accept", "*/*")
+            .method(method, null)
 
         if (forceIdentityEncoding) {
-            b.setHeader("Accept-Encoding", "identity");
+            builder.header("Accept-Encoding", "identity")
         }
 
-        if (headers != null) {
-            headers.forEach((k, v) -> {
-                if (k == null || k.isBlank() || v == null) return;
-                b.setHeader(k, v);
-            });
-        }
-    }
-
-    private static void debugResponseSummary(URI url, int code, java.net.http.HttpHeaders h, boolean askedRange, long rangeStart) {
-        if (!log.isDebugEnabled()) return;
-
-        String cl = h.firstValue("content-length").orElse(null);
-        String cr = h.firstValue("content-range").orElse(null);
-        String ar = h.firstValue("accept-ranges").orElse(null);
-        String ct = h.firstValue("content-type").orElse(null);
-        String etag = h.firstValue("etag").orElse(null);
-        String lm = h.firstValue("last-modified").orElse(null);
-        String ra = h.firstValue("retry-after").orElse(null);
-
-        log.debug("[DL-HTTP] url={} code={} askedRange={}{} contentLength={} contentRange={} acceptRanges={} contentType={} etag={} lastModified={} retryAfter={}",
-                url, code,
-                askedRange,
-                (askedRange ? ("(start=" + rangeStart + ")") : ""),
-                (cl != null ? cl : "-"),
-                (cr != null ? cr : "-"),
-                (ar != null ? ar : "-"),
-                (ct != null ? ct : "-"),
-                (etag != null ? etag : "-"),
-                (lm != null ? lm : "-"),
-                (ra != null ? ra : "-"));
-    }
-
-    private static long guessTotalSize(int code, java.net.http.HttpHeaders h) {
-        if (code == 206) {
-            return h.firstValue("content-range")
-                    .map(DownloadUtils::parseTotalFromContentRange)
-                    .orElse(-1L);
-        }
-        return h.firstValueAsLong("content-length").orElse(-1L);
-    }
-
-    private static @Nullable String pickIfRangeToken(java.net.http.HttpHeaders h) {
-        String etag = h.firstValue("etag").orElse(null);
-        if (etag != null && !etag.isBlank()) return etag;
-
-        String lm = h.firstValue("last-modified").orElse(null);
-        if (lm != null && !lm.isBlank()) return lm;
-
-        return null;
-    }
-
-    /**
-     * 解析 Content-Range 里的 total，例如： "bytes 0-0/12345" -> 12345
-     */
-    private static long parseTotalFromContentRange(String cr) {
-        if (cr == null) return -1L;
-        int slash = cr.lastIndexOf('/');
-        if (slash < 0 || slash + 1 >= cr.length()) return -1L;
-        String total = cr.substring(slash + 1).trim();
-        if (total.isEmpty() || "*".equals(total)) return -1L;
-        try {
-            return Long.parseLong(total);
-        } catch (NumberFormatException e) {
-            return -1L;
-        }
-    }
-
-    private static boolean isRetryableStatus(int code) {
-        return code == 408 || code == 429 || (code >= 500 && code <= 599);
-    }
-
-    private static boolean isRetryableException(IOException e) {
-        if (e instanceof HttpStatusException hs) {
-            return isRetryableStatus(hs.statusCode);
-        }
-        return !(e instanceof FileSystemException);// 其它 IOException 默认认为网络/连接问题可重试
-    }
-
-    private static long computeRetryDelayMs(IOException e, int attemptIndex) {
-
-        long exp = 1L << Math.min(20, Math.max(0, attemptIndex - 1));
-        long delay = Math.min(DEFAULT_RETRY_MAX_DELAY_MS, DEFAULT_RETRY_BASE_DELAY_MS * exp);
-
-        if (e instanceof HttpStatusException hs && hs.retryAfterMs != null && hs.retryAfterMs > 0) {
-            long ra = Math.min(DEFAULT_RETRY_AFTER_CAP_MS, hs.retryAfterMs);
-            delay = Math.max(delay, ra);
-        }
-
-        long jitter = ThreadLocalRandom.current().nextLong(0, Math.max(1L, delay / 3));
-        return Math.min(DEFAULT_RETRY_MAX_DELAY_MS, delay + jitter);
-    }
-
-    private static @Nullable Long parseRetryAfterMs(@Nullable String v) {
-        if (v == null || v.isBlank()) return null;
-
-        try {
-            long sec = Long.parseLong(v.trim());
-            if (sec <= 0) return null;
-            return sec * 1000L;
-        } catch (NumberFormatException ignored) {
-        }
-
-        try {
-            ZonedDateTime zdt = ZonedDateTime.parse(v.trim(), DateTimeFormatter.RFC_1123_DATE_TIME);
-            long ms = Duration.between(Instant.now(), zdt.toInstant()).toMillis();
-            return Math.max(0L, ms);
-        } catch (Exception ignored) {
-            return null;
-        }
-    }
-
-    private static void sleepMs(long ms) throws IOException {
-        if (ms <= 0) return;
-        try {
-            Thread.sleep(ms);
-        } catch (InterruptedException ie) {
-            Thread.currentThread().interrupt();
-            throw new IOException("Sleep interrupted", ie);
-        }
-    }
-
-    private static void safeDelete(Path p) {
-        try {
-            Files.deleteIfExists(p);
-        } catch (Exception ignored) {
-        }
-    }
-
-    private static void closeQuietly(@Nullable InputStream in) {
-        if (in == null) return;
-        try (in) {
-            try {
-                in.readNBytes(1);
-            } catch (Exception _) {
+        headers?.forEach { (key, value) ->
+            if (key.isNotBlank()) {
+                builder.header(key, value)
             }
-        } catch (Exception _) {
+        }
+
+        if (rangeStart != null) {
+            val rangeValue = if (rangeEnd != null) "bytes=$rangeStart-$rangeEnd" else "bytes=$rangeStart-"
+            builder.header("Range", rangeValue)
+            if (!ifRangeToken.isNullOrBlank()) {
+                builder.header("If-Range", ifRangeToken)
+            }
+        }
+
+        return builder.build()
+    }
+
+    @Throws(IOException::class)
+    private fun resolveNamedTarget(dir: Path, entryName: String): Path {
+        val safe = normalizeRelativeEntryName(entryName)
+        val base = dir.toAbsolutePath().normalize()
+        val target = base.resolve(safe).normalize()
+        if (!target.startsWith(base)) {
+            throw IOException("Illegal target path: $entryName")
+        }
+        return target
+    }
+
+    @Throws(IOException::class)
+    private fun uniqueEntryName(entryName: String, usedNames: MutableSet<String>): String {
+        val safe = normalizeRelativeEntryName(entryName)
+        synchronized(usedNames) {
+            if (usedNames.add(safe)) return safe
+
+            val slash = safe.lastIndexOf('/')
+            val dirPart = if (slash >= 0) safe.substring(0, slash + 1) else ""
+            val filePart = if (slash >= 0) safe.substring(slash + 1) else safe
+            val dot = filePart.lastIndexOf('.')
+            val base = if (dot > 0) filePart.substring(0, dot) else filePart
+            val ext = if (dot > 0) filePart.substring(dot) else ""
+
+            var index = 2
+            while (true) {
+                val candidate = "$dirPart$base ($index)$ext"
+                if (usedNames.add(candidate)) return candidate
+                index++
+            }
         }
     }
 
-    private static String formatBytes(long bytes) {
-        if (bytes < 0) return "?";
-        double b = bytes;
-        String[] units = {"B", "KiB", "MiB", "GiB", "TiB"};
-        int u = 0;
-        while (b >= 1024.0 && u < units.length - 1) {
-            b /= 1024.0;
-            u++;
+    @Throws(IOException::class)
+    private fun normalizeRelativeEntryName(entryName: String?): String {
+        var normalized = entryName?.trim().orEmpty().replace('\\', '/')
+        while (normalized.startsWith('/')) {
+            normalized = normalized.substring(1)
         }
-        if (u == 0) return String.format(Locale.ROOT, "%d %s", bytes, units[u]);
-        return String.format(Locale.ROOT, "%.2f %s", b, units[u]);
+        if (normalized.isBlank()) throw IOException("Empty entry name")
+
+        normalized = Paths.get(normalized).normalize().toString().replace('\\', '/')
+        if (normalized.isBlank() || normalized == "." || normalized.startsWith("..") || normalized.contains("/../")) {
+            throw IOException("Illegal entry name: $entryName")
+        }
+        return normalized
     }
 
-    private static String formatSpeed(long bytes, long elapsedNs) {
-        if (bytes < 0 || elapsedNs <= 0) return "?";
-        double sec = elapsedNs / 1_000_000_000.0;
-        double bps = bytes / sec;
-        return formatBytes((long) bps) + "/s";
-    }
-
-    public static String sanitizeFileName(String name) {
-        String n = (name == null) ? "" : name.trim();
-
-        n = n.replace("\\", "_").replace("/", "_");
-        n = n.replaceAll("[<>:\"|?*]", "_");
-        n = n.replaceAll("\\p{Cntrl}", "_");
-
-        if (n.isBlank()) n = "file";
-        return n;
-    }
-
-    private static final class HttpStatusException extends IOException {
-        final int statusCode;
-        final @Nullable Long retryAfterMs;
-
-        HttpStatusException(int statusCode, @Nullable Long retryAfterMs, String message) {
-            super(message);
-            this.statusCode = statusCode;
-            this.retryAfterMs = retryAfterMs;
+    @Throws(IOException::class)
+    private fun moveReplace(tmp: Path, targetFile: Path) {
+        try {
+            Files.move(tmp, targetFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+        } catch (_: AtomicMoveNotSupportedException) {
+            Files.move(tmp, targetFile, StandardCopyOption.REPLACE_EXISTING)
         }
     }
 
-    private record RangeMeta(long length, boolean acceptRanges, @Nullable String ifRangeToken) {
+    private fun debugResponseSummary(url: URI, code: Int, headers: Headers, askedRange: Boolean, rangeStart: Long) {
+        if (!log.isDebugEnabled) return
+
+        log.debug(
+            "[DL-HTTP] url={} code={} askedRange={}{} contentLength={} contentRange={} acceptRanges={} contentType={} etag={} lastModified={} retryAfter={}",
+            url,
+            code,
+            askedRange,
+            if (askedRange) "(start=$rangeStart)" else "",
+            headers["Content-Length"] ?: "-",
+            headers["Content-Range"] ?: "-",
+            headers["Accept-Ranges"] ?: "-",
+            headers["Content-Type"] ?: "-",
+            headers["ETag"] ?: "-",
+            headers["Last-Modified"] ?: "-",
+            headers["Retry-After"] ?: "-"
+        )
     }
 
-    public record NamedUrl(String name, URI url) {
+    private fun guessTotalSize(code: Int, headers: Headers): Long =
+        if (code == 206) headers["Content-Range"]?.let(::parseTotalFromContentRange) ?: -1L
+        else headers["Content-Length"]?.toLongOrNull() ?: -1L
+
+    private fun pickIfRangeToken(headers: Headers): String? =
+        headers["ETag"]?.takeUnless(String::isBlank)
+            ?: headers["Last-Modified"]?.takeUnless(String::isBlank)
+
+    private fun parseTotalFromContentRange(value: String?): Long {
+        if (value.isNullOrBlank()) return -1L
+        val slash = value.lastIndexOf('/')
+        if (slash < 0 || slash + 1 >= value.length) return -1L
+        val total = value.substring(slash + 1).trim()
+        if (total.isEmpty() || total == "*") return -1L
+        return total.toLongOrNull() ?: -1L
     }
 
-    public record BatchResult(int ok, List<String> failed) {
+    private fun isRetryableStatus(code: Int): Boolean = code == 408 || code == 429 || code in 500..599
+
+    private fun isRetryableException(error: IOException): Boolean = when (error) {
+        is HttpStatusException -> isRetryableStatus(error.statusCode)
+        is FileSystemException -> false
+        else -> true
     }
+
+    private fun computeRetryDelayMs(error: IOException, attemptIndex: Int): Long {
+        val exp = 1L shl min(20, max(0, attemptIndex - 1))
+        var delay = min(DEFAULT_RETRY_MAX_DELAY_MS, DEFAULT_RETRY_BASE_DELAY_MS * exp)
+
+        if (error is HttpStatusException && error.retryAfterMs != null && error.retryAfterMs > 0) {
+            delay = max(delay, min(DEFAULT_RETRY_AFTER_CAP_MS, error.retryAfterMs))
+        }
+
+        val jitter = ThreadLocalRandom.current().nextLong(0, max(1L, delay / 3))
+        return min(DEFAULT_RETRY_MAX_DELAY_MS, delay + jitter)
+    }
+
+    private fun parseRetryAfterMs(value: String?): Long? {
+        if (value.isNullOrBlank()) return null
+        value.trim().toLongOrNull()?.let { seconds ->
+            if (seconds > 0) return seconds * 1000L
+        }
+
+        return try {
+            val zdt = ZonedDateTime.parse(value.trim(), DateTimeFormatter.RFC_1123_DATE_TIME)
+            max(0L, Duration.between(Instant.now(), zdt.toInstant()).toMillis())
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    @Throws(IOException::class)
+    private fun sleepMs(ms: Long) {
+        if (ms <= 0) return
+        try {
+            Thread.sleep(ms)
+        } catch (ie: InterruptedException) {
+            Thread.currentThread().interrupt()
+            throw IOException("Sleep interrupted", ie)
+        }
+    }
+
+    private fun safeDelete(path: Path) {
+        runCatching { Files.deleteIfExists(path) }
+    }
+
+    private fun tempPathOf(targetFile: Path): Path =
+        targetFile.parent?.resolve(targetFile.fileName.toString() + ".part")
+            ?: Paths.get(targetFile.fileName.toString() + ".part")
+
+    private fun formatBytes(bytes: Long): String {
+        if (bytes < 0) return "?"
+        var value = bytes.toDouble()
+        val units = arrayOf("B", "KiB", "MiB", "GiB", "TiB")
+        var index = 0
+        while (value >= 1024.0 && index < units.lastIndex) {
+            value /= 1024.0
+            index++
+        }
+        return if (index == 0) String.format(Locale.ROOT, "%d %s", bytes, units[index])
+        else String.format(Locale.ROOT, "%.2f %s", value, units[index])
+    }
+
+    private fun formatSpeed(bytes: Long, elapsedNs: Long): String {
+        if (bytes < 0 || elapsedNs <= 0) return "?"
+        val sec = elapsedNs / 1_000_000_000.0
+        return formatBytes((bytes / sec).toLong()) + "/s"
+    }
+
+    private class HttpStatusException(
+        val statusCode: Int,
+        val retryAfterMs: Long?,
+        message: String,
+    ) : IOException(message)
+
+    private class RangeMeta(
+        val length: Long,
+        val acceptRanges: Boolean,
+        val ifRangeToken: String?,
+    )
+
+    class NamedUrl(
+        val name: String,
+        val url: URI,
+    ) {
+
+        fun name(): String = name
+        fun url(): URI = url
+
+        override fun toString(): String = "NamedUrl(name=$name, url=$url)"
+        override fun equals(other: Any?): Boolean =
+            this === other || (other is NamedUrl && name == other.name && url == other.url)
+
+        override fun hashCode(): Int = 31 * name.hashCode() + url.hashCode()
+
+    }
+
+    class BatchResult(
+        val ok: Int,
+        val failed: List<String>,
+    ) {
+
+        fun ok(): Int = ok
+        fun failed(): List<String> = failed
+
+        override fun toString(): String = "BatchResult(ok=$ok, failed=$failed)"
+        override fun equals(other: Any?): Boolean =
+            this === other || (other is BatchResult && ok == other.ok && failed == other.failed)
+
+        override fun hashCode(): Int = 31 * ok + failed.hashCode()
+
+    }
+
 }

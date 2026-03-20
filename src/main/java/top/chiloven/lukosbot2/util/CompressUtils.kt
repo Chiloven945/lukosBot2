@@ -1,172 +1,159 @@
-package top.chiloven.lukosbot2.util;
+package top.chiloven.lukosbot2.util
 
-import lombok.extern.log4j.Log4j2;
-import org.jetbrains.annotations.Nullable;
-import org.jspecify.annotations.NonNull;
+import net.lingala.zip4j.ZipFile
+import net.lingala.zip4j.model.ZipParameters
+import net.lingala.zip4j.model.enums.CompressionLevel
+import net.lingala.zip4j.model.enums.CompressionMethod
+import org.apache.logging.log4j.LogManager
+import java.io.IOException
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.util.zip.ZipOutputStream
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.*;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.util.List;
-import java.util.Objects;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
+object CompressUtils {
 
-@Log4j2
-public final class CompressUtils {
+    private val log = LogManager.getLogger(CompressUtils::class.java)
 
-    private CompressUtils() {
-    }
-
-    /**
-     * 把一个目录整体打成 zip（递归）。
-     * zip 内路径以 dir 作为根（不包含 dir 本身的上级路径）。
-     */
-    public static void zipDirectory(Path dir, Path zipFile) throws IOException {
-        Objects.requireNonNull(dir, "dir");
-        Objects.requireNonNull(zipFile, "zipFile");
-
+    @JvmStatic
+    @Throws(IOException::class)
+    fun zipDirectory(dir: Path, zipFile: Path) {
         if (!Files.isDirectory(dir)) {
-            throw new IOException("Not a directory: " + dir);
+            throw IOException("Not a directory: $dir")
+        }
+        prepareParent(zipFile)
+        Files.deleteIfExists(zipFile)
+
+        val files = Files.walk(dir).use { stream ->
+            stream
+                .filter { path -> Files.isRegularFile(path) }
+                .map { file -> NamedPath(dir.relativize(file).toString().replace('\\', '/'), file) }
+                .toList()
         }
 
-        Path parent = zipFile.getParent();
-        if (parent != null) Files.createDirectories(parent);
-
-        try (ZipOutputStream zos = new ZipOutputStream(Files.newOutputStream(zipFile))) {
-            Files.walkFileTree(dir, new SimpleFileVisitor<>() {
-                @Override
-                public @NonNull FileVisitResult preVisitDirectory(@NonNull Path d, @NonNull BasicFileAttributes attrs) throws IOException {
-                    Path rel = dir.relativize(d);
-                    if (!rel.toString().isEmpty()) {
-                        String entryName = normalizeZipEntry(rel.toString()) + "/";
-                        putEntryDir(zos, entryName, attrs);
-                    }
-                    return FileVisitResult.CONTINUE;
-                }
-
-                @Override
-                public @NonNull FileVisitResult visitFile(@NonNull Path file, @NonNull BasicFileAttributes attrs) throws IOException {
-                    Path rel = dir.relativize(file);
-                    String entryName = normalizeZipEntry(rel.toString());
-                    putEntryFile(zos, file, entryName, attrs);
-                    return FileVisitResult.CONTINUE;
-                }
-            });
-        }
-
-        log.debug("Zip created: {} <- {}", zipFile, dir);
+        zipNamedPaths(files, zipFile)
+        log.debug("Zip created with zip4j: {} <- {}", zipFile, dir)
     }
 
-    /**
-     * 将一组文件打包进 zip。
-     *
-     * @param baseDir 用于计算相对路径；entryName = baseDir.relativize(file)
-     * @param files   要打包的文件列表
-     */
-    public static void zipFiles(Path baseDir, List<Path> files, Path zipFile) throws IOException {
-        Objects.requireNonNull(baseDir, "baseDir");
-        Objects.requireNonNull(files, "files");
-        Objects.requireNonNull(zipFile, "zipFile");
+    @JvmStatic
+    @Throws(IOException::class)
+    fun zipFiles(baseDir: Path, files: List<Path?>, zipFile: Path) {
+        prepareParent(zipFile)
+        Files.deleteIfExists(zipFile)
 
-        Path parent = zipFile.getParent();
-        if (parent != null) Files.createDirectories(parent);
+        val items = files.asSequence()
+            .filterNotNull()
+            .filter { path -> Files.isRegularFile(path) }
+            .map { file -> NamedPath(baseDir.relativize(file).toString().replace('\\', '/'), file) }
+            .toList()
 
-        try (ZipOutputStream zos = new ZipOutputStream(Files.newOutputStream(zipFile))) {
-            for (Path f : files) {
-                if (f == null) continue;
-                if (!Files.isRegularFile(f)) continue;
-
-                Path rel = baseDir.relativize(f);
-                String entryName = normalizeZipEntry(rel.toString());
-
-                BasicFileAttributes attrs = Files.readAttributes(f, BasicFileAttributes.class);
-                putEntryFile(zos, f, entryName, attrs);
-            }
-        }
-
-        log.debug("Zip created: {} <- {} file(s)", zipFile, files.size());
+        zipNamedPaths(items, zipFile)
+        log.debug("Zip created with zip4j: {} <- {} file(s)", zipFile, items.size)
     }
 
-    /**
-     * 写入单个文件到 zip，支持指定 entryName（更适合你后面做目录结构）。
-     */
-    public static void zipFilesWithNames(List<NamedPath> items, Path zipFile) throws IOException {
-        Objects.requireNonNull(items, "items");
-        Objects.requireNonNull(zipFile, "zipFile");
+    @JvmStatic
+    @Throws(IOException::class)
+    fun zipFilesWithNames(items: List<NamedPath?>, zipFile: Path) {
+        prepareParent(zipFile)
+        Files.deleteIfExists(zipFile)
 
-        Path parent = zipFile.getParent();
-        if (parent != null) Files.createDirectories(parent);
+        val actualItems = items.asSequence()
+            .filterNotNull()
+            .filter { Files.isRegularFile(it.path) }
+            .toList()
 
-        try (ZipOutputStream zos = new ZipOutputStream(Files.newOutputStream(zipFile))) {
-            for (NamedPath np : items) {
-                if (np == null) continue;
-                Path f = np.path();
-                if (!Files.isRegularFile(f)) continue;
+        zipNamedPaths(actualItems, zipFile)
+        log.debug("Zip created with zip4j: {} <- {} named file(s)", zipFile, actualItems.size)
+    }
 
-                String entryName = normalizeZipEntry(np.entryName());
-                BasicFileAttributes attrs = Files.readAttributes(f, BasicFileAttributes.class);
-                putEntryFile(zos, f, entryName, attrs);
-            }
+    @Throws(IOException::class)
+    private fun zipNamedPaths(items: List<NamedPath>, zipFile: Path) {
+        if (items.isEmpty()) {
+            createEmptyZip(zipFile)
+            return
+        }
+
+        val zip = ZipFile(zipFile.toFile())
+        val usedNames = LinkedHashSet<String>()
+
+        for (item in items) {
+            val normalizedEntryName = uniqueEntryName(normalizeZipEntry(item.entryName), usedNames)
+            val params = newZipParameters(normalizedEntryName)
+            zip.addFile(item.path.toFile(), params)
         }
     }
 
-    /**
-     * ZipSlip 防护 + 统一分隔符：
-     * - 统一用 '/'
-     * - 禁止绝对路径、禁止 '..'
-     */
-    private static String normalizeZipEntry(String entryName) throws IOException {
-        String n = (entryName == null) ? "" : entryName.trim();
-        n = n.replace("\\", "/");
+    @Throws(IOException::class)
+    private fun createEmptyZip(zipFile: Path) {
+        Files.newOutputStream(zipFile).use { output ->
+            ZipOutputStream(output, StandardCharsets.UTF_8).use { }
+        }
+    }
 
-        while (n.startsWith("/")) n = n.substring(1);
-
-        if (n.isBlank()) throw new IOException("Empty zip entry name");
-
-        if (n.contains("..")) {
-            Path p = Paths.get(n).normalize();
-            String pn = p.toString().replace("\\", "/");
-            if (pn.startsWith("..") || pn.contains("/..")) {
-                throw new IOException("Illegal zip entry name: " + entryName);
-            }
-            n = pn;
+    private fun newZipParameters(entryName: String): ZipParameters =
+        ZipParameters().apply {
+            fileNameInZip = entryName
+            compressionMethod = CompressionMethod.DEFLATE
+            compressionLevel = CompressionLevel.NORMAL
         }
 
-        return n;
+    @Throws(IOException::class)
+    private fun prepareParent(zipFile: Path) {
+        zipFile.parent?.let(Files::createDirectories)
     }
 
-    private static void putEntryDir(ZipOutputStream zos, String entryName, @Nullable BasicFileAttributes attrs) throws IOException {
-        String safe = normalizeZipEntry(entryName.endsWith("/") ? entryName : entryName + "/");
-        ZipEntry ze = new ZipEntry(safe);
-        if (attrs != null) ze.setTime(attrs.lastModifiedTime().toMillis());
-        zos.putNextEntry(ze);
-        zos.closeEntry();
-    }
+    @Throws(IOException::class)
+    private fun normalizeZipEntry(entryName: String?): String {
+        var normalized = entryName?.trim().orEmpty().replace('\\', '/')
 
-    private static void putEntryFile(ZipOutputStream zos, Path file, String entryName, @Nullable BasicFileAttributes attrs) throws IOException {
-        String safe = normalizeZipEntry(entryName);
-        ZipEntry ze = new ZipEntry(safe);
-
-        if (attrs != null) {
-            ze.setSize(attrs.size());
-            ze.setTime(attrs.lastModifiedTime().toMillis());
+        while (normalized.startsWith('/')) {
+            normalized = normalized.substring(1)
         }
 
-        zos.putNextEntry(ze);
-        try (InputStream in = Files.newInputStream(file)) {
-            in.transferTo(zos);
+        if (normalized.isBlank()) {
+            throw IOException("Empty zip entry name")
         }
-        zos.closeEntry();
+
+        normalized = Paths.get(normalized).normalize().toString().replace('\\', '/')
+        if (normalized.isBlank() || normalized == "." || normalized.startsWith("..") || normalized.contains("/../")) {
+            throw IOException("Illegal zip entry name: $entryName")
+        }
+
+        return normalized
     }
 
-    // TODO: LZMA(2) format support
+    private fun uniqueEntryName(entryName: String, usedNames: MutableSet<String>): String {
+        if (usedNames.add(entryName)) return entryName
 
-    /**
-     * 你后面如果要“自定义 zip 内路径结构”，就用这个。
-     * entryName 例子： "patreon/127300515/149949916/xxx.png"
-     */
-    public record NamedPath(String entryName, Path path) {
+        val slash = entryName.lastIndexOf('/')
+        val dirPart = if (slash >= 0) entryName.substring(0, slash + 1) else ""
+        val filePart = if (slash >= 0) entryName.substring(slash + 1) else entryName
+        val dot = filePart.lastIndexOf('.')
+        val base = if (dot > 0) filePart.substring(0, dot) else filePart
+        val ext = if (dot > 0) filePart.substring(dot) else ""
+
+        var index = 2
+        while (true) {
+            val candidate = "$dirPart$base ($index)$ext"
+            if (usedNames.add(candidate)) return candidate
+            index++
+        }
     }
+
+    class NamedPath(
+        val entryName: String,
+        val path: Path,
+    ) {
+
+        fun entryName(): String = entryName
+        fun path(): Path = path
+
+        override fun toString(): String = "NamedPath(entryName=$entryName, path=$path)"
+        override fun equals(other: Any?): Boolean =
+            this === other || (other is NamedPath && entryName == other.entryName && path == other.path)
+
+        override fun hashCode(): Int = 31 * entryName.hashCode() + path.hashCode()
+    }
+
 }
