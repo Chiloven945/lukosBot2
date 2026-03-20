@@ -17,6 +17,7 @@ import kotlin.math.pow
  * @author Chiloven945
  */
 object StringUtils {
+
     /**
      * Normalize all whitespace to single spaces, trim, and cap to specified limit with ellipsis.
      * 
@@ -35,6 +36,19 @@ object StringUtils {
     fun String.truncate(limit: Int = 200): String {
         return truncateText(this, limit)
     }
+
+    /**
+     * Convenient replace null method for Java. Use `?.` if you are using Kotlin.
+     *
+     * Replace the string with a replacement if the string is null.
+     *
+     * @param str the string about to be replaced
+     * @param replace the replacement string, default is empty
+     * @return the replaced string
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun replaceNull(str: String?, replace: String = ""): String = str ?: replace
 
     /**
      * Format a number into a human-readable string with suffixes (k, M, B).
@@ -194,5 +208,9 @@ object StringUtils {
 
     fun fmtTimeSec(seconds: Double): String =
         fmtTimeSec(floor(seconds).toLong())
+
+    fun StringBuilder.appendSeparator(): StringBuilder {
+        return append("--------------------").appendLine()
+    }
 
 }

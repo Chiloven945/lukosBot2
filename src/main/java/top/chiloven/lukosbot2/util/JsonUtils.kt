@@ -226,6 +226,10 @@ object JsonUtils {
         return getElement(this, key)
     }
 
+    fun JsonObject.isNotEmpty(): Boolean {
+        return !entrySet().isEmpty()
+    }
+
     fun getStringFromArrayObj(
         obj: JsonObject,
         arrayKey: String,
