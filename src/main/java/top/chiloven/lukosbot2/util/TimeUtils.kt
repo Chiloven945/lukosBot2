@@ -64,4 +64,18 @@ object TimeUtils {
      */
     fun LocalDateTime.fmtTime(): String = this.format(dtfTime())
 
+    /**
+     * Format uptime in seconds to d:hh:mm:ss
+     *
+     * @param seconds uptime in seconds
+     * @return formatted uptime string
+     */
+    fun formatUptime(seconds: Long): String {
+        val days = seconds / 86400
+        val hours = (seconds % 86400) / 3600
+        val minutes = (seconds % 3600) / 60
+        val secs = seconds % 60
+        return "%d:%02d:%02d:%02d".format(days, hours, minutes, secs)
+    }
+
 }

@@ -1,106 +1,71 @@
-package top.chiloven.lukosbot2.commands.impl;
+package top.chiloven.lukosbot2.commands.impl
 
-import com.mojang.brigadier.CommandDispatcher;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Service;
-import top.chiloven.lukosbot2.commands.IBotCommand;
-import top.chiloven.lukosbot2.commands.UsageNode;
-import top.chiloven.lukosbot2.core.command.CommandSource;
-
-import java.lang.management.ManagementFactory;
-import java.lang.management.OperatingSystemMXBean;
-import java.lang.management.RuntimeMXBean;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-
-import static top.chiloven.lukosbot2.Constants.INSTANCE;
-import static top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
+import com.mojang.brigadier.CommandDispatcher
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.stereotype.Service
+import top.chiloven.lukosbot2.Constants
+import top.chiloven.lukosbot2.commands.IBotCommand
+import top.chiloven.lukosbot2.commands.UsageNode
+import top.chiloven.lukosbot2.core.command.CommandSource
+import top.chiloven.lukosbot2.util.StringUtils
+import top.chiloven.lukosbot2.util.TimeUtils
+import top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal
+import java.lang.management.ManagementFactory
+import java.time.Instant
+import java.time.ZoneId
 
 @Service
 @ConditionalOnProperty(
-        prefix = "lukos.commands.control",
-        name = "ping",
-        havingValue = "true",
-        matchIfMissing = true
+    prefix = "lukos.commands.control",
+    name = ["ping"],
+    havingValue = "true",
+    matchIfMissing = true
 )
-public class PingCommand implements IBotCommand {
-    @Override
-    public String name() {
-        return "ping";
-    }
+class PingCommand : IBotCommand {
 
-    /**
-     * Format uptime in seconds to d:hh:mm:ss
-     *
-     * @param seconds uptime in seconds
-     * @return formatted uptime string
-     */
-    private String formatUptime(long seconds) {
-        long days = seconds / 86400;
-        long hours = (seconds % 86400) / 3600;
-        long minutes = (seconds % 3600) / 60;
-        long secs = seconds % 60;
-        return String.format("%d:%02d:%02d:%02d", days, hours, minutes, secs);
-    }
+    override fun name(): String = "ping"
 
-    @Override
-    public UsageNode usage() {
-        return UsageNode.root(name())
-                .description(description())
-                .syntax("检测机器人在线状态")
-                .example("ping")
-                .build();
-    }
+    override fun usage(): UsageNode =
+        UsageNode.root(name())
+            .description(description())
+            .syntax("检测机器人在线状态")
+            .example("ping")
+            .build()
 
-    @Override
-    public String description() {
-        return "健康检查：返回 pong 及运行状态";
-    }
+    override fun description(): String = "返回机器人的运行状态与版本信息"
 
-    @Override
-    public void register(CommandDispatcher<CommandSource> dispatcher) {
+    override fun register(dispatcher: CommandDispatcher<CommandSource>) {
         dispatcher.register(
-                literal(name())
-                        .executes(ctx -> {
-                            ctx.getSource().reply(buildStatus());
-                            return 1;
-                        })
-        );
+            literal(name())
+                .executes { ctx ->
+                    ctx.source.reply(buildStatus())
+                    1
+                }
+        )
     }
 
-    private String buildStatus() {
-        Runtime runtime = Runtime.getRuntime();
-        long freeMem = runtime.freeMemory() / 1024 / 1024;
-        long totalMem = runtime.totalMemory() / 1024 / 1024;
-        long maxMem = runtime.maxMemory() / 1024 / 1024;
+    private fun buildStatus(): String {
+        val runtime = Runtime.getRuntime()
 
-        RuntimeMXBean rtBean = ManagementFactory.getRuntimeMXBean();
-        long uptimeSec = rtBean.getUptime() / 1000;
-        String uptimeFmt = formatUptime(uptimeSec);
+        val totalMem = StringUtils.fmtBytes(runtime.totalMemory(), 2)
+        val maxMem = StringUtils.fmtBytes(runtime.maxMemory(), 2)
+        val usedMem = StringUtils.fmtBytes(runtime.totalMemory() - runtime.freeMemory(), 2)
 
-        OperatingSystemMXBean osBean = ManagementFactory.getOperatingSystemMXBean();
-        String time = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-                .withZone(ZoneId.systemDefault())
-                .format(Instant.now());
+        val rtBean = ManagementFactory.getRuntimeMXBean()
+        val uptimeFmt = TimeUtils.formatUptime(rtBean.uptime / 1000)
 
-        return String.format("""
-                        Pong 🏓
-                        时间: %s
-                        运行时间: %s
-                        系统: %s %s
-                        内存: 已用 %d MB / 总 %d MB (最大 %d MB)
-                        线程数: %d
-                        Java: %s | SpringBoot: %s
-                        TelegramBots: %s | JDA: %s | Shiro: %s
-                        """,
-                time,
-                uptimeFmt,
-                osBean.getName(), osBean.getVersion(),
-                (totalMem - freeMem), totalMem, maxMem,
-                Thread.activeCount(),
-                INSTANCE.getJavaVersion(), INSTANCE.getSpringBootVersion(),
-                INSTANCE.getTgVersion(), INSTANCE.getJdaVersion(), INSTANCE.getShiroVersion()
-        );
+        val osBean = ManagementFactory.getOperatingSystemMXBean()
+        val time = TimeUtils.dtf().withZone(ZoneId.systemDefault()).format(Instant.now())
+
+        return """
+            Pong！$time
+            ${Constants.APP_NAME} ${Constants.VERSION}
+            运行时间: $uptimeFmt
+            系统: ${osBean.name} ${osBean.version}
+            内存: $usedMem / $totalMem (最大 $maxMem)
+            Java: ${Constants.javaVersion} | SpringBoot: ${Constants.springBootVersion}
+            TelegramBots: ${Constants.tgVersion} | JDA: ${Constants.jdaVersion} | Shiro: ${Constants.shiroVersion}
+        """.trimIndent()
     }
+
 }
