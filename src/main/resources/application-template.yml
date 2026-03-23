@@ -34,6 +34,8 @@ lukos:
 
   cli:
     enabled: true
+    control:
+      democommand: false
 
   telegram:
     enabled: false
@@ -50,7 +52,7 @@ lukos:
     token: "${DISCORD_TOKEN:}"
 
   commands:
-    switch:
+    control:
       weather: false
       translate: false
 

@@ -2,6 +2,7 @@ package top.chiloven.lukosbot2.cli.impl
 
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.StringArgumentType
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.cli.ICliCommand
 import top.chiloven.lukosbot2.core.MessageSenderHub
@@ -12,6 +13,12 @@ import top.chiloven.lukosbot2.util.brigadier.builder.CliLAB.literal
 import top.chiloven.lukosbot2.util.brigadier.builder.CliRAB.argument
 
 @Service
+@ConditionalOnProperty(
+    prefix = "lukos.cli.control",
+    name = ["send"],
+    havingValue = "true",
+    matchIfMissing = true
+)
 class SendCliCommand(
     val msh: MessageSenderHub
 ) : ICliCommand {
