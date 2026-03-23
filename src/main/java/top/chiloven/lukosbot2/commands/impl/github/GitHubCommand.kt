@@ -13,8 +13,8 @@ import top.chiloven.lukosbot2.commands.impl.github.data.GitHubUser
 import top.chiloven.lukosbot2.commands.impl.github.data.SearchParams
 import top.chiloven.lukosbot2.config.CommandConfigProp
 import top.chiloven.lukosbot2.core.command.CommandSource
-import top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal
-import top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument
+import top.chiloven.lukosbot2.util.brigadier.builder.CommandLAB.literal
+import top.chiloven.lukosbot2.util.brigadier.builder.CommandRAB.argument
 
 @Service
 @ConditionalOnProperty(

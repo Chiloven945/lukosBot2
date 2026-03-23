@@ -1,5 +1,6 @@
 package top.chiloven.lukosbot2.util.brigadier.builder;
 
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 
 /**
@@ -8,10 +9,9 @@ import top.chiloven.lukosbot2.core.command.CommandSource;
  * <p>This class extends Brigadier's {@link com.mojang.brigadier.builder.LiteralArgumentBuilder}
  * so all original fluent methods are available.</p>
  */
-public final class LiteralArgumentBuilder
-        extends com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSource> {
+public final class CommandLAB extends LiteralArgumentBuilder<CommandSource> {
 
-    private LiteralArgumentBuilder(String literal) {
+    private CommandLAB(String literal) {
         super(literal);
     }
 
@@ -21,7 +21,8 @@ public final class LiteralArgumentBuilder
      * @param name literal name
      * @return builder instance
      */
-    public static LiteralArgumentBuilder literal(String name) {
-        return new LiteralArgumentBuilder(name);
+    public static CommandLAB literal(String name) {
+        return new CommandLAB(name);
     }
+
 }

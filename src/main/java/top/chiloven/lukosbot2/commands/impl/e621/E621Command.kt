@@ -15,8 +15,8 @@ import top.chiloven.lukosbot2.model.message.media.BytesRef
 import top.chiloven.lukosbot2.model.message.outbound.OutImage
 import top.chiloven.lukosbot2.model.message.outbound.OutboundMessage
 import top.chiloven.lukosbot2.util.StringUtils.isUrl
-import top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal
-import top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument
+import top.chiloven.lukosbot2.util.brigadier.builder.CommandLAB.literal
+import top.chiloven.lukosbot2.util.brigadier.builder.CommandRAB.argument
 
 @Service
 @ConditionalOnProperty(

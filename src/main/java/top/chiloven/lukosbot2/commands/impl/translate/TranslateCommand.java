@@ -14,8 +14,8 @@ import java.util.Arrays;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
-import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
+import static top.chiloven.lukosbot2.util.brigadier.builder.CommandLAB.literal;
+import static top.chiloven.lukosbot2.util.brigadier.builder.CommandRAB.argument;
 
 @Service
 @ConditionalOnProperty(

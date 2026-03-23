@@ -27,26 +27,6 @@ public class TelegramLifecycle implements SmartLifecycle, IPlatformAdapter {
     private volatile boolean running = false;
 
     @Override
-    public List<AutoCloseable> start(MessageDispatcher md, MessageSenderHub msh) throws Exception {
-        TelegramReceiver tg = new TelegramReceiver(
-                props.getTelegram().getBotToken(),
-                props.getTelegram().getBotUsername()
-        );
-        tg.bind(md::receive);
-        tg.start();
-        msh.register(ChatPlatform.TELEGRAM, tg.sender());
-        closeable.add(tg);
-        log.info("Telegram ready as @{}", props.getTelegram().getBotUsername());
-        return List.of(closeable);
-    }
-
-    @Override
-    public String name() {
-        return "Telegram";
-    }
-
-    // --- SmartLifecycle ---
-    @Override
     public void start() {
         if (running) return;
         try {
@@ -60,12 +40,36 @@ public class TelegramLifecycle implements SmartLifecycle, IPlatformAdapter {
     }
 
     @Override
+    public List<AutoCloseable> start(MessageDispatcher md, MessageSenderHub msh) throws Exception {
+        TelegramReceiver tg = new TelegramReceiver(
+                props.getTelegram().getBotToken(),
+                props.getTelegram().getBotUsername()
+        );
+        tg.bind(md::receive);
+        tg.start();
+        msh.register(ChatPlatform.TELEGRAM, tg.sender());
+
+        log.info("Telegram ready as @{}", props.getTelegram().getBotUsername());
+        return List.of(tg);
+    }
+
+    @Override
+    public String name() {
+        return "Telegram";
+    }
+
+    @Override
     public void stop() {
         try {
             closeable.close();
         } finally {
             running = false;
         }
+    }
+
+    @Override
+    public boolean isRunning() {
+        return running;
     }
 
     @Override
@@ -78,12 +82,8 @@ public class TelegramLifecycle implements SmartLifecycle, IPlatformAdapter {
     }
 
     @Override
-    public boolean isRunning() {
-        return running;
-    }
-
-    @Override
     public int getPhase() {
         return 0;
     }
+
 }

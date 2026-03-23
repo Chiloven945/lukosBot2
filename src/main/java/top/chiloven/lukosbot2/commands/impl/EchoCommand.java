@@ -9,8 +9,8 @@ import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
-import static top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
-import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
+import static top.chiloven.lukosbot2.util.brigadier.builder.CommandLAB.literal;
+import static top.chiloven.lukosbot2.util.brigadier.builder.CommandRAB.argument;
 
 @Service
 @ConditionalOnProperty(

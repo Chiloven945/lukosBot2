@@ -26,8 +26,8 @@ import top.chiloven.lukosbot2.util.*
 import top.chiloven.lukosbot2.util.JsonUtils.obj
 import top.chiloven.lukosbot2.util.JsonUtils.str
 import top.chiloven.lukosbot2.util.StringUtils.isUrl
-import top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal
-import top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument
+import top.chiloven.lukosbot2.util.brigadier.builder.CommandLAB.literal
+import top.chiloven.lukosbot2.util.brigadier.builder.CommandRAB.argument
 import java.io.IOException
 import java.net.URI
 import java.nio.file.Files

@@ -32,6 +32,11 @@ lukos:
       - "10.*"
       - "192.168.*"
 
+  cli:
+    enabled: true
+    control:
+      democommand: false
+
   telegram:
     enabled: false
     bot-token: "${TELEGRAM_BOT_TOKEN:}"
@@ -47,7 +52,7 @@ lukos:
     token: "${DISCORD_TOKEN:}"
 
   commands:
-    switch:
+    control:
       weather: false
       translate: false
 

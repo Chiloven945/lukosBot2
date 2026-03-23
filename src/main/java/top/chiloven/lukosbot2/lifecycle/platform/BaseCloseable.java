@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class BaseCloseable implements AutoCloseable {
+
     private final List<AutoCloseable> list = new ArrayList<>();
 
     /**
@@ -13,7 +14,7 @@ public final class BaseCloseable implements AutoCloseable {
      * @return this instance for chaining
      */
     public BaseCloseable add(AutoCloseable c) {
-        if (c != null) list.add(c);
+        if (c != null && c != this) list.add(c);
         return this;
     }
 
@@ -24,7 +25,11 @@ public final class BaseCloseable implements AutoCloseable {
      * @return this instance for chaining
      */
     public BaseCloseable addAll(List<? extends AutoCloseable> cs) {
-        if (cs != null) list.addAll(cs);
+        if (cs != null) {
+            cs.stream()
+                    .filter(c -> c != null && c != this)
+                    .forEach(list::add);
+        }
         return this;
     }
 
@@ -33,8 +38,9 @@ public final class BaseCloseable implements AutoCloseable {
         for (int i = list.size() - 1; i >= 0; i--) {
             try {
                 list.get(i).close();
-            } catch (Exception ignored) {
+            } catch (Exception _) {
             }
         }
     }
+
 }

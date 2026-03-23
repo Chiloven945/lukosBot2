@@ -12,8 +12,8 @@ import top.chiloven.lukosbot2.util.MathUtils;
 import java.math.BigInteger;
 import java.util.stream.IntStream;
 
-import static top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
-import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
+import static top.chiloven.lukosbot2.util.brigadier.builder.CommandLAB.literal;
+import static top.chiloven.lukosbot2.util.brigadier.builder.CommandRAB.argument;
 
 @Service
 @ConditionalOnProperty(

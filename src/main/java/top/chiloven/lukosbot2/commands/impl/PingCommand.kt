@@ -9,7 +9,7 @@ import top.chiloven.lukosbot2.commands.UsageNode
 import top.chiloven.lukosbot2.core.command.CommandSource
 import top.chiloven.lukosbot2.util.StringUtils
 import top.chiloven.lukosbot2.util.TimeUtils
-import top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal
+import top.chiloven.lukosbot2.util.brigadier.builder.CommandLAB.literal
 import java.lang.management.ManagementFactory
 import java.time.Instant
 import java.time.ZoneId

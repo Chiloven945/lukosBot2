@@ -12,8 +12,8 @@ import top.chiloven.lukosbot2.util.feature.MojangApi;
 
 import java.io.IOException;
 
-import static top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
-import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
+import static top.chiloven.lukosbot2.util.brigadier.builder.CommandLAB.literal;
+import static top.chiloven.lukosbot2.util.brigadier.builder.CommandRAB.argument;
 
 /**
  * Query command for Minecraft: Java Edition players.
