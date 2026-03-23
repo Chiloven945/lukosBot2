@@ -1,7 +1,6 @@
 package top.chiloven.lukosbot2.util.message
 
 import org.apache.logging.log4j.LogManager
-import top.chiloven.lukosbot2.model.message.Address
 import top.chiloven.lukosbot2.model.message.inbound.*
 import top.chiloven.lukosbot2.model.message.media.BytesRef
 import top.chiloven.lukosbot2.model.message.media.MediaRef
@@ -27,7 +26,7 @@ object MessageIoLog {
     }
 
     private fun briefInbound(`in`: InboundMessage): String {
-        val addr = briefAddr(`in`.addr())
+        val addr = `in`.addr().toString()
         val who = briefSender(`in`.sender())
         val text = clip(TextExtractor.allText(`in`))
         val parts = briefInParts(`in`.partsSafe())
@@ -37,14 +36,9 @@ object MessageIoLog {
     }
 
     private fun briefOutbound(out: OutboundMessage): String {
-        val addr = briefAddr(out.addr())
+        val addr = out.addr().toString()
         val parts = briefOutParts(out.parts())
         return addr + " -> " + parts.ifEmpty { "<empty>" }
-    }
-
-    private fun briefAddr(a: Address?): String {
-        if (a == null) return "unknown"
-        return a.platform().name + ":" + (if (a.group()) "g" else "p") + ":" + a.chatId()
     }
 
     private fun briefSender(s: Sender?): String {
