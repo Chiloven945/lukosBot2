@@ -9,6 +9,8 @@ public interface ICliCommand {
 
     String description();
 
+    String usage();
+
     void register(CommandDispatcher<CliCmdContext> dispatcher);
 
 }

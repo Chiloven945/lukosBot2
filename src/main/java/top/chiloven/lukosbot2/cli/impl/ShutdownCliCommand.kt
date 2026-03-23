@@ -14,6 +14,8 @@ class ShutdownCliCommand : ICliCommand {
 
     override fun description(): String = "Shutdown the bot process"
 
+    override fun usage(): String = "shutdown"
+
     override fun register(dispatcher: CommandDispatcher<CliCmdContext>) {
         dispatcher.register(
             literal(name())
