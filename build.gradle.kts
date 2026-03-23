@@ -1,17 +1,17 @@
 plugins {
     java
-    id("org.jetbrains.kotlin.jvm")
-    id("org.jetbrains.kotlin.plugin.spring")
-    id("org.jetbrains.kotlin.plugin.lombok")
-    id("org.springframework.boot")
-    id("io.spring.dependency-management")
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.spring)
+    alias(libs.plugins.kotlin.lombok)
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
 }
 
-val javaVersionInt = (property("java-version") as String).toInt()
+val javaVersionInt = libs.versions.java.get().toInt()
 
 group = property("group") as String
 version = property("version") as String
-description = "lukosBot2"
+description = property("description") as String
 
 java {
     toolchain {
@@ -19,61 +19,55 @@ java {
     }
 }
 
-repositories {
-    mavenCentral()
-    maven("https://jitpack.io")
-    maven("https://libraries.minecraft.net")
-}
-
 dependencies {
     // Platform API
-    implementation("net.dv8tion:JDA:${property("jda-version")}")
-    implementation("com.mikuac:shiro:${property("shiro-version")}")
-    implementation("org.telegram:telegrambots-longpolling:${property("telegrambots-version")}")
-    implementation("org.telegram:telegrambots-client:${property("telegrambots-version")}")
+    implementation(libs.jda)
+    implementation(libs.shiro)
+    implementation(libs.telegrambots.longpolling)
+    implementation(libs.telegrambots.client)
 
     // Spring Boot
-    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor:${property("spring-boot-version")}")
-    implementation("org.springframework.boot:spring-boot-starter:${property("spring-boot-version")}") {
+    annotationProcessor(libs.spring.boot.configuration.processor)
+    implementation(libs.spring.boot.starter) {
         exclude(group = "org.springframework.boot", module = "spring-boot-starter-logging")
     }
-    implementation("org.springframework.boot:spring-boot-starter-log4j2:${property("spring-boot-version")}")
-    implementation("org.springframework.boot:spring-boot-starter-actuator:${property("spring-boot-version")}")
-    implementation("org.springframework.boot:spring-boot-starter-jdbc:${property("spring-boot-version")}")
-    runtimeOnly("com.h2database:h2")
+    implementation(libs.spring.boot.starter.log4j2)
+    implementation(libs.spring.boot.starter.actuator)
+    implementation(libs.spring.boot.starter.jdbc)
+    runtimeOnly(libs.h2)
 
     // Core Library
-    implementation("com.mojang:brigadier:1.3.10")
-    implementation("commons-net:commons-net:3.13.0")
-    implementation("com.google.code.gson:gson:${property("gson-version")}")
-    compileOnly("org.projectlombok:lombok:${property("lombok-version")}")
-    annotationProcessor("org.projectlombok:lombok:${property("lombok-version")}")
-    implementation("org.yaml:snakeyaml:2.6")
-    implementation("com.squareup.okhttp3:okhttp:5.3.2")
-    implementation("net.lingala.zip4j:zip4j:2.11.6")
+    implementation(libs.brigadier)
+    implementation(libs.commons.net)
+    implementation(libs.gson)
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)
+    implementation(libs.snakeyaml)
+    implementation(libs.okhttp)
+    implementation(libs.zip4j)
 
-    implementation("org.apache.logging.log4j:log4j-api:${property("log4j2-version")}")
-    implementation("org.apache.logging.log4j:log4j-core:${property("log4j2-version")}")
-    implementation("org.slf4j:slf4j-api:2.0.17")
-    implementation("org.apache.logging.log4j:log4j-slf4j2-impl:${property("log4j2-version")}")
+    implementation(libs.log4j.api)
+    implementation(libs.log4j.core)
+    implementation(libs.slf4j.api)
+    implementation(libs.log4j.slf4j2.impl)
 
-    implementation("com.github.docker-java:docker-java:${property("docker-java-version")}")
-    implementation("com.github.docker-java:docker-java-transport-httpclient5:${property("docker-java-version")}")
+    implementation(libs.docker.java)
+    implementation(libs.docker.java.transport.httpclient5)
 
     // Feature Library
-    implementation("com.vladsch.flexmark:flexmark-html2md-converter:0.64.8")
-    implementation("org.seleniumhq.selenium:selenium-java:${property("selenium-version")}")
-    implementation("org.jsoup:jsoup:${property("jsoup-version")}")
-    implementation("io.github.bonigarcia:webdrivermanager:${property("webdrivermanager-version")}")
+    implementation(libs.flexmark.html2md.converter)
+    implementation(libs.selenium.java)
+    implementation(libs.jsoup)
+    implementation(libs.webdrivermanager)
 
-    implementation(kotlin("stdlib"))
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+    implementation(libs.kotlin.stdlib)
+    implementation(libs.kotlinx.coroutines.core)
 
     constraints {
-        implementation("com.fasterxml.jackson.core:jackson-core:2.21.1") {
+        implementation(libs.jackson.core.v2) {
             because("jackson-core: Number Length Constraint Bypass in Async Parser Leads to Potential DoS Condition, GHSA-72hv-8253-57qq")
         }
-        implementation("tools.jackson.core:jackson-core:3.1.0") {
+        implementation(libs.jackson.core.v3) {
             because("jackson-core: Number Length Constraint Bypass in Async Parser Leads to Potential DoS Condition, GHSA-72hv-8253-57qq")
         }
     }
