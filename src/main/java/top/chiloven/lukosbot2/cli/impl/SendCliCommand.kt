@@ -32,10 +32,6 @@ class SendCliCommand(
     override fun register(dispatcher: CommandDispatcher<CliCmdContext>) {
         dispatcher.register(
             literal(name())
-                .executes { ctx ->
-                    ctx.source.printlnErr("Usage: ${usage()}")
-                    0
-                }
                 .then(
                     argument("target", AddressArgumentType.address())
                         .then(
