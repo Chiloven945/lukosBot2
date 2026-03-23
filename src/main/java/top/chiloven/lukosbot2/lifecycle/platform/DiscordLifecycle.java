@@ -30,22 +30,6 @@ public class DiscordLifecycle implements SmartLifecycle, IPlatformAdapter {
     private volatile boolean running = false;
 
     @Override
-    public List<AutoCloseable> start(MessageDispatcher md, MessageSenderHub msh) throws Exception {
-        DiscordReceiver dc = new DiscordReceiver(props.getDiscord().getToken(), proxyConfigProp);
-        dc.bind(md::receive);
-        dc.start();
-        msh.register(ChatPlatform.DISCORD, dc.sender());
-        closeable.add(dc);
-        log.info("Discord ready");
-        return List.of(closeable);
-    }
-
-    @Override
-    public String name() {
-        return "Discord";
-    }
-
-    @Override
     public void start() {
         if (running) return;
         try {
@@ -58,12 +42,33 @@ public class DiscordLifecycle implements SmartLifecycle, IPlatformAdapter {
     }
 
     @Override
+    public List<AutoCloseable> start(MessageDispatcher md, MessageSenderHub msh) throws Exception {
+        DiscordReceiver dc = new DiscordReceiver(props.getDiscord().getToken(), proxyConfigProp);
+        dc.bind(md::receive);
+        dc.start();
+        msh.register(ChatPlatform.DISCORD, dc.sender());
+
+        log.info("Discord ready");
+        return List.of(dc);
+    }
+
+    @Override
+    public String name() {
+        return "Discord";
+    }
+
+    @Override
     public void stop() {
         try {
             closeable.close();
         } finally {
             running = false;
         }
+    }
+
+    @Override
+    public boolean isRunning() {
+        return running;
     }
 
     @Override
@@ -76,12 +81,8 @@ public class DiscordLifecycle implements SmartLifecycle, IPlatformAdapter {
     }
 
     @Override
-    public boolean isRunning() {
-        return running;
-    }
-
-    @Override
     public int getPhase() {
         return 0;
     }
+
 }

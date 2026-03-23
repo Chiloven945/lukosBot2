@@ -30,22 +30,6 @@ public class OneBotLifecycle implements SmartLifecycle, IPlatformAdapter {
     private volatile boolean running = false;
 
     @Override
-    public List<AutoCloseable> start(MessageDispatcher md, MessageSenderHub msh) throws Exception {
-        OneBotReceiver ob = new OneBotReceiver(botContainer);
-        ob.start();
-        msh.register(ChatPlatform.ONEBOT, ob.sender());
-        closeable.add(ob);
-
-        log.info("OneBot (Shiro) ready (wsUrl={})", props.getOnebot().getWsUrl());
-        return List.of(closeable);
-    }
-
-    @Override
-    public String name() {
-        return "OneBot";
-    }
-
-    @Override
     public void start() {
         if (running) return;
         try {
@@ -58,12 +42,32 @@ public class OneBotLifecycle implements SmartLifecycle, IPlatformAdapter {
     }
 
     @Override
+    public List<AutoCloseable> start(MessageDispatcher md, MessageSenderHub msh) throws Exception {
+        OneBotReceiver ob = new OneBotReceiver(botContainer);
+        ob.start();
+        msh.register(ChatPlatform.ONEBOT, ob.sender());
+
+        log.info("OneBot (Shiro) ready (wsUrl={})", props.getOnebot().getWsUrl());
+        return List.of(ob);
+    }
+
+    @Override
+    public String name() {
+        return "OneBot";
+    }
+
+    @Override
     public void stop() {
         try {
             closeable.close();
         } finally {
             running = false;
         }
+    }
+
+    @Override
+    public boolean isRunning() {
+        return running;
     }
 
     @Override
@@ -76,12 +80,8 @@ public class OneBotLifecycle implements SmartLifecycle, IPlatformAdapter {
     }
 
     @Override
-    public boolean isRunning() {
-        return running;
-    }
-
-    @Override
     public int getPhase() {
         return 0;
     }
+
 }
