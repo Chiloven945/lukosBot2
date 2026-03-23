@@ -35,9 +35,9 @@ public class CommandProcessor implements IProcessor {
             for (IBotCommand cmd : commands) {
                 try {
                     cmd.register(dispatcher);
-                    log.info("Registered command: {}", cmd.name());
+                    log.info("[Cmd] Registered command: {}", cmd.name());
                 } catch (Exception e) {
-                    log.warn("Failed to register command {}: {}", cmd.name(), e.getMessage(), e);
+                    log.warn("[Cmd] Failed to register command {}: {}", cmd.name(), e.getMessage(), e);
                 }
             }
         }
@@ -69,7 +69,7 @@ public class CommandProcessor implements IProcessor {
             String pointer = " ".repeat(Math.min(cursor, input.length())) + "^";
             src.reply("命令语法错误：\n" + input + "\n" + pointer + "\n" + e.getMessage());
         } catch (Exception e) {
-            log.warn("Command execution error: {}", e.getMessage(), e);
+            log.warn("[Cmd] Command execution error: {}", e.getMessage(), e);
             src.reply("命令执行失败：" + e.getClass().getSimpleName());
         }
 

@@ -9,8 +9,8 @@ import top.chiloven.lukosbot2.config.AppProperties;
 import top.chiloven.lukosbot2.core.command.CommandRegistry;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 
-import static top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
-import static top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument;
+import static top.chiloven.lukosbot2.util.brigadier.builder.CommandLAB.literal;
+import static top.chiloven.lukosbot2.util.brigadier.builder.CommandRAB.argument;
 
 @Service
 public class HelpCommand implements IBotCommand {

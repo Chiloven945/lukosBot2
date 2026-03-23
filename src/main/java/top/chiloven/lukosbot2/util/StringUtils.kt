@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.regex.Pattern
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.ln
@@ -212,5 +213,46 @@ object StringUtils {
     fun StringBuilder.appendSeparator(): StringBuilder {
         return append("--------------------").appendLine()
     }
+
+    @JvmStatic
+    fun replaceWithMap(target: String?, replacements: Map<String, String>?): String? {
+        if (target == null || replacements.isNullOrEmpty()) {
+            return target
+        }
+
+        val regex = Regex(
+            replacements.keys.joinToString(
+                "|", "(", ")"
+            ) { Pattern.quote(it) }
+        )
+
+        return regex.replace(target) { matchResult ->
+            replacements[matchResult.value] ?: matchResult.value
+        }
+    }
+
+    val CMD_TO_ANSI_MAP = mapOf(
+        "§0" to "\u001B[30m",
+        "§1" to "\u001B[34m",
+        "§2" to "\u001B[32m",
+        "§3" to "\u001B[36m",
+        "§4" to "\u001B[31m",
+        "§5" to "\u001B[35m",
+        "§6" to "\u001B[33m",
+        "§7" to "\u001B[37m",
+        "§8" to "\u001B[90m",
+        "§9" to "\u001B[94m",
+        "§a" to "\u001B[92m",
+        "§b" to "\u001B[96m",
+        "§c" to "\u001B[91m",
+        "§d" to "\u001B[95m",
+        "§e" to "\u001B[93m",
+        "§f" to "\u001B[97m",
+        "§r" to "\u001B[0m",
+    )
+
+    @JvmStatic
+    fun resolveColorCode(target: String): String =
+        replaceWithMap(target, CMD_TO_ANSI_MAP)!!
 
 }

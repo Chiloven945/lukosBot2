@@ -19,8 +19,8 @@ import top.chiloven.lukosbot2.util.StringUtils.fmtNum
 import top.chiloven.lukosbot2.util.StringUtils.fmtTime
 import top.chiloven.lukosbot2.util.StringUtils.formatTime
 import top.chiloven.lukosbot2.util.StringUtils.truncate
-import top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal
-import top.chiloven.lukosbot2.util.brigadier.builder.RequiredArgumentBuilder.argument
+import top.chiloven.lukosbot2.util.brigadier.builder.CommandLAB.literal
+import top.chiloven.lukosbot2.util.brigadier.builder.CommandRAB.argument
 import java.net.URI
 import java.net.URLEncoder
 import java.net.http.HttpClient

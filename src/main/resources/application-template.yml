@@ -32,6 +32,9 @@ lukos:
       - "10.*"
       - "192.168.*"
 
+  cli:
+    enabled: true
+
   telegram:
     enabled: false
     bot-token: "${TELEGRAM_BOT_TOKEN:}"

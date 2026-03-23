@@ -11,7 +11,7 @@ import top.chiloven.lukosbot2.util.MathUtils;
 
 import java.time.LocalDate;
 
-import static top.chiloven.lukosbot2.util.brigadier.builder.LiteralArgumentBuilder.literal;
+import static top.chiloven.lukosbot2.util.brigadier.builder.CommandLAB.literal;
 
 @Log4j2
 @Service
