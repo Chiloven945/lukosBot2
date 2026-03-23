@@ -15,7 +15,7 @@ public final class CliCmdContext {
     }
 
     public void printErr(@NonNull String string) {
-        print("§c" + string + "§r");
+        print("§4" + string + "§r");
     }
 
     public void print(@NonNull String string) {
@@ -23,7 +23,7 @@ public final class CliCmdContext {
     }
 
     public void printlnErr(@NonNull String string) {
-        println("§c" + string + "§r");
+        println("§4" + string + "§r");
     }
 
     public void println(@NonNull String string) {
@@ -31,7 +31,7 @@ public final class CliCmdContext {
     }
 
     public void printfErr(@NonNull String format, Object... args) {
-        printf("§c" + format + "§r", args);
+        printf("§4" + format + "§r", args);
     }
 
     public void printf(@NonNull String format, Object... args) {
