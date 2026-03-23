@@ -4,11 +4,17 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.context.ApplicationContext
+import kotlin.system.exitProcess
 
 @SpringBootApplication
 class Main {
+
     companion object {
+
         private val log: Logger = LogManager.getLogger(Main::class.java)
+
+        lateinit var context: ApplicationContext
 
         @JvmStatic
         fun main(args: Array<String>) {
@@ -24,7 +30,19 @@ class Main {
                     \/___/   \/_____/\/_/\/_/ \/_____/\/_____/\/___/   \/_____/  \/_/\/_____/ 
                 """.trimIndent(), Constants.VERSION
             )
-            SpringApplication.run(Main::class.java, *args)
+            context = SpringApplication.run(Main::class.java, *args)
         }
+
+        @JvmStatic
+        fun shutdown() {
+            log.info("Start to shut down lukosBot2...")
+            log.info("Shutting down SpringBoot...")
+            val exitCode = SpringApplication.exit(context, { 0 })
+
+            log.info("Finished shutting down. Now exiting lukosBot2 and JVM... Goodbye!")
+            exitProcess(exitCode)
+        }
+
     }
+
 }
