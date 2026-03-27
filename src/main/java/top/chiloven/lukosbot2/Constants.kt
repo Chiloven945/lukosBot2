@@ -7,7 +7,7 @@ import java.util.*
  */
 object Constants {
 
-    const val VERSION = "0.2.0-SNAPSHOT"
+    const val VERSION = "0.2.1-SNAPSHOT"
     const val APP_NAME = "lukosBot2"
     const val UA = "$APP_NAME/$VERSION"
 
