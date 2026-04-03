@@ -40,6 +40,7 @@ dependencies {
     implementation(libs.brigadier)
     implementation(libs.commons.net)
     implementation(libs.gson)
+    implementation(libs.jackson.core.v3)
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
     implementation(libs.snakeyaml)
@@ -62,15 +63,6 @@ dependencies {
 
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines.core)
-
-    constraints {
-        implementation(libs.jackson.core.v2) {
-            because("jackson-core: Number Length Constraint Bypass in Async Parser Leads to Potential DoS Condition, GHSA-72hv-8253-57qq")
-        }
-        implementation(libs.jackson.core.v3) {
-            because("jackson-core: Number Length Constraint Bypass in Async Parser Leads to Potential DoS Condition, GHSA-72hv-8253-57qq")
-        }
-    }
 }
 
 tasks.withType<JavaCompile>().configureEach {
