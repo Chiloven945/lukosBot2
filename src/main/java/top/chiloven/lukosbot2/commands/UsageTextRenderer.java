@@ -27,9 +27,15 @@ public final class UsageTextRenderer {
             String cmd = joinInvocation(options.prefix(), List.of(node.getName()), "");
             lines.add(RenderedLine.text(LineKind.TITLE, "命令：%s".formatted(cmd)));
 
+            List<String> aliases = node.getAliases();
+            if (aliases != null && !aliases.isEmpty()) {
+                lines.add(RenderedLine.text(LineKind.TEXT, "别名：%s".formatted(String.join(", ", aliases))));
+            }
+
             if (options.includeDescriptionInHeader() && !isBlank(node.getDescription())) {
                 lines.add(RenderedLine.text(LineKind.TEXT, node.getDescription()));
             }
+
             lines.add(RenderedLine.blank());
         }
 
@@ -241,6 +247,7 @@ public final class UsageTextRenderer {
     }
 
     public record RenderedLine(LineKind kind, String markdown, String plain) {
+
         public static RenderedLine blank() {
             return new RenderedLine(LineKind.BLANK, "", "");
         }
@@ -249,9 +256,11 @@ public final class UsageTextRenderer {
             String t = text == null ? "" : text;
             return new RenderedLine(kind, t, t);
         }
+
     }
 
     public record Result(String markdownText, List<RenderedLine> lines) {
+
     }
 
     /**
@@ -284,6 +293,7 @@ public final class UsageTextRenderer {
             int maxDepth,
             boolean autoPrefixExamples
     ) {
+
         public static Options forHelp(String prefix) {
             return new Options(
                     prefix,
@@ -320,11 +330,15 @@ public final class UsageTextRenderer {
                     true
             );
         }
+
     }
 
     private record SyntaxEntry(List<String> path, String tail, String desc) {
+
     }
 
     private record NodeAtPath(List<String> path, UsageNode node) {
+
     }
+
 }
