@@ -11,6 +11,7 @@ import top.chiloven.lukosbot2.config.CommandConfigProp.Translate;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -25,6 +26,7 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.CommandRAB.argument;
         matchIfMissing = true
 )
 public class TranslateCommand implements IBotCommand {
+
     public final TranslationService ts;
     private final Translate translate;
 
@@ -39,6 +41,11 @@ public class TranslateCommand implements IBotCommand {
     }
 
     @Override
+    public List<String> aliases() {
+        return List.of("tr");
+    }
+
+    @Override
     public String description() {
         return "";
     }
@@ -47,6 +54,7 @@ public class TranslateCommand implements IBotCommand {
     public UsageNode usage() {
         return UsageNode.root(name())
                 .description(description())
+                .alias(aliases())
                 .syntax("翻译文本（默认自动检测语言）", UsageNode.arg("text"))
                 .syntax("翻译文本（可选指定源/目标语言）",
                         UsageNode.opt(UsageNode.group(UsageNode.lit("-f"), UsageNode.arg("from_lang"))),
@@ -113,4 +121,5 @@ public class TranslateCommand implements IBotCommand {
     private String run(String from, String to, String text) {
         return ts.translate(from, to, text);
     }
+
 }

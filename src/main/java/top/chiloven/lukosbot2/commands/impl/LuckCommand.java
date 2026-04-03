@@ -10,6 +10,7 @@ import top.chiloven.lukosbot2.core.command.CommandSource;
 import top.chiloven.lukosbot2.util.MathUtils;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import static top.chiloven.lukosbot2.util.brigadier.builder.CommandLAB.literal;
 
@@ -22,9 +23,15 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.CommandLAB.literal;
         matchIfMissing = true
 )
 public class LuckCommand implements IBotCommand {
+
     @Override
     public String name() {
         return "luck";
+    }
+
+    @Override
+    public List<String> aliases() {
+        return List.of("l", "jrrp");
     }
 
     @Override
@@ -36,6 +43,7 @@ public class LuckCommand implements IBotCommand {
     public UsageNode usage() {
         return UsageNode.root(name())
                 .description(description())
+                .alias(aliases())
                 .syntax("获取今日幸运值")
                 .example("luck")
                 .build();
@@ -66,4 +74,5 @@ public class LuckCommand implements IBotCommand {
                         })
         );
     }
+
 }

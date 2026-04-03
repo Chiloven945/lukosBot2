@@ -9,11 +9,14 @@ import top.chiloven.lukosbot2.config.AppProperties;
 import top.chiloven.lukosbot2.core.command.CommandRegistry;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 
+import java.util.List;
+
 import static top.chiloven.lukosbot2.util.brigadier.builder.CommandLAB.literal;
 import static top.chiloven.lukosbot2.util.brigadier.builder.CommandRAB.argument;
 
 @Service
 public class HelpCommand implements IBotCommand {
+
     private final ObjectProvider<CommandRegistry> registryProvider;
     private final AppProperties appProperties;
 
@@ -94,6 +97,11 @@ public class HelpCommand implements IBotCommand {
     }
 
     @Override
+    public List<String> aliases() {
+        return List.of("h");
+    }
+
+    @Override
     public String description() {
         return "列出可用命令或其详细用法";
     }
@@ -102,6 +110,7 @@ public class HelpCommand implements IBotCommand {
     public UsageNode usage() {
         return UsageNode.root(name())
                 .description(description())
+                .alias(aliases())
                 .syntax("列出所有可用命令")
                 .syntax("查看命令用法（可选强制输出方式）",
                         UsageNode.arg("command"),
@@ -125,4 +134,5 @@ public class HelpCommand implements IBotCommand {
     private CommandRegistry registry() {
         return registryProvider.getObject();
     }
+
 }

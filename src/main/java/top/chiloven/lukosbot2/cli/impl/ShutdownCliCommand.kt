@@ -19,6 +19,8 @@ class ShutdownCliCommand : ICliCommand {
 
     override fun name(): String = "shutdown"
 
+    override fun aliases(): List<String> = listOf("stop", "close")
+
     override fun description(): String = "Shutdown the bot process"
 
     override fun usage(): String = "shutdown"
