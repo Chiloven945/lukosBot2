@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     java
     alias(libs.plugins.kotlin.jvm)
@@ -88,4 +90,10 @@ configurations.all {
 
 kotlin {
     jvmToolchain(javaVersionInt)
+}
+
+val compileKotlin: KotlinCompile by tasks
+
+compileKotlin.compilerOptions {
+    freeCompilerArgs.set(listOf("-Xannotation-default-target=param-property"))
 }

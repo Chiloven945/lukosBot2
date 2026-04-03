@@ -1,8 +1,8 @@
 package top.chiloven.lukosbot2.util
 
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
-import com.google.gson.JsonSyntaxException
+import tools.jackson.core.JacksonException
+import tools.jackson.databind.node.ObjectNode
+import top.chiloven.lukosbot2.util.JsonUtils.MAPPER
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -25,6 +25,7 @@ import java.util.*
  * @author Chiloven945
  */
 class Base64Utils(private val defaultCharset: Charset = StandardCharsets.UTF_8) {
+
     private val encoder: Base64.Encoder = Base64.getEncoder()
     private val decoder: Base64.Decoder = Base64.getDecoder()
     private val urlEncoder: Base64.Encoder = Base64.getUrlEncoder()
@@ -102,10 +103,10 @@ class Base64Utils(private val defaultCharset: Charset = StandardCharsets.UTF_8) 
      * @throws IllegalArgumentException if base64 is invalid
      */
     @JvmOverloads
-    @Throws(JsonSyntaxException::class, IllegalArgumentException::class)
-    fun decodeToJsonObject(base64: String?, charset: Charset? = defaultCharset): JsonObject {
+    @Throws(JacksonException::class, IllegalArgumentException::class)
+    fun decodeToJsonObject(base64: String?, charset: Charset? = defaultCharset): ObjectNode {
         if (base64.isNullOrEmpty()) {
-            return JsonObject()
+            return MAPPER.createObjectNode()
         }
 
         val cs = charset ?: defaultCharset
@@ -119,7 +120,8 @@ class Base64Utils(private val defaultCharset: Charset = StandardCharsets.UTF_8) 
         }
 
         val jsonText = String(decodedBytes, cs)
-        return JsonParser.parseString(jsonText).getAsJsonObject()
+        val node = MAPPER.readTree(jsonText)
+        return node.asObjectOpt().orElse(null) ?: MAPPER.createObjectNode()
     }
 
     /* ===================== URL-safe Base64 ===================== */
@@ -240,4 +242,5 @@ class Base64Utils(private val defaultCharset: Charset = StandardCharsets.UTF_8) 
         require(mod != 1) { "Invalid Base64URL string length." }
         return base64Url
     }
+
 }

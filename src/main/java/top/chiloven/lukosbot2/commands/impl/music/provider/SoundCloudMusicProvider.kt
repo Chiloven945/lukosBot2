@@ -1,10 +1,10 @@
 package top.chiloven.lukosbot2.commands.impl.music.provider
 
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
 import org.jspecify.annotations.NonNull
+import tools.jackson.databind.node.ObjectNode
 import top.chiloven.lukosbot2.commands.impl.music.MusicPlatform
 import top.chiloven.lukosbot2.commands.impl.music.TrackInfo
+import top.chiloven.lukosbot2.util.JsonUtils.MAPPER
 import top.chiloven.lukosbot2.util.JsonUtils.arr
 import top.chiloven.lukosbot2.util.JsonUtils.long
 import top.chiloven.lukosbot2.util.JsonUtils.obj
@@ -18,6 +18,11 @@ import java.nio.charset.StandardCharsets
 class SoundCloudMusicProvider(
     private val clientId: String
 ) : IMusicProvider {
+
+    private companion object {
+
+        private const val API_BASE_V2 = "https://api-v2.soundcloud.com"
+    }
 
     override fun platform(): @NonNull MusicPlatform = MusicPlatform.SOUNDCLOUD
 
@@ -36,16 +41,16 @@ class SoundCloudMusicProvider(
             throw RuntimeException("SoundCloud search error: ${resp.body()}")
         }
 
-        val root = JsonParser.parseString(resp.body()).asJsonObject
+        val root = MAPPER.readTree(resp.body()).asObject()
         val collection = root.arr("collection")
         if (collection == null || collection.size() == 0) return null
 
-        val t = collection[0].asJsonObject
+        val t = collection[0].asObject()
         return toTrackInfo(t)
     }
 
     @Throws(Exception::class)
-    override fun resolveLink(link: String): TrackInfo? {
+    override fun resolveLink(link: String): TrackInfo {
         val encoded = URLEncoder.encode(link, StandardCharsets.UTF_8)
         val url = "$API_BASE_V2/resolve?url=$encoded&client_id=$clientId"
 
@@ -59,11 +64,11 @@ class SoundCloudMusicProvider(
             throw RuntimeException("SoundCloud resolve error: ${resp.body()}")
         }
 
-        val t = JsonParser.parseString(resp.body()).asJsonObject
+        val t = MAPPER.readTree(resp.body()).asObject()
         return toTrackInfo(t)
     }
 
-    private fun toTrackInfo(t: JsonObject): TrackInfo {
+    private fun toTrackInfo(t: ObjectNode): TrackInfo {
         val id = t.str("id").orEmpty()
         val title = t.str("title").orEmpty()
 
@@ -76,8 +81,8 @@ class SoundCloudMusicProvider(
         )
 
         val fromSets = t.arr("sets")
-            ?.takeIf { it.size() > 0 && it[0].isJsonPrimitive }
-            ?.get(0)?.asString
+            ?.takeIf { it.size() > 0 && it[0].isValueNode }
+            ?.get(0)?.asString()
             ?.takeIf { it.isNotBlank() }
 
         val album = firstNonBlank(
@@ -98,7 +103,4 @@ class SoundCloudMusicProvider(
     private fun firstNonBlank(vararg candidates: String?): String =
         candidates.firstOrNull { !it.isNullOrBlank() }.orEmpty()
 
-    private companion object {
-        private const val API_BASE_V2 = "https://api-v2.soundcloud.com"
-    }
 }

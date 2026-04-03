@@ -1,13 +1,12 @@
 package top.chiloven.lukosbot2.commands.impl;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ObjectNode;
 import top.chiloven.lukosbot2.commands.IBotCommand;
 import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.config.ProxyConfigProp;
@@ -24,6 +23,7 @@ import java.util.Base64;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static top.chiloven.lukosbot2.util.JsonUtils.MAPPER;
 import static top.chiloven.lukosbot2.util.brigadier.builder.CommandLAB.literal;
 import static top.chiloven.lukosbot2.util.brigadier.builder.CommandRAB.argument;
 
@@ -37,31 +37,7 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.CommandRAB.argument;
 @Log4j2
 public class MotdCommand implements IBotCommand {
 
-    public record MotdData(
-            String version,
-            int protocol,
-            int max,
-            int online,
-            String desc,
-            String favicon
-    ) {
-
-        public String formatted() {
-            return String.format("""
-                            描述：
-                            %s
-                            版本：%s（%d）
-                            玩家：%d/%d
-                            """,
-                    (desc != null && !desc.isBlank()) ? desc : "A Minecraft Server",
-                    version,
-                    protocol,
-                    online,
-                    max
-            );
-        }
-
-    }
+    // TODO: refactor like other api-based commands
 
     @Override
     public void register(CommandDispatcher<CommandSource> dispatcher) {
@@ -130,7 +106,6 @@ public class MotdCommand implements IBotCommand {
                 )
                 .build();
     }
-
 
     private MotdData query(String address) throws IOException {
         Matcher matcher = Pattern
@@ -227,44 +202,46 @@ public class MotdCommand implements IBotCommand {
     }
 
     private MotdData parseMotd(String json) {
-        JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+        ObjectNode root = MAPPER.readTree(json).asObject();
 
-        JsonObject versionObj = root.getAsJsonObject("version");
+        JsonNode versionNode = root.get("version");
+        ObjectNode versionObj = versionNode == null ? null : versionNode.asObjectOpt().orElse(null);
         String version = versionObj != null && versionObj.has("name")
-                ? versionObj.get("name").getAsString()
+                ? versionObj.get("name").asString()
                 : "Unknown";
 
         int protocol = versionObj != null && versionObj.has("protocol")
-                ? versionObj.get("protocol").getAsInt()
+                ? versionObj.get("protocol").asInt()
                 : -1;
 
-        JsonObject playersObj = root.getAsJsonObject("players");
+        JsonNode playersNode = root.get("players");
+        ObjectNode playersObj = playersNode == null ? null : playersNode.asObjectOpt().orElse(null);
         int max = playersObj != null && playersObj.has("max")
-                ? playersObj.get("max").getAsInt()
+                ? playersObj.get("max").asInt()
                 : 0;
         int online = playersObj != null && playersObj.has("online")
-                ? playersObj.get("online").getAsInt()
+                ? playersObj.get("online").asInt()
                 : 0;
 
         String desc = parseDescription(root.get("description"));
 
-        String favicon = root.has("favicon") && !root.get("favicon").isJsonNull()
-                ? root.get("favicon").getAsString()
+        String favicon = root.has("favicon") && !root.get("favicon").isNull()
+                ? root.get("favicon").asString()
                 : null;
 
         return new MotdData(version, protocol, max, online, desc, favicon);
     }
 
-    private String parseDescription(JsonElement el) {
-        if (el == null || el.isJsonNull()) return "A Minecraft Server";
+    private String parseDescription(JsonNode el) {
+        if (el == null || el.isNull()) return "A Minecraft Server";
 
         String raw;
-        if (el.isJsonPrimitive()) {
-            raw = el.getAsString();
-        } else if (el.isJsonObject()) {
-            JsonObject obj = el.getAsJsonObject();
-            if (obj.has("text") && obj.get("text").isJsonPrimitive()) {
-                raw = obj.get("text").getAsString();
+        if (el.isValueNode()) {
+            raw = el.asString();
+        } else if (el.isObject()) {
+            ObjectNode obj = el.asObject();
+            if (obj.has("text") && obj.get("text").isValueNode()) {
+                raw = obj.get("text").asString();
             } else {
                 raw = obj.toString();
             }
@@ -301,5 +278,30 @@ public class MotdCommand implements IBotCommand {
         return result;
     }
 
+    public record MotdData(
+            String version,
+            int protocol,
+            int max,
+            int online,
+            String desc,
+            String favicon
+    ) {
+
+        public String formatted() {
+            return String.format("""
+                            描述：
+                            %s
+                            版本：%s（%d）
+                            玩家：%d/%d
+                            """,
+                    (desc != null && !desc.isBlank()) ? desc : "A Minecraft Server",
+                    version,
+                    protocol,
+                    online,
+                    max
+            );
+        }
+
+    }
 
 }

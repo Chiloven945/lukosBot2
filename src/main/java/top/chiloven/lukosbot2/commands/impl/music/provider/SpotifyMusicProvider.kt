@@ -1,9 +1,9 @@
 package top.chiloven.lukosbot2.commands.impl.music.provider
 
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
+import tools.jackson.databind.node.ObjectNode
 import top.chiloven.lukosbot2.commands.impl.music.MusicPlatform
 import top.chiloven.lukosbot2.commands.impl.music.TrackInfo
+import top.chiloven.lukosbot2.util.JsonUtils.MAPPER
 import top.chiloven.lukosbot2.util.JsonUtils.arr
 import top.chiloven.lukosbot2.util.JsonUtils.int
 import top.chiloven.lukosbot2.util.JsonUtils.long
@@ -21,6 +21,13 @@ class SpotifyMusicProvider(
     private val clientId: String,
     private val clientSecret: String
 ) : IMusicProvider {
+
+    private companion object {
+
+        private const val TOKEN_URL = "https://accounts.spotify.com/api/token"
+        private const val API_BASE = "https://api.spotify.com/v1"
+        private val TRACK_ID_RE = Regex("""/track/([^?#\s/]+)""")
+    }
 
     @Volatile
     private var accessToken: String? = null
@@ -47,12 +54,12 @@ class SpotifyMusicProvider(
             throw RuntimeException("Spotify search error: ${resp.body()}")
         }
 
-        val root = JsonParser.parseString(resp.body()).asJsonObject
+        val root = MAPPER.readTree(resp.body()).asObject()
         val tracks = root.obj("tracks") ?: return null
         val items = tracks.arr("items") ?: return null
         if (items.size() == 0) return null
 
-        return toTrackInfo(items[0].asJsonObject)
+        return toTrackInfo(items[0].asObject())
     }
 
     @Throws(Exception::class)
@@ -73,7 +80,7 @@ class SpotifyMusicProvider(
             throw RuntimeException("Spotify track error: ${resp.body()}")
         }
 
-        val root = JsonParser.parseString(resp.body()).asJsonObject
+        val root = MAPPER.readTree(resp.body()).asObject()
         return toTrackInfo(root)
     }
 
@@ -103,7 +110,7 @@ class SpotifyMusicProvider(
             throw RuntimeException("Spotify token error: ${resp.body()}")
         }
 
-        val root = JsonParser.parseString(resp.body()).asJsonObject
+        val root = MAPPER.readTree(resp.body()).asObject()
         val token = root.str("access_token").orEmpty()
         val expiresIn = root.int("expires_in") ?: 0
 
@@ -112,13 +119,13 @@ class SpotifyMusicProvider(
         return token
     }
 
-    private fun toTrackInfo(t: JsonObject): TrackInfo {
+    private fun toTrackInfo(t: ObjectNode): TrackInfo {
         val id = t.str("id").orEmpty()
         val name = t.str("name").orEmpty()
 
         val artist = t.arr("artists")
             ?.takeIf { it.size() > 0 }
-            ?.get(0)?.asJsonObject
+            ?.get(0)?.asObjectOpt()?.orElse(null)
             ?.str("name")
             .orEmpty()
 
@@ -127,7 +134,7 @@ class SpotifyMusicProvider(
 
         val cover = albumObj?.arr("images")
             ?.takeIf { it.size() > 0 }
-            ?.get(0)?.asJsonObject
+            ?.get(0)?.asObjectOpt()?.orElse(null)
             ?.str("url")
 
         var url = t.obj("external_urls")?.str("spotify")
@@ -145,9 +152,4 @@ class SpotifyMusicProvider(
         return m.groupValues.getOrNull(1)
     }
 
-    private companion object {
-        private const val TOKEN_URL = "https://accounts.spotify.com/api/token"
-        private const val API_BASE = "https://api.spotify.com/v1"
-        private val TRACK_ID_RE = Regex("""/track/([^?#\s/]+)""")
-    }
 }
