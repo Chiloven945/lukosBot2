@@ -3,6 +3,9 @@ package top.chiloven.lukosbot2.cli;
 import com.mojang.brigadier.CommandDispatcher;
 import top.chiloven.lukosbot2.core.cli.CliCmdContext;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Contract for all CLI commands.
  *
@@ -46,6 +49,7 @@ import top.chiloven.lukosbot2.core.cli.CliCmdContext;
  *   <li>{@link #name()} should return the primary, user-facing command label
  *   (for example {@code "help"}, {@code "send"}, {@code "shutdown"}). It is
  *   expected to be unique within the CLI dispatcher.</li>
+ *   <li>{@link #aliases()} return a List of aliases of the command.</li>
  *   <li>{@link #description()} is a short, one-line summary suitable for help
  *   listings.</li>
  *   <li>{@link #usage()} describes the structured usage syntax for this command and is
@@ -73,6 +77,24 @@ public interface ICliCommand {
      * @return the main name of the command
      */
     String name();
+
+    /**
+     * Returns a list of aliases of this CLI command.
+     *
+     * <p>This is a default method which will return an empty {@link ArrayList}. Specify the aliases by override this method.</p>
+     *
+     * @return a list of the aliases
+     */
+    default List<String> aliases() {
+        return new ArrayList<>();
+    }
+
+    default boolean matches(String input) {
+        if (input == null || input.isEmpty()) return false;
+        if (name().equalsIgnoreCase(input)) return true;
+        return aliases().stream()
+                .anyMatch(alias -> alias.equalsIgnoreCase(input));
+    }
 
     /**
      * Returns a short, human-readable description of this CLI command.

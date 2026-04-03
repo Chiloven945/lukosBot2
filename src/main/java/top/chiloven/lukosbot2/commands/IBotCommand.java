@@ -3,6 +3,9 @@ package top.chiloven.lukosbot2.commands;
 import com.mojang.brigadier.CommandDispatcher;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Contract for all bot commands.
  *
@@ -70,6 +73,24 @@ public interface IBotCommand {
      * @return the main name of the command
      */
     String name();
+
+    /**
+     * Returns a list of aliases of this command.
+     *
+     * <p>This is a default method which will return an empty {@link ArrayList}. Specify the aliases by override this method.</p>
+     *
+     * @return a list of the aliases
+     */
+    default List<String> aliases() {
+        return new ArrayList<>();
+    }
+
+    default boolean matches(String input) {
+        if (input == null || input.isEmpty()) return false;
+        if (name().equalsIgnoreCase(input)) return true;
+        return aliases().stream()
+                .anyMatch(alias -> alias.equalsIgnoreCase(input));
+    }
 
     /**
      * Returns a short, human-readable description of this command.
@@ -154,4 +175,5 @@ public interface IBotCommand {
     default boolean isVisible() {
         return true;
     }
+
 }

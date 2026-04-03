@@ -30,17 +30,18 @@ public class HelpCommand implements IBotCommand {
                         .executes(ctx -> {
                             String p = appProperties.getPrefix();
                             StringBuilder sb = new StringBuilder("可用命令：\n");
+
                             registry().all().stream()
                                     .filter(IBotCommand::isVisible)
                                     .forEach(c -> sb.append(p)
                                             .append(c.name())
+                                            .append(c.aliases().isEmpty() ? "" : c.aliases())
                                             .append(" - ")
                                             .append(c.description())
                                             .append("\n")
                                     );
-                            sb.append("\n使用 `")
-                                    .append(p).append(name())
-                                    .append(" <command>` 查看具体命令的用法（可自动转图片）。");
+
+                            sb.append("\n使用 `").append(p).append(name()).append(" <command>` 查看具体命令的用法。");
                             ctx.getSource().reply(sb.toString().trim());
                             return 1;
                         })
