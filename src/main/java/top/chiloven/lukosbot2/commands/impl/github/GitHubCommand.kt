@@ -29,11 +29,15 @@ class GitHubCommand(ccp: CommandConfigProp) : IBotCommand {
     private val api = GitHubApi(ccp.gitHub.token)
 
     override fun name(): String = "github"
+
+    override fun aliases(): List<String> = listOf("gh")
+
     override fun description(): String = "GitHub 查询工具"
 
     override fun usage(): UsageNode {
         return UsageNode.root(name())
             .description(description())
+            .alias(aliases())
             .subcommand("user", "查询用户信息") { b ->
                 b.syntax("查询用户信息", UsageNode.arg("username"))
                     .param("username", "GitHub 用户名")

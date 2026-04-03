@@ -2,10 +2,7 @@ package top.chiloven.lukosbot2.commands;
 
 import lombok.Getter;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Consumer;
 
 /**
@@ -23,6 +20,7 @@ import java.util.function.Consumer;
  * <p>A {@code UsageNode} describes one command node (typically one literal in a Brigadier tree),
  * optionally with child nodes (subcommands). Each node can define:
  * <ul>
+ *   <li><b>Aliases</b>: alternative literal labels that refer to the same node.</li>
  *   <li><b>Syntax lines</b>: one or more usage patterns for invoking this node.</li>
  *   <li><b>Parameters</b>: placeholders to be substituted by user-provided values.</li>
  *   <li><b>Options</b>: flags/switches that modify behavior.</li>
@@ -69,11 +67,13 @@ import java.util.function.Consumer;
  * <p>{@code UsageNode} instances are immutable. Use {@link Builder} to construct instances.
  *
  * <h2>Validation</h2>
- * <p>Construction enforces non-blank node names and non-blank argument names. Choice items require
- * at least two options.
+ * <p>Construction enforces non-blank node names and non-blank argument names. Alias values are
+ * trimmed, blank aliases are ignored, aliases equal to the canonical node name are discarded, and
+ * duplicates are removed while preserving insertion order. Choice items require at least two options.
  */
 @Getter
 public final class UsageNode {
+
     /**
      * Returns the literal name for this usage node.
      *
@@ -81,6 +81,7 @@ public final class UsageNode {
      */
     private final String name;
     private final String description;
+    private final List<String> aliases;
     private final List<Syntax> syntaxes;
     private final List<Parameter> parameters;
     private final List<Option> options;
@@ -91,6 +92,7 @@ public final class UsageNode {
     private UsageNode(
             String name,
             String description,
+            List<String> aliases,
             List<Syntax> syntaxes,
             List<Parameter> parameters,
             List<Option> options,
@@ -100,6 +102,7 @@ public final class UsageNode {
     ) {
         this.name = requireNonBlank(name, "name");
         this.description = description == null ? "" : description.trim();
+        this.aliases = List.copyOf(syntaxes == null ? List.of() : aliases);
 
         this.syntaxes = List.copyOf(syntaxes == null ? List.of() : syntaxes);
         this.parameters = List.copyOf(parameters == null ? List.of() : parameters);
@@ -121,8 +124,10 @@ public final class UsageNode {
     /**
      * Creates a builder for a root usage node.
      *
-     * <p>The {@code name} is the literal label for the node (typically the Brigadier literal name),
-     * and is stored without any command prefix (for example: {@code "wiki"}, {@code "help"}).
+     * <p>The {@code name} is the canonical literal label for the node (typically the Brigadier
+     * literal name), and is stored without any command prefix (for example: {@code "wiki"},
+     * {@code "help"}). Alternative labels may be added later via {@link Builder#alias(String)} or
+     * {@link Builder#alias(String...)}.
      *
      * @param name the literal name for this node; must be non-null and non-blank
      * @return a builder for configuring the node
@@ -302,6 +307,7 @@ public final class UsageNode {
      * {@link UsageNode#renderItems(List)} rather than inspecting implementations directly.
      */
     public interface Item {
+
     }
 
     /**
@@ -317,7 +323,9 @@ public final class UsageNode {
      * ({@link RawTail}).
      */
     public interface SyntaxTail {
+
         String asText();
+
     }
 
     /**
@@ -329,9 +337,11 @@ public final class UsageNode {
      * @param text literal token text
      */
     public record Lit(String text) implements Item {
+
         public Lit {
             text = text == null ? "" : text.trim();
         }
+
     }
 
     /**
@@ -342,6 +352,7 @@ public final class UsageNode {
      * @param name argument name (without brackets)
      */
     public record Arg(String name) implements Item {
+
         /**
          * @throws NullPointerException     if {@code name} is {@code null}
          * @throws IllegalArgumentException if {@code name} is blank after trimming
@@ -349,6 +360,7 @@ public final class UsageNode {
         public Arg {
             name = requireNonBlank(name, "arg");
         }
+
     }
 
     /**
@@ -359,12 +371,14 @@ public final class UsageNode {
      * @param item wrapped item
      */
     public record Opt(Item item) implements Item {
+
         /**
          * @throws NullPointerException if {@code item} is {@code null}
          */
         public Opt {
             item = Objects.requireNonNull(item, "item");
         }
+
     }
 
     /**
@@ -382,6 +396,7 @@ public final class UsageNode {
      * @param options  two or more alternatives
      */
     public record Choice(boolean optional, List<Item> options) implements Item {
+
         /**
          * @throws IllegalArgumentException if fewer than two options are provided
          */
@@ -391,6 +406,7 @@ public final class UsageNode {
                 throw new IllegalArgumentException("choice requires at least 2 options");
             }
         }
+
     }
 
     /**
@@ -403,9 +419,11 @@ public final class UsageNode {
      * @param items grouped items (immutable snapshot)
      */
     public record Group(List<Item> items) implements Item {
+
         public Group {
             items = List.copyOf(items == null ? List.of() : items);
         }
+
     }
 
     /**
@@ -417,9 +435,11 @@ public final class UsageNode {
      * @param items concatenated items (immutable snapshot)
      */
     public record Concat(List<Item> items) implements Item {
+
         public Concat {
             items = List.copyOf(items == null ? List.of() : items);
         }
+
     }
 
     /**
@@ -433,6 +453,7 @@ public final class UsageNode {
      * @param text raw tail text (after the command path)
      */
     public record RawTail(String text) implements SyntaxTail {
+
         public RawTail {
             text = text == null ? "" : text.trim();
         }
@@ -441,6 +462,7 @@ public final class UsageNode {
         public String asText() {
             return text;
         }
+
     }
 
     /**
@@ -452,6 +474,7 @@ public final class UsageNode {
      * @param items tail items (immutable snapshot)
      */
     public record ItemTail(List<Item> items) implements SyntaxTail {
+
         public ItemTail {
             items = List.copyOf(items == null ? List.of() : items);
         }
@@ -460,6 +483,7 @@ public final class UsageNode {
         public String asText() {
             return renderItems(items);
         }
+
     }
 
     /**
@@ -472,6 +496,7 @@ public final class UsageNode {
      * @param description optional one-line description (trimmed; may be empty)
      */
     public record Syntax(SyntaxTail tail, String description) {
+
         public Syntax {
             tail = Objects.requireNonNullElseGet(tail, () -> new RawTail(""));
             description = description == null ? "" : description.trim();
@@ -487,6 +512,7 @@ public final class UsageNode {
         public String tailText() {
             return tail.asText();
         }
+
     }
 
     /**
@@ -500,10 +526,12 @@ public final class UsageNode {
      * @throws NullPointerException if {@code token} is {@code null}
      */
     public record Parameter(Item token, String description) {
+
         public Parameter {
             token = Objects.requireNonNull(token, "token");
             description = description == null ? "" : description.trim();
         }
+
     }
 
     /**
@@ -517,10 +545,12 @@ public final class UsageNode {
      * @throws NullPointerException if {@code token} is {@code null}
      */
     public record Option(Item token, String description) {
+
         public Option {
             token = Objects.requireNonNull(token, "token");
             description = description == null ? "" : description.trim();
         }
+
     }
 
     /**
@@ -543,7 +573,9 @@ public final class UsageNode {
      * Structured items are validated (e.g., argument names must be non-blank).
      */
     public static final class Builder {
+
         private final String name;
+        private final List<String> aliases = new ArrayList<>();
         private final List<Syntax> syntaxes = new ArrayList<>();
         private final List<Parameter> parameters = new ArrayList<>();
         private final List<Option> options = new ArrayList<>();
@@ -554,6 +586,74 @@ public final class UsageNode {
 
         private Builder(String name) {
             this.name = requireNonBlank(name, "name");
+        }
+
+        /**
+         * Sets the one-line description for the node being built.
+         *
+         * @param description node description; {@code null} becomes empty
+         * @return this builder
+         */
+        public Builder description(String description) {
+            this.description = description == null ? "" : description.trim();
+            return this;
+        }
+
+        /**
+         * Adds a single alias for the node being built.
+         *
+         * <p>An alias is an alternative literal label for the same usage node. The canonical label
+         * remains {@link UsageNode#getName()}. Blank aliases are ignored. Normalization, duplicate
+         * removal, and canonical-name filtering are applied when {@link #build()} is called.
+         *
+         * @param alias alias label to add
+         * @return this builder
+         */
+        public Builder alias(String alias) {
+            if (alias != null && !alias.isBlank()) {
+                this.aliases.add(alias.trim());
+            }
+            return this;
+        }
+
+        /**
+         * Adds multiple aliases for the node being built.
+         *
+         * <p>{@code null} input is ignored. Blank entries are skipped. Each alias is trimmed.
+         * Normalization, duplicate removal, and canonical-name filtering are applied when
+         * {@link #build()} is called.
+         *
+         * @param aliases alias labels to add
+         * @return this builder
+         */
+        public Builder alias(String... aliases) {
+            if (aliases != null) {
+                Arrays.stream(aliases)
+                        .filter(alias -> alias != null && !alias.isBlank())
+                        .map(String::trim)
+                        .forEach(this.aliases::add);
+            }
+            return this;
+        }
+
+        /**
+         * Adds multiple aliases for the node being built in {@code Collection<String>}.
+         *
+         * <p>{@code null} input is ignored. Blank entries are skipped. Each alias is trimmed.
+         * Normalization, duplicate removal, and canonical-name filtering are applied when
+         * {@link #build()} is called.
+         *
+         * @param aliases alias labels to add
+         * @return this builder
+         */
+        public Builder alias(Collection<String> aliases) {
+            if (aliases != null) {
+                aliases.stream()
+                        .filter(alias -> alias != null && !alias.isBlank())
+                        .map(String::trim)
+                        .forEach(this.aliases::add);
+            }
+            return this;
         }
 
         /**
@@ -774,17 +874,6 @@ public final class UsageNode {
         }
 
         /**
-         * Sets the one-line description for the node being built.
-         *
-         * @param description node description; {@code null} becomes empty
-         * @return this builder
-         */
-        public Builder description(String description) {
-            this.description = description == null ? "" : description.trim();
-            return this;
-        }
-
-        /**
          * Builds an immutable {@link UsageNode} snapshot from the builder state.
          *
          * <p>All lists are defensively copied into immutable lists. String fields are trimmed.
@@ -795,6 +884,7 @@ public final class UsageNode {
             return new UsageNode(
                     name,
                     description,
+                    aliases,
                     syntaxes,
                     parameters,
                     options,
@@ -803,6 +893,7 @@ public final class UsageNode {
                     children
             );
         }
+
     }
 
 }

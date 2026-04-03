@@ -9,6 +9,7 @@ import top.chiloven.lukosbot2.config.AppProperties;
 import top.chiloven.lukosbot2.core.IProcessor;
 import top.chiloven.lukosbot2.model.message.inbound.InboundMessage;
 import top.chiloven.lukosbot2.model.message.outbound.OutboundMessage;
+import top.chiloven.lukosbot2.util.brigadier.BrigadierUtils;
 import top.chiloven.lukosbot2.util.message.TextExtractor;
 
 import java.util.ArrayList;
@@ -35,7 +36,8 @@ public class CommandProcessor implements IProcessor {
             for (IBotCommand cmd : commands) {
                 try {
                     cmd.register(dispatcher);
-                    log.info("[Cmd] Registered command: {}", cmd.name());
+                    BrigadierUtils.registerAliases(dispatcher, cmd.name(), cmd.aliases());
+                    log.info("[Cmd] Registered command: {}", cmd.name() + (cmd.aliases().isEmpty() ? "" : " aliases: " + cmd.aliases()));
                 } catch (Exception e) {
                     log.warn("[Cmd] Failed to register command {}: {}", cmd.name(), e.getMessage(), e);
                 }
@@ -63,7 +65,6 @@ public class CommandProcessor implements IProcessor {
         try {
             dispatcher.execute(cmdLine, src);
         } catch (CommandSyntaxException e) {
-            // Provide a friendly error with cursor indicator.
             String input = e.getInput() == null ? cmdLine : e.getInput();
             int cursor = Math.max(0, e.getCursor());
             String pointer = " ".repeat(Math.min(cursor, input.length())) + "^";

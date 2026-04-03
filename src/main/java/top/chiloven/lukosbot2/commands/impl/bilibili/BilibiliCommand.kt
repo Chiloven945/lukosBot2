@@ -58,12 +58,15 @@ class BilibiliCommand : IBotCommand {
     }
 
     override fun name(): String = "bilibili"
+
+    override fun aliases(): List<String> = listOf("bili")
     override fun description(): String = "查看B站视频（支持 AV/BV/短链）"
 
     override fun usage(): UsageNode {
         val target = UsageNode.oneOf(UsageNode.arg("code"), UsageNode.arg("link"))
         return UsageNode.root(name())
             .description(description())
+            .alias(aliases())
             .syntax("查询 B 站视频信息（可选 -i 获取更详细的信息）", target, UsageNode.opt(UsageNode.lit("-i")))
             .param("code", "视频编号（AV/BV）")
             .param("link", "视频链接或 b23 短链")

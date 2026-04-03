@@ -5,6 +5,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.cli.ICliCommand;
+import top.chiloven.lukosbot2.util.brigadier.BrigadierUtils;
 
 import java.util.HashMap;
 import java.util.List;
@@ -19,13 +20,14 @@ public class CliCmdProcessor {
 
     public CliCmdProcessor(List<ICliCommand> cliCommands) {
         if (cliCommands != null) {
-            for (ICliCommand cliCommand : cliCommands) {
+            for (ICliCommand cliCmd : cliCommands) {
                 try {
-                    cliCommand.register(dispatcher);
-                    commands.put(cliCommand.name(), cliCommand);
-                    log.info("[Cli] Registered cli command: {}", cliCommand.name());
+                    cliCmd.register(dispatcher);
+                    BrigadierUtils.registerAliases(dispatcher, cliCmd.name(), cliCmd.aliases());
+                    commands.put(cliCmd.name(), cliCmd);
+                    log.info("[Cli] Registered cli command: {}", cliCmd.name() + (cliCmd.aliases().isEmpty() ? "" : " aliases: " + cliCmd.aliases()));
                 } catch (Exception e) {
-                    log.error("[Cli] Failed to register cli command {}: {}", cliCommand.name(), e.getMessage(), e);
+                    log.error("[Cli] Failed to register cli command {}: {}", cliCmd.name(), e.getMessage(), e);
                 }
             }
         }
@@ -51,7 +53,7 @@ public class CliCmdProcessor {
                     .append(e.getMessage());
 
             if (commandName != null) {
-                ICliCommand cmd = commands.get(commandName.toLowerCase());
+                ICliCommand cmd = commands.get(commandName);
                 if (cmd != null) {
                     errorMsg.append("\nUsage: ").append(cmd.usage());
                 }
