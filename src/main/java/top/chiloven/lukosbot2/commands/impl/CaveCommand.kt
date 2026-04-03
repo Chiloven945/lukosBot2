@@ -1,36 +1,27 @@
-package top.chiloven.lukosbot2.commands.impl;
+package top.chiloven.lukosbot2.commands.impl
 
-import com.mojang.brigadier.CommandDispatcher;
-import top.chiloven.lukosbot2.commands.IBotCommand;
-import top.chiloven.lukosbot2.commands.UsageNode;
-import top.chiloven.lukosbot2.core.command.CommandSource;
+import com.mojang.brigadier.CommandDispatcher
+import org.springframework.stereotype.Service
+import top.chiloven.lukosbot2.commands.IBotCommand
+import top.chiloven.lukosbot2.commands.UsageNode
+import top.chiloven.lukosbot2.core.command.CommandSource
 
-/**
- * Record and send message.
- *
- * @author Chiloven945
- */
-public class CaveCommand implements IBotCommand {
-    @Override
-    public String name() {
-        return "";
-    }
+@Service
+class CaveCommand : IBotCommand {
+    override fun name(): String = "cave"
 
-    @Override
-    public String description() {
-        return "";
-    }
+    override fun aliases(): List<String> = listOf("c")
 
-    @Override
-    public UsageNode usage() {
-        return UsageNode.root(name())
-                .description(description())
-                .syntax("WIP")
-                .build();
-    }
+    override fun description(): String = "回声洞！"
 
-    @Override
-    public void register(CommandDispatcher<CommandSource> dispatcher) {
+    override fun usage(): UsageNode =
+        UsageNode.root(name())
+            .description(description())
+            .alias(aliases())
+            .build()
+
+    override fun register(dispatcher: CommandDispatcher<CommandSource>) {
 
     }
+
 }
