@@ -1,11 +1,10 @@
 package top.chiloven.lukosbot2.commands.impl.kemono.schema
 
-import com.google.gson.JsonArray
-import com.google.gson.JsonObject
-import top.chiloven.lukosbot2.util.JsonUtils.int
-import top.chiloven.lukosbot2.util.JsonUtils.str
+import tools.jackson.databind.node.ArrayNode
+import tools.jackson.databind.node.ObjectNode
+import top.chiloven.lukosbot2.util.JsonUtils
+import top.chiloven.lukosbot2.util.JsonUtils.JsonLdt
 import top.chiloven.lukosbot2.util.TimeUtils.fmt
-import top.chiloven.lukosbot2.util.TimeUtils.toLDT
 import java.time.LocalDateTime
 
 data class Creator(
@@ -25,19 +24,20 @@ data class Creator(
 
     companion object {
 
-        fun fromProfileAndPosts(obj: JsonObject, arr: JsonArray): Creator {
+        fun fromProfileAndPosts(obj: ObjectNode, arr: ArrayNode): Creator {
+            val profile = JsonUtils.snakeTreeToValue(obj, Profile::class.java)
             return Creator(
-                id = obj.str("id")!!,
-                name = obj.str("name")!!,
-                service = Service.getService(obj.str("service")!!),
-                indexed = obj.str("indexed")!!.toLDT(),
-                updated = obj.str("updated")!!.toLDT(),
-                publicId = obj.str("public_id")!!,
-                relationId = obj.str("relation_id"),
-                postCount = obj.int("post_count")!!,
-                dmCount = obj.int("dm_count")!!,
-                shareCount = obj.int("share_count")!!,
-                chatCount = obj.int("chat_count")!!,
+                id = profile.id,
+                name = profile.name,
+                service = profile.service,
+                indexed = profile.indexed,
+                updated = profile.updated,
+                publicId = profile.publicId,
+                relationId = profile.relationId,
+                postCount = profile.postCount,
+                dmCount = profile.dmCount,
+                shareCount = profile.shareCount,
+                chatCount = profile.chatCount,
                 posts = PostSimple.fromArraySimplePost(arr)
             )
         }
@@ -63,5 +63,21 @@ data class Creator(
             }
         }.trim()
     }
+
+    private data class Profile(
+        val id: String = "",
+        val name: String = "",
+        val service: Service = Service.UNKNOWN,
+        @JsonLdt
+        val indexed: LocalDateTime = LocalDateTime.MIN,
+        @JsonLdt
+        val updated: LocalDateTime = LocalDateTime.MIN,
+        val publicId: String = "",
+        val relationId: String? = null,
+        val postCount: Int = 0,
+        val dmCount: Int = 0,
+        val shareCount: Int = 0,
+        val chatCount: Int = 0,
+    )
 
 }

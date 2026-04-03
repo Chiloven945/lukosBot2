@@ -1,14 +1,15 @@
 package top.chiloven.lukosbot2.commands.impl.e621
 
-import com.google.gson.JsonArray
-import com.google.gson.JsonObject
+import tools.jackson.databind.node.ArrayNode
+import tools.jackson.databind.node.ObjectNode
 import top.chiloven.lukosbot2.util.HttpJson
+import top.chiloven.lukosbot2.util.JsonUtils.MAPPER
 import top.chiloven.lukosbot2.util.JsonUtils.arr
 import top.chiloven.lukosbot2.util.JsonUtils.obj
-import java.io.IOException
 import java.net.URI
 
 object E621Api {
+
     val API: URI = URI("https://e621.net")
 
     fun getArtists(
@@ -28,7 +29,7 @@ object E621Api {
         searchIsLinked: String? = null,
         searchLinkedUserId: Int? = null,
         searchLinkedUserName: String? = null
-    ): JsonArray {
+    ): ArrayNode {
         val params = mapOf(
             "limit" to limit,
             "page" to page,
@@ -46,27 +47,13 @@ object E621Api {
             "search[is_linked]" to searchIsLinked,
             "search[linked_user_id]" to searchLinkedUserId,
             "search[linked_user_name]" to searchLinkedUserName
-        ).mapNotNull { (key, value) ->
-            value?.let { key to it.toString() }
-        }.toMap()
+        ).mapNotNull { (key, value) -> value?.let { key to it.toString() } }.toMap()
 
-        try {
-            return HttpJson.getArray(
-                API.resolve("artists.json"),
-                params
-            )
-        } catch (e: IOException) {
-            throw e
-        }
+        return HttpJson.getArray(API.resolve("artists.json"), params)
     }
 
-    fun getArtistsXIdOrName(
-        idOrName: String
-    ): JsonObject {
-        return HttpJson.getObject(
-            API.resolve("artists/$idOrName.json")
-        )
-    }
+    fun getArtistsXIdOrName(idOrName: String): ObjectNode =
+        HttpJson.getObject(API.resolve("artists/$idOrName.json"))
 
     fun getPosts(
         limit: Int? = null,
@@ -74,48 +61,30 @@ object E621Api {
         tags: String? = null,
         md5: String? = null,
         random: String? = null,
-    ): JsonArray {
+    ): ArrayNode {
         val params = mapOf(
             "limit" to limit,
             "page" to page,
             "tags" to tags,
             "md5" to md5,
             "random" to random
-        ).mapNotNull { (key, value) ->
-            value?.let { key to it.toString() }
-        }.toMap()
+        ).mapNotNull { (key, value) -> value?.let { key to it.toString() } }.toMap()
 
-        val root = HttpJson.getObject(
-            API.resolve("posts.json"),
-            params
-        )
-
-        // 1) normal list response: { "posts": [ ... ] }
+        val root = HttpJson.getObject(API.resolve("posts.json"), params)
         root.arr("posts")?.let { return it }
-
-        // 2) single response: { "post": { ... } }
         root.obj("post")?.let { postObj ->
-            return JsonArray().apply { add(postObj) }
+            return MAPPER.createArrayNode().add(postObj)
         }
-
-        // 3) unknown shape: return empty list
-        return JsonArray()
+        return MAPPER.createArrayNode()
     }
 
-    fun getPostsXRandom(
-        tags: String? = null
-    ): JsonObject {
-        return HttpJson.getObject(
+    fun getPostsXRandom(tags: String? = null): ObjectNode =
+        HttpJson.getObject(
             API.resolve("posts/random.json"),
             mapOf("tags" to tags).filterValues { it != null }
         ).obj("post")!!
-    }
 
-    fun getPostsXId(
-        id: String
-    ): JsonObject {
-        return HttpJson.getObject(
-            API.resolve("posts/$id.json")
-        ).obj("post")!!
-    }
+    fun getPostsXId(id: String): ObjectNode =
+        HttpJson.getObject(API.resolve("posts/$id.json")).obj("post")!!
+
 }

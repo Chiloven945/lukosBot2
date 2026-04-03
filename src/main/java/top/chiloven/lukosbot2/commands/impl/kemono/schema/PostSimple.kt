@@ -1,46 +1,42 @@
 package top.chiloven.lukosbot2.commands.impl.kemono.schema
 
-import com.google.gson.JsonArray
-import com.google.gson.JsonObject
-import top.chiloven.lukosbot2.util.JsonUtils.arr
+import tools.jackson.databind.node.ArrayNode
+import tools.jackson.databind.node.ObjectNode
+import top.chiloven.lukosbot2.util.JsonUtils
+import top.chiloven.lukosbot2.util.JsonUtils.JsonLdt
 import top.chiloven.lukosbot2.util.JsonUtils.isNotEmpty
 import top.chiloven.lukosbot2.util.JsonUtils.obj
-import top.chiloven.lukosbot2.util.JsonUtils.str
 import top.chiloven.lukosbot2.util.StringUtils.truncate
 import top.chiloven.lukosbot2.util.TimeUtils.fmtDate
-import top.chiloven.lukosbot2.util.TimeUtils.toLDT
 import java.time.LocalDateTime
 
 data class PostSimple(
-    val id: String,
-    val user: String,
-    val service: Service,
-    val title: String,
-    val substring: String,
-    val published: LocalDateTime,
-    val file: Item?,
-    val attachments: List<Item>,
+    val id: String = "",
+    val user: String = "",
+    val service: Service = Service.UNKNOWN,
+    val title: String = "",
+    val substring: String = "",
+    @JsonLdt
+    val published: LocalDateTime = LocalDateTime.MIN,
+    val file: Item? = null,
+    val attachments: List<Item> = emptyList(),
 ) {
 
     companion object {
 
-        fun fromSingleSimplePost(obj: JsonObject): PostSimple {
-            return PostSimple(
-                id = obj.str("id")!!,
-                user = obj.str("user")!!,
-                service = Service.getService(obj.str("service")!!),
-                title = obj.str("title")!!,
-                substring = obj.str("substring")!!,
-                published = obj.str("published")!!.toLDT(),
-                file = obj.obj("file")?.takeIf { it.isNotEmpty() }?.let { Item.fromJsonObject(it) },
-                attachments = Item.fromJsonArray(obj.arr("attachments")!!)
-            )
-        }
+        fun fromSingleSimplePost(obj: ObjectNode): PostSimple =
+            JsonUtils.snakeTreeToValue(normalize(obj), PostSimple::class.java)
 
-        fun fromArraySimplePost(arr: JsonArray): List<PostSimple> {
-            return arr.mapNotNull { el ->
-                el.takeIf { it.isJsonObject }?.asJsonObject?.let(::fromSingleSimplePost)
+        fun fromArraySimplePost(arr: ArrayNode): List<PostSimple> =
+            arr.mapNotNull { it.asObjectOpt().orElse(null) }
+                .map(::fromSingleSimplePost)
+
+        private fun normalize(source: ObjectNode): ObjectNode {
+            val node = source.deepCopy()
+            if (node.obj("file")?.isNotEmpty() == false) {
+                node.remove("file")
             }
+            return node
         }
 
     }

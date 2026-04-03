@@ -1,8 +1,8 @@
 package top.chiloven.lukosbot2.commands.impl.kemono
 
-import com.google.gson.JsonArray
-import com.google.gson.JsonObject
 import org.apache.logging.log4j.LogManager
+import tools.jackson.databind.node.ArrayNode
+import tools.jackson.databind.node.ObjectNode
 import top.chiloven.lukosbot2.commands.impl.kemono.schema.Service
 import top.chiloven.lukosbot2.util.HttpJson
 import java.io.IOException
@@ -28,85 +28,63 @@ object KemonoAPI {
         service: Service,
         creatorId: String,
         postId: String
-    ): JsonObject {
-        return HttpJson.getObject(
-            resolve("v1/$service/user/$creatorId/post/$postId"),
-            headers = HEADER
-        )
-    }
+    ): ObjectNode = HttpJson.getObject(
+        resolve("v1/$service/user/$creatorId/post/$postId"),
+        headers = HEADER
+    )
 
     @Throws(IOException::class)
     fun getCreatorProfile(
         service: Service,
         creatorId: String
-    ): JsonObject {
-        return HttpJson.getObject(
-            resolve("v1/$service/user/$creatorId/profile"),
-            headers = HEADER
-        )
-    }
+    ): ObjectNode = HttpJson.getObject(
+        resolve("v1/$service/user/$creatorId/profile"),
+        headers = HEADER
+    )
 
     @Throws(IOException::class)
     fun getCreatorLinks(
         service: Service,
         creatorId: String
-    ): JsonArray {
-        return HttpJson.getArray(
-            resolve("v1/$service/user/$creatorId/links"),
-            headers = HEADER
-        )
-    }
+    ): ArrayNode = HttpJson.getArray(
+        resolve("v1/$service/user/$creatorId/links"),
+        headers = HEADER
+    )
 
     @Throws(IOException::class)
     fun getCreatorPosts(
         service: Service,
         creatorId: String
-    ): JsonArray {
-        return HttpJson.getArray(
-            resolve("v1/$service/user/$creatorId/posts"),
-            headers = HEADER
-        )
-    }
+    ): ArrayNode = HttpJson.getArray(
+        resolve("v1/$service/user/$creatorId/posts"),
+        headers = HEADER
+    )
 
     @Throws(IOException::class)
-    fun getDiscordChannelPost(
-        channelId: String
-    ): JsonArray {
-        return HttpJson.getArray(
-            resolve("v1/discord/channel/$channelId"),
-            headers = HEADER
-        )
-    }
+    fun getDiscordChannelPost(channelId: String): ArrayNode = HttpJson.getArray(
+        resolve("v1/discord/channel/$channelId"),
+        headers = HEADER
+    )
 
     @Throws(IOException::class)
-    fun getDiscordServerChannel(
-        channelId: String
-    ): JsonArray {
-        return HttpJson.getArray(
-            resolve("v1/discord/channel/lookup/$channelId"),
-            headers = HEADER
-        )
-    }
+    fun getDiscordServerChannel(channelId: String): ArrayNode = HttpJson.getArray(
+        resolve("v1/discord/channel/lookup/$channelId"),
+        headers = HEADER
+    )
 
     @Throws(IOException::class)
-    fun getFileFromHash(
-        hash: String
-    ): JsonObject {
-        return HttpJson.getObject(
-            resolve("v1/search_hash/$hash"),
-            headers = HEADER
-        )
-    }
+    fun getFileFromHash(hash: String): ObjectNode = HttpJson.getObject(
+        resolve("v1/search_hash/$hash"),
+        headers = HEADER
+    )
 
     @Throws(IOException::class)
     fun getPostFromServicePost(
         service: Service,
         servicePostId: String
-    ): JsonObject {
-        return HttpJson.getObject(
-            resolve("v1/$service/post/$servicePostId"),
-            headers = HEADER
-        )
-    }
+    ): ObjectNode = HttpJson.getObject(
+        resolve("v1/$service/post/$servicePostId"),
+        headers = HEADER
+    )
 
 }
