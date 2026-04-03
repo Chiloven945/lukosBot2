@@ -39,13 +39,15 @@ dependencies {
     // Core Library
     implementation(libs.brigadier)
     implementation(libs.commons.net)
-    implementation(libs.gson)
-    implementation(libs.jackson.core.v3)
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
     implementation(libs.snakeyaml)
     implementation(libs.okhttp)
     implementation(libs.zip4j)
+
+    implementation(libs.jackson.core)
+    implementation(libs.jackson.core.databind)
+    implementation(libs.jackson.module.kotlin)
 
     implementation(libs.log4j.api)
     implementation(libs.log4j.core)
@@ -61,7 +63,7 @@ dependencies {
     implementation(libs.jsoup)
     implementation(libs.webdrivermanager)
 
-    implementation(libs.kotlin.stdlib)
+    implementation(libs.kotlin.reflect)
     implementation(libs.kotlinx.coroutines.core)
 }
 
