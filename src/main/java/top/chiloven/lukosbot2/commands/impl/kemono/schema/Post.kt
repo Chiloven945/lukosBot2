@@ -1,55 +1,51 @@
 package top.chiloven.lukosbot2.commands.impl.kemono.schema
 
-import com.google.gson.JsonObject
-import top.chiloven.lukosbot2.util.JsonUtils.arr
-import top.chiloven.lukosbot2.util.JsonUtils.bool
+import tools.jackson.databind.node.ObjectNode
+import top.chiloven.lukosbot2.util.JsonUtils
+import top.chiloven.lukosbot2.util.JsonUtils.JsonLdt
 import top.chiloven.lukosbot2.util.JsonUtils.isNotEmpty
 import top.chiloven.lukosbot2.util.JsonUtils.obj
-import top.chiloven.lukosbot2.util.JsonUtils.str
 import top.chiloven.lukosbot2.util.StringUtils.appendSeparator
 import top.chiloven.lukosbot2.util.TimeUtils.fmt
-import top.chiloven.lukosbot2.util.TimeUtils.toLDT
 import java.time.LocalDateTime
 
 data class Post(
-    val id: String,
-    val user: String,
-    val service: Service,
-    val title: String,
-    val content: String,
-    val embed: Embed?,
-    val sharedFile: Boolean,
-    val added: LocalDateTime,
-    val published: LocalDateTime,
-    val edited: LocalDateTime,
-    val file: Item?,
-    val attachments: List<Item>,
-    val next: String?,
-    val previous: String?,
+    val id: String = "",
+    val user: String = "",
+    val service: Service = Service.UNKNOWN,
+    val title: String = "",
+    val content: String = "",
+    val embed: Embed? = null,
+    val sharedFile: Boolean = false,
+    @JsonLdt
+    val added: LocalDateTime = LocalDateTime.MIN,
+    @JsonLdt
+    val published: LocalDateTime = LocalDateTime.MIN,
+    @JsonLdt
+    val edited: LocalDateTime = LocalDateTime.MIN,
+    val file: Item? = null,
+    val attachments: List<Item> = emptyList(),
+    val next: String? = null,
+    val previous: String? = null,
 ) {
 
     companion object {
 
-        fun fromJsonObject(obj: JsonObject): Post {
-            return Post(
-                id = obj.str("id")!!,
-                user = obj.str("user")!!,
-                service = Service.getService(obj.str("service")!!),
-                title = obj.str("title")!!,
-                content = obj.str("content")!!,
-                embed = obj.obj("embed")?.takeIf { it.isNotEmpty() }?.let { Embed.fromJsonObject(it) },
-                sharedFile = obj.bool("shared_file")!!,
-                added = obj.str("added")!!.toLDT(),
-                published = obj.str("published")!!.toLDT(),
-                edited = obj.str("edited")!!.toLDT(),
-                file = obj.obj("file")?.takeIf { it.isNotEmpty() }?.let { Item.fromJsonObject(it) },
-                attachments = Item.fromJsonArray(obj.arr("attachments")!!),
-                next = obj.str("next"),
-                previous = obj.str("previous"),
-            )
-        }
+        fun fromJsonObject(obj: ObjectNode): Post =
+            JsonUtils.snakeTreeToValue(normalize(obj), Post::class.java)
 
-        fun fromSpecificPost(obj: JsonObject): Post = fromJsonObject(obj.obj("post")!!)
+        fun fromSpecificPost(obj: ObjectNode): Post = fromJsonObject(obj.obj("post")!!)
+
+        private fun normalize(source: ObjectNode): ObjectNode {
+            val node = source.deepCopy()
+            if (node.obj("embed")?.isNotEmpty() == false) {
+                node.remove("embed")
+            }
+            if (node.obj("file")?.isNotEmpty() == false) {
+                node.remove("file")
+            }
+            return node
+        }
 
     }
 

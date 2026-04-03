@@ -1,16 +1,15 @@
 package top.chiloven.lukosbot2.commands.impl.github.data
 
-import com.google.gson.JsonObject
-import top.chiloven.lukosbot2.util.JsonUtils.int
-import top.chiloven.lukosbot2.util.JsonUtils.str
+import tools.jackson.databind.node.ObjectNode
+import top.chiloven.lukosbot2.util.JsonUtils
 
 data class GitHubUser(
-    val login: String,
-    val name: String?,
-    val htmlUrl: String?,
-    val publicRepos: Int,
-    val followers: Int,
-    val following: Int
+    val login: String = "",
+    val name: String? = null,
+    val htmlUrl: String? = null,
+    val publicRepos: Int = 0,
+    val followers: Int = 0,
+    val following: Int = 0
 ) {
 
     fun toReadableText(): String {
@@ -24,14 +23,10 @@ data class GitHubUser(
     }
 
     companion object {
-        fun from(obj: JsonObject): GitHubUser = GitHubUser(
-            login = obj.str("login").orEmpty(),
-            name = obj.str("name"),
-            htmlUrl = obj.str("html_url"),
-            publicRepos = obj.int("public_repos")!!,
-            followers = obj.int("followers")!!,
-            following = obj.int("following")!!,
-        )
+
+        fun from(obj: ObjectNode): GitHubUser =
+            JsonUtils.snakeTreeToValue(obj, GitHubUser::class.java)
+
     }
 
 }

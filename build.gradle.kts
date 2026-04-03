@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     java
     alias(libs.plugins.kotlin.jvm)
@@ -39,12 +41,15 @@ dependencies {
     // Core Library
     implementation(libs.brigadier)
     implementation(libs.commons.net)
-    implementation(libs.gson)
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
     implementation(libs.snakeyaml)
     implementation(libs.okhttp)
     implementation(libs.zip4j)
+
+    implementation(libs.jackson.core)
+    implementation(libs.jackson.core.databind)
+    implementation(libs.jackson.module.kotlin)
 
     implementation(libs.log4j.api)
     implementation(libs.log4j.core)
@@ -60,17 +65,8 @@ dependencies {
     implementation(libs.jsoup)
     implementation(libs.webdrivermanager)
 
-    implementation(libs.kotlin.stdlib)
+    implementation(libs.kotlin.reflect)
     implementation(libs.kotlinx.coroutines.core)
-
-    constraints {
-        implementation(libs.jackson.core.v2) {
-            because("jackson-core: Number Length Constraint Bypass in Async Parser Leads to Potential DoS Condition, GHSA-72hv-8253-57qq")
-        }
-        implementation(libs.jackson.core.v3) {
-            because("jackson-core: Number Length Constraint Bypass in Async Parser Leads to Potential DoS Condition, GHSA-72hv-8253-57qq")
-        }
-    }
 }
 
 tasks.withType<JavaCompile>().configureEach {
@@ -94,4 +90,10 @@ configurations.all {
 
 kotlin {
     jvmToolchain(javaVersionInt)
+}
+
+val compileKotlin: KotlinCompile by tasks
+
+compileKotlin.compilerOptions {
+    freeCompilerArgs.set(listOf("-Xannotation-default-target=param-property"))
 }

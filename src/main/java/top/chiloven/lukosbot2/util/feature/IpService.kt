@@ -1,15 +1,16 @@
 package top.chiloven.lukosbot2.util.feature
 
-import com.google.gson.JsonObject
+import tools.jackson.databind.node.ObjectNode
 import top.chiloven.lukosbot2.util.HttpJson
 import top.chiloven.lukosbot2.util.JsonUtils.getString
 import java.io.IOException
 
 object IpService {
+
     @JvmStatic
     @Throws(IOException::class)
     fun getIpInfo(ip: String?): IpInfo {
-        val result: JsonObject = HttpJson.getObject("https://api.ip.sb/geoip/$ip")
+        val result: ObjectNode = HttpJson.getObject("https://api.ip.sb/geoip/$ip")
 
         return IpInfo(
             ip = getString(result, "ip", null),
@@ -42,6 +43,7 @@ object IpService {
         val timezone: String?,
         val asn: String?
     ) {
+
         override fun toString(): String = buildString {
             append("IP 地址 - ").append(ip ?: "未知").append('\n')
 
@@ -82,5 +84,7 @@ object IpService {
             if (!extra.isNullOrBlank()) append(extra)
             append('\n')
         }
+
     }
+
 }

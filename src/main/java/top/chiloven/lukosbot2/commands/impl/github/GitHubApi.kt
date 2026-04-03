@@ -1,6 +1,6 @@
 package top.chiloven.lukosbot2.commands.impl.github
 
-import com.google.gson.JsonObject
+import tools.jackson.databind.node.ObjectNode
 import top.chiloven.lukosbot2.util.HttpJson
 import java.io.IOException
 
@@ -9,11 +9,11 @@ class GitHubApi(token: String?) {
     private val token: String? = token?.takeIf { it.isNotBlank() }
 
     @Throws(IOException::class)
-    fun getUser(username: String): JsonObject =
+    fun getUser(username: String): ObjectNode =
         get("/users/$username", emptyMap())
 
     @Throws(IOException::class)
-    fun getRepo(owner: String, repo: String): JsonObject =
+    fun getRepo(owner: String, repo: String): ObjectNode =
         get("/repos/$owner/$repo", emptyMap())
 
     /**
@@ -32,7 +32,7 @@ class GitHubApi(token: String?) {
         order: String?,
         language: String?,
         perPage: Int
-    ): JsonObject {
+    ): ObjectNode {
         val fullQ = buildString {
             append(keywords)
             language?.takeIf { it.isNotBlank() }?.let { append(" language:").append(it) }
@@ -49,12 +49,9 @@ class GitHubApi(token: String?) {
     }
 
     @Throws(IOException::class)
-    private fun get(path: String, query: Map<String, String>): JsonObject {
+    private fun get(path: String, query: Map<String, String>): ObjectNode {
         val url = BASE + path + HttpJson.buildQuery(query)
-
-        val headers = linkedMapOf(
-            "Accept" to "application/vnd.github.v3+json"
-        ).apply {
+        val headers = linkedMapOf("Accept" to "application/vnd.github.v3+json").apply {
             token?.let { put("Authorization", "Bearer $it") }
         }
 
@@ -66,7 +63,9 @@ class GitHubApi(token: String?) {
     }
 
     private companion object {
+
         private const val BASE = "https://api.github.com"
+
     }
 
 }

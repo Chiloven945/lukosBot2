@@ -1,10 +1,10 @@
 package top.chiloven.lukosbot2.core.service;
 
-import com.google.gson.Gson;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.json.JsonMapper;
 import top.chiloven.lukosbot2.config.ServiceConfigProp;
 import top.chiloven.lukosbot2.core.MessageSenderHub;
 import top.chiloven.lukosbot2.core.command.CommandSource;
@@ -27,25 +27,16 @@ import java.util.concurrent.*;
 public class ServiceManager {
 
     private static final String NS_SERVICE = "service";
-
     @Getter
     private final ServiceRegistry registry;
-
     private final IStateStore store;
     private final MessageSenderHub senderHub;
     private final ServiceConfigProp props;
+    private final JsonMapper mapper;
 
-    private final Gson gson = new Gson();
-
-    /**
-     * chatKey -> (serviceName -> state)
-     */
     private final ConcurrentMap<String, ConcurrentMap<String, ServiceState>> chatStates = new ConcurrentHashMap<>();
-
-    /**
-     * scheduleKey(chatKey|serviceName) -> future
-     */
     private final ConcurrentMap<String, ScheduledFuture<?>> schedules = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, ServiceState> defaultStates = new ConcurrentHashMap<>();
 
     private final ScheduledExecutorService scheduler =
             Executors.newScheduledThreadPool(2, r -> {
@@ -54,21 +45,38 @@ public class ServiceManager {
                 return t;
             });
 
-    /**
-     * defaults for new chats
-     */
-    private final ConcurrentMap<String, ServiceState> defaultStates = new ConcurrentHashMap<>();
-
     public ServiceManager(
             ServiceRegistry registry,
             IStateStore store,
             MessageSenderHub senderHub,
-            ServiceConfigProp props
+            ServiceConfigProp props,
+            JsonMapper mapper
     ) {
         this.registry = registry;
         this.store = store;
         this.senderHub = senderHub;
         this.props = props;
+        this.mapper = mapper;
+    }
+
+    private static String scheduleKey(String chatKey, String serviceName) {
+        return chatKey + "|" + serviceName;
+    }
+
+    private static String chatKey(Address addr) {
+        return Scope.chatKey(addr);
+    }
+
+    private static Address parseChatKey(String key) {
+        try {
+            String[] p = key.split(":", 3);
+            ChatPlatform platform = ChatPlatform.valueOf(p[0]);
+            boolean group = "g".equalsIgnoreCase(p[1]);
+            long chatId = Long.parseLong(p[2]);
+            return new Address(platform, chatId, group);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @PostConstruct
@@ -84,14 +92,12 @@ public class ServiceManager {
         }
     }
 
-    /* ======================== load/persist ======================== */
-
     private void loadFromStore() {
         // defaults
         defaultStates.clear();
         store.getNamespaceJson(Scope.global(), NS_SERVICE).forEach((serviceName, json) -> {
             try {
-                ServiceState st = gson.fromJson(json, ServiceState.class);
+                ServiceState st = mapper.readValue(json, ServiceState.class);
                 if (st != null) defaultStates.put(serviceName, st);
             } catch (Exception ignore) {
             }
@@ -104,9 +110,9 @@ public class ServiceManager {
             if (kv != null) {
                 kv.forEach((serviceName, json) -> {
                     try {
-                        ServiceState st = gson.fromJson(json, ServiceState.class);
+                        ServiceState st = mapper.readValue(json, ServiceState.class);
                         if (st != null) cm.put(serviceName, st);
-                    } catch (Exception ignore) {
+                    } catch (Exception _) {
                     }
                 });
             }
@@ -127,7 +133,7 @@ public class ServiceManager {
     }
 
     private void persistDefault(String serviceName, ServiceState st) {
-        store.upsertJson(Scope.global(), NS_SERVICE, serviceName, gson.toJson(st), null);
+        store.upsertJson(Scope.global(), NS_SERVICE, serviceName, mapper.writeValueAsString(st), null);
     }
 
     private void persistChatAll(String chatKey, Map<String, ServiceState> perChat) {
@@ -138,7 +144,7 @@ public class ServiceManager {
     }
 
     private void persistChatState(String chatKey, String serviceName, ServiceState st) {
-        store.upsertJson(new Scope(ScopeType.CHAT, chatKey), NS_SERVICE, serviceName, gson.toJson(st), null);
+        store.upsertJson(new Scope(ScopeType.CHAT, chatKey), NS_SERVICE, serviceName, mapper.writeValueAsString(st), null);
     }
 
     /**
@@ -199,8 +205,6 @@ public class ServiceManager {
         return changed;
     }
 
-    /* ======================== scheduling ======================== */
-
     private void rescheduleAllChats() {
         for (String chatKey : chatStates.keySet()) {
             Address addr = parseChatKey(chatKey);
@@ -240,12 +244,6 @@ public class ServiceManager {
         ScheduledFuture<?> f = scheduler.scheduleAtFixedRate(task, intervalMs, intervalMs, TimeUnit.MILLISECONDS);
         schedules.put(sk, f);
     }
-
-    private static String scheduleKey(String chatKey, String serviceName) {
-        return chatKey + "|" + serviceName;
-    }
-
-    /* ======================== incoming + triggers ======================== */
 
     /**
      * Called by MessageDispatcher (incoming messages).
@@ -339,8 +337,6 @@ public class ServiceManager {
         }
     }
 
-    /* ======================== /service command API ======================== */
-
     public boolean isAllowed(String serviceName) {
         return props.isAllowed(serviceName);
     }
@@ -427,21 +423,4 @@ public class ServiceManager {
         persistChatState(chatKey, serviceName, st);
     }
 
-    /* ======================== helpers ======================== */
-
-    private static String chatKey(Address addr) {
-        return Scope.chatKey(addr);
-    }
-
-    private static Address parseChatKey(String key) {
-        try {
-            String[] p = key.split(":", 3);
-            ChatPlatform platform = ChatPlatform.valueOf(p[0]);
-            boolean group = "g".equalsIgnoreCase(p[1]);
-            long chatId = Long.parseLong(p[2]);
-            return new Address(platform, chatId, group);
-        } catch (Exception e) {
-            return null;
-        }
-    }
 }

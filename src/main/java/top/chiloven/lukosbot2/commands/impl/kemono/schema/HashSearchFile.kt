@@ -1,43 +1,32 @@
 package top.chiloven.lukosbot2.commands.impl.kemono.schema
 
-import com.google.gson.JsonObject
-import top.chiloven.lukosbot2.util.JsonUtils.arr
-import top.chiloven.lukosbot2.util.JsonUtils.long
-import top.chiloven.lukosbot2.util.JsonUtils.str
+import tools.jackson.databind.node.ObjectNode
+import top.chiloven.lukosbot2.util.JsonUtils
+import top.chiloven.lukosbot2.util.JsonUtils.JsonLdt
 import top.chiloven.lukosbot2.util.StringUtils
 import top.chiloven.lukosbot2.util.TimeUtils.fmt
-import top.chiloven.lukosbot2.util.TimeUtils.toLDT
 import java.time.LocalDateTime
 
 data class HashSearchFile(
-    val id: String,
-    val hash: String,
-    val mtime: LocalDateTime,
-    val ctime: LocalDateTime,
-    val mime: String,
-    val ext: String,
-    val added: LocalDateTime,
-    val size: Long,
-    val ihash: String?,
-    val posts: List<PostSimple>,
+    val id: String = "",
+    val hash: String = "",
+    @JsonLdt
+    val mtime: LocalDateTime = LocalDateTime.MIN,
+    @JsonLdt
+    val ctime: LocalDateTime = LocalDateTime.MIN,
+    val mime: String = "",
+    val ext: String = "",
+    @JsonLdt
+    val added: LocalDateTime = LocalDateTime.MIN,
+    val size: Long = 0,
+    val ihash: String? = null,
+    val posts: List<PostSimple> = emptyList(),
 ) {
 
     companion object {
 
-        fun fromJsonObject(obj: JsonObject): HashSearchFile {
-            return HashSearchFile(
-                id = obj.str("id")!!,
-                hash = obj.str("hash")!!,
-                mtime = obj.str("mtime")!!.toLDT(),
-                ctime = obj.str("ctime")!!.toLDT(),
-                mime = obj.str("mime")!!,
-                ext = obj.str("ext")!!,
-                added = obj.str("added")!!.toLDT(),
-                size = obj.long("size")!!,
-                ihash = obj.str("ihash"),
-                posts = PostSimple.fromArraySimplePost(obj.arr("posts")!!)
-            )
-        }
+        fun fromJsonObject(obj: ObjectNode): HashSearchFile =
+            JsonUtils.snakeTreeToValue(obj, HashSearchFile::class.java)
 
     }
 
@@ -52,9 +41,7 @@ data class HashSearchFile(
                 appendLine("来自：无关联帖子")
             } else {
                 appendLine("来自：")
-                posts.forEach { post ->
-                    appendLine("  - ${post.getBrief()}")
-                }
+                posts.forEach { post -> appendLine("  - ${post.getBrief()}") }
             }
         }.trim()
     }

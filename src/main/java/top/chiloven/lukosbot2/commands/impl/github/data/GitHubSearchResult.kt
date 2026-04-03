@@ -1,11 +1,11 @@
 package top.chiloven.lukosbot2.commands.impl.github.data
 
-import com.google.gson.JsonObject
-import top.chiloven.lukosbot2.util.JsonUtils.int
+import tools.jackson.databind.node.ObjectNode
+import top.chiloven.lukosbot2.util.JsonUtils
 
 data class GitHubSearchResult(
-    val totalCount: Int,
-    val items: List<GitHubRepoBrief>
+    val totalCount: Int = 0,
+    val items: List<GitHubRepoBrief> = emptyList()
 ) {
 
     fun toReadableText(): String {
@@ -22,22 +22,12 @@ data class GitHubSearchResult(
     }
 
     companion object {
-        fun from(obj: JsonObject, top: Int): GitHubSearchResult {
-            val itemsArr = obj.getAsJsonArray("items")
-            val repos = buildList {
-                if (itemsArr != null && !itemsArr.isEmpty) {
-                    val count = minOf(itemsArr.size(), top)
-                    for (i in 0 until count) {
-                        val repoObj = itemsArr[i].asJsonObject
-                        add(GitHubRepoBrief.from(repoObj))
-                    }
-                }
-            }
-            return GitHubSearchResult(
-                totalCount = obj.int("total_count")!!,
-                items = repos
-            )
+
+        fun from(obj: ObjectNode, top: Int): GitHubSearchResult {
+            val mapped = JsonUtils.snakeTreeToValue(obj, GitHubSearchResult::class.java)
+            return mapped.copy(items = mapped.items.take(top))
         }
+
     }
 
 }

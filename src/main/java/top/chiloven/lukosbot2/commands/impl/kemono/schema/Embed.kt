@@ -1,23 +1,17 @@
 package top.chiloven.lukosbot2.commands.impl.kemono.schema
 
-import com.google.gson.JsonObject
-import top.chiloven.lukosbot2.util.JsonUtils.str
+import tools.jackson.databind.node.ObjectNode
+import top.chiloven.lukosbot2.util.JsonUtils
 
 data class Embed(
-    val url: String,
-    val subject: String?,
-    val description: String?,
+    val url: String = "",
+    val subject: String? = null,
+    val description: String? = null,
 ) {
 
     companion object {
 
-        fun fromJsonObject(obj: JsonObject): Embed {
-            return Embed(
-                url = obj.str("url")!!,
-                subject = obj.str("subject"),
-                description = obj.str("description"),
-            )
-        }
+        fun fromJsonObject(obj: ObjectNode): Embed = JsonUtils.snakeTreeToValue(obj, Embed::class.java)
 
     }
 

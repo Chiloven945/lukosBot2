@@ -12,8 +12,7 @@ import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientImpl;
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
 import com.github.dockerjava.transport.DockerHttpClient;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import tools.jackson.databind.node.ObjectNode;
 import top.chiloven.lukosbot2.config.CommandConfigProp.Translate;
 import top.chiloven.lukosbot2.util.StringUtils;
 
@@ -26,18 +25,16 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 
-/**
- * 基于 Docker 管理本地 LibreTranslate 容器的翻译服务：
- * - 应用启动时自动确保 libretranslate/libretranslate 容器存在并在跑
- * - 对外只暴露 translate(from, to, text)
- */
+import static top.chiloven.lukosbot2.util.JsonUtils.MAPPER;
+
 public class TranslationService {
+
     private static final String IMAGE_NAME = "libretranslate/libretranslate:latest";
     private static final String CONTAINER_NAME = "lukos-libretranslate";
-    private static final int CONTAINER_PORT = 5000;     // LibreTranslate 默认端口
-    private static final int HOST_PORT = 5000;          // 映射到宿主机的端口
+    private static final int CONTAINER_PORT = 5000;
+    private static final int HOST_PORT = 5000;
 
-    private final String baseUrl;      // 例如 http://127.0.0.1:5000
+    private final String baseUrl;
     private final String defaultLang;
 
     private final HttpClient httpClient;
@@ -48,12 +45,10 @@ public class TranslationService {
                 ? translate.getDefaultLang()
                 : "en";
 
-        // 如果配置里显式指定 url，就直接用，不管 docker
         if (translate.getUrl() != null && !translate.getUrl().isBlank()) {
             this.baseUrl = normalizeBaseUrl(translate.getUrl());
             this.dockerClient = null;
         } else {
-            // 默认使用本机 docker 容器
             this.baseUrl = "http://127.0.0.1:" + HOST_PORT;
             this.dockerClient = createDockerClient();
             ensureLibreTranslateContainer();
@@ -99,14 +94,12 @@ public class TranslationService {
 
     private String extractTranslatedText(String body) {
         try {
-            JsonObject obj = JsonParser.parseString(body).getAsJsonObject();
-            if (obj.has("translatedText") && !obj.get("translatedText").isJsonNull()) {
-                return obj.get("translatedText").getAsString();
+            ObjectNode obj = MAPPER.readTree(body).asObject();
+            if (obj.has("translatedText") && !obj.get("translatedText").isNull()) {
+                return obj.get("translatedText").asString();
             }
-            // 字段不存在时，把整个响应透出去，避免你看到“null 没原因”的情况
             return "[翻译结果缺失] " + body;
         } catch (Exception e) {
-            // JSON 解析失败同理，直接把原始响应附上
             return "[解析翻译结果失败] " + body;
         }
     }
@@ -144,10 +137,8 @@ public class TranslationService {
 
             String containerId;
             if (existing == null) {
-                // 没有容器，先拉镜像
                 dockerClient.pullImageCmd(IMAGE_NAME).start().awaitCompletion();
 
-                // 创建容器并绑定端口
                 Ports portBindings = new Ports();
                 portBindings.bind(
                         ExposedPort.tcp(CONTAINER_PORT),
@@ -167,7 +158,6 @@ public class TranslationService {
                 containerId = existing.getId();
             }
 
-            // 确保容器在跑
             InspectContainerResponse inspect = dockerClient.inspectContainerCmd(containerId).exec();
             if (!Boolean.TRUE.equals(inspect.getState().getRunning())) {
                 dockerClient.startContainerCmd(containerId).exec();
@@ -180,10 +170,9 @@ public class TranslationService {
         }
     }
 
-    /* ===================== 工具方法 ===================== */
-
     private String normalizeBaseUrl(String url) {
         String u = url.trim();
         return u.endsWith("/") ? u.substring(0, u.length() - 1) : u;
     }
+
 }

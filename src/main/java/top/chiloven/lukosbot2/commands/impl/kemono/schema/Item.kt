@@ -1,35 +1,27 @@
 package top.chiloven.lukosbot2.commands.impl.kemono.schema
 
-import com.google.gson.JsonArray
-import com.google.gson.JsonObject
-import top.chiloven.lukosbot2.util.JsonUtils.str
+import tools.jackson.databind.node.ArrayNode
+import tools.jackson.databind.node.ObjectNode
+import top.chiloven.lukosbot2.util.JsonUtils
 import java.net.URI
 
-private const val KEMONO_BASE = "https://kemono.cr"
-
 data class Item(
-    val name: String,
-    val path: URI,
+    val name: String = "",
+    val path: URI = URI.create("")
 ) {
 
     companion object {
 
-        fun fromJsonObject(obj: JsonObject): Item {
-            return Item(
-                name = obj.str("name")!!,
-                path = URI.create(obj.str("path")!!)
-            )
-        }
+        private const val KEMONO_BASE = "https://kemono.cr"
 
-        fun fromJsonArray(arr: JsonArray): List<Item> {
-            return arr.mapNotNull { el ->
-                el.takeIf { it.isJsonObject }?.asJsonObject?.let(::fromJsonObject)
-            }
-        }
+        fun fromJsonObject(obj: ObjectNode): Item =
+            JsonUtils.snakeTreeToValue(obj, Item::class.java)
 
-        fun getStringInList(items: List<Item>): String {
-            return items.joinToString("\n") { it.getString() }
-        }
+        fun fromJsonArray(arr: ArrayNode): List<Item> =
+            JsonUtils.snakeTreeToList(arr, Item::class.java)
+
+        fun getStringInList(items: List<Item>): String =
+            items.joinToString("\n") { it.getString() }
 
     }
 

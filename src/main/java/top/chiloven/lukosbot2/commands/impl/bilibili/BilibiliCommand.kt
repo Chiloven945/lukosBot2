@@ -1,16 +1,17 @@
 package top.chiloven.lukosbot2.commands.impl.bilibili
 
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.StringArgumentType
 import org.apache.logging.log4j.LogManager
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
+import tools.jackson.databind.node.ObjectNode
 import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.commands.UsageNode
 import top.chiloven.lukosbot2.core.command.CommandSource
+import top.chiloven.lukosbot2.util.JsonUtils.MAPPER
+import top.chiloven.lukosbot2.util.JsonUtils.arr
 import top.chiloven.lukosbot2.util.JsonUtils.int
 import top.chiloven.lukosbot2.util.JsonUtils.long
 import top.chiloven.lukosbot2.util.JsonUtils.obj
@@ -39,6 +40,8 @@ import java.time.Duration
     matchIfMissing = true
 )
 class BilibiliCommand : IBotCommand {
+
+    // TODO: refactor like other api-based commands
 
     private val log = LogManager.getLogger(BilibiliCommand::class.java)
 
@@ -312,7 +315,7 @@ class BilibiliCommand : IBotCommand {
         }
     }
 
-    private fun getJson(url: String, timeoutSec: Int): JsonObject? {
+    private fun getJson(url: String, timeoutSec: Int): ObjectNode? {
         val req = HttpRequest.newBuilder()
             .uri(URI.create(url))
             .timeout(Duration.ofSeconds(timeoutSec.toLong()))
@@ -325,7 +328,7 @@ class BilibiliCommand : IBotCommand {
         if (resp.statusCode() / 100 != 2) return null
 
         return runCatching {
-            JsonParser.parseString(resp.body()).asJsonObject
+            MAPPER.readTree(resp.body()).asObjectOpt().orElse(null)
         }.getOrNull()
     }
 
@@ -338,14 +341,14 @@ class BilibiliCommand : IBotCommand {
         }
     }
 
-    private fun publishDateMs(data: JsonObject): Long {
+    private fun publishDateMs(data: ObjectNode): Long {
         val sec = data.long("pubdate")!!
         return if (sec <= 0) 0L else sec * 1000L
     }
 
-    private fun pageCount(data: JsonObject?): Int {
-        val byArray = if (data != null && data.has("pages") && data["pages"].isJsonArray) {
-            data.getAsJsonArray("pages").size()
+    private fun pageCount(data: ObjectNode?): Int {
+        val byArray = if (data != null && data.has("pages") && data["pages"].isArray) {
+            data.arr("pages")!!.size()
         } else 0
         val byField = data?.int("videos") ?: 0
         return maxOf(1, maxOf(byArray, byField))

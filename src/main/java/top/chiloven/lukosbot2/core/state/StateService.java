@@ -1,8 +1,8 @@
 package top.chiloven.lukosbot2.core.state;
 
-import com.google.gson.Gson;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.json.JsonMapper;
 import top.chiloven.lukosbot2.core.state.definition.StateDefinition;
 import top.chiloven.lukosbot2.core.state.store.IStateStore;
 import top.chiloven.lukosbot2.model.message.Address;
@@ -17,10 +17,11 @@ import java.time.Instant;
 public class StateService {
 
     private final IStateStore store;
-    private final Gson gson = new Gson();
+    private final JsonMapper mapper;
 
-    public StateService(IStateStore store) {
+    public StateService(IStateStore store, JsonMapper mapper) {
         this.store = store;
+        this.mapper = mapper;
     }
 
     public <T> T resolve(StateDefinition<T> def, Address addr, Long userId) {
@@ -29,7 +30,7 @@ public class StateService {
             var v = store.getJson(Scope.chat(addr), def.namespace(), def.name()).orElse(null);
             if (v != null) {
                 try {
-                    return gson.fromJson(v, def.type());
+                    return mapper.readValue(v, def.type());
                 } catch (Exception e) {
                     log.debug("Failed to parse state {}.{} at CHAT: {}", def.namespace(), def.name(), e.getMessage());
                 }
@@ -41,7 +42,7 @@ public class StateService {
             var v = store.getJson(Scope.user(addr.platform(), userId), def.namespace(), def.name()).orElse(null);
             if (v != null) {
                 try {
-                    return gson.fromJson(v, def.type());
+                    return mapper.readValue(v, def.type());
                 } catch (Exception e) {
                     log.debug("Failed to parse state {}.{} at USER: {}", def.namespace(), def.name(), e.getMessage());
                 }
@@ -53,7 +54,7 @@ public class StateService {
             var v = store.getJson(Scope.global(), def.namespace(), def.name()).orElse(null);
             if (v != null) {
                 try {
-                    return gson.fromJson(v, def.type());
+                    return mapper.readValue(v, def.type());
                 } catch (Exception e) {
                     log.debug("Failed to parse state {}.{} at GLOBAL: {}", def.namespace(), def.name(), e.getMessage());
                 }
@@ -70,7 +71,7 @@ public class StateService {
 
         Instant exp = def.ttl() == null ? null : Instant.now().plus(def.ttl());
         Scope scope = preferredScope(def, addr, userId);
-        store.upsertJson(scope, def.namespace(), def.name(), gson.toJson(v), exp);
+        store.upsertJson(scope, def.namespace(), def.name(), mapper.writeValueAsString(v), exp);
     }
 
     public Scope preferredScope(StateDefinition<?> def, Address addr, Long userId) {

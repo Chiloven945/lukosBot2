@@ -1,5 +1,7 @@
 package top.chiloven.lukosbot2.commands.impl.kemono.schema
 
+import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonValue
 import java.net.URI
 import java.util.*
 
@@ -7,6 +9,7 @@ import java.util.*
  * Services supported by kemono.
  */
 enum class Service(
+    @get:JsonValue
     val id: String,
     val siteName: String,
     val abbr: String,
@@ -36,9 +39,18 @@ enum class Service(
         private val byAbbr = entries.associateBy { it.abbr }
         private val byId = entries.associateBy { it.id }
 
+        @JvmStatic
         fun getService(code: String): Service {
             val normalized = code.trim().lowercase(Locale.ROOT)
-            return byAbbr[normalized] ?: byId[normalized]!!
+            return byAbbr[normalized] ?: byId[normalized]
+            ?: throw IllegalArgumentException("Unknown service: $code")
+        }
+
+        @JvmStatic
+        @JsonCreator
+        fun fromJson(code: String): Service {
+            val normalized = code.trim().lowercase(Locale.ROOT)
+            return byAbbr[normalized] ?: byId[normalized] ?: UNKNOWN
         }
 
         fun parseServicePostUrl(uri: URI): ServiceAndPostId {
