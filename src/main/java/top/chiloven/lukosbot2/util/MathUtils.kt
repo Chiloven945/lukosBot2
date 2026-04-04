@@ -105,7 +105,6 @@ object MathUtils {
      * @param seeds seed objects, may include nulls
      * @return an integer in [min, max] deterministically derived from the seeds
      */
-    @JvmStatic
     @Throws(IllegalArgumentException::class)
     fun stableRandom(min: Int, max: Int, vararg seeds: Any?): Int {
         require(min <= max) { "min must be <= max" }
