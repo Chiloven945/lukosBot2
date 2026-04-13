@@ -1,5 +1,6 @@
 package top.chiloven.lukosbot2.core;
 
+import jakarta.annotation.PreDestroy;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.core.service.ServiceManager;
@@ -32,7 +33,11 @@ public class MessageDispatcher {
      */
     private final ExecutorService exec = Execs.newVirtualExecutor("proc-");
 
-    public MessageDispatcher(MessageSenderHub senderHub, PipelineProcessor pipeline, ServiceManager services) {
+    public MessageDispatcher(
+            MessageSenderHub senderHub,
+            PipelineProcessor pipeline,
+            ServiceManager services
+    ) {
         this.senderHub = senderHub;
         this.pipeline = pipeline;
         this.services = services;
@@ -69,6 +74,11 @@ public class MessageDispatcher {
                 log.warn("Unexpected dispatcher error: {}", e.getMessage(), e);
             }
         });
+    }
+
+    @PreDestroy
+    public void destroy() {
+        exec.shutdown();
     }
 
 }

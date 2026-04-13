@@ -1,5 +1,6 @@
 package top.chiloven.lukosbot2.core;
 
+import jakarta.annotation.PreDestroy;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.model.message.Address;
@@ -30,6 +31,12 @@ public class MessageSenderHub {
         if (platform == null || sender == null) return;
         senders.put(platform, sender);
         log.info("Registered sender for platform {}", platform);
+    }
+
+    public void unregister(ChatPlatform platform) {
+        if (platform == null) return;
+        senders.remove(platform);
+        log.info("Unregistered sender for platform {}", platform);
     }
 
     public void sendBatch(List<OutboundMessage> outs) {
@@ -63,6 +70,11 @@ public class MessageSenderHub {
     private static String chatKey(Address addr) {
         if (addr == null) return "unknown";
         return addr.platform().name() + ":" + (addr.group() ? "g" : "p") + ":" + addr.chatId();
+    }
+
+    @PreDestroy
+    public void destroy() {
+        shutdown();
     }
 
     public void shutdown() {

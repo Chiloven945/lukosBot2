@@ -4,7 +4,7 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
-import org.springframework.context.ApplicationContext
+import org.springframework.context.ConfigurableApplicationContext
 import kotlin.system.exitProcess
 
 @SpringBootApplication
@@ -14,10 +14,13 @@ class Main {
 
         private val log: Logger = LogManager.getLogger(Main::class.java)
 
-        lateinit var context: ApplicationContext
+        lateinit var context: ConfigurableApplicationContext
+        private var startupArgs: Array<String> = emptyArray()
 
         @JvmStatic
         fun main(args: Array<String>) {
+            startupArgs = args.copyOf()
+
             log.info(
                 """
                 Starting lukosBot2 {} ...
@@ -30,12 +33,21 @@ class Main {
                     \/___/   \/_____/\/_/\/_/ \/_____/\/_____/\/___/   \/_____/  \/_/\/_____/ 
                 """.trimIndent(), Constants.VERSION
             )
-            context = SpringApplication.run(Main::class.java, *args)
+
+            context = SpringApplication.run(Main::class.java, *startupArgs)
+        }
+
+        @JvmStatic
+        fun restart() {
+            log.info("Restarting lukosBot2...")
+            context.close()
+            context = SpringApplication.run(Main::class.java, *startupArgs)
+            log.info("lukosBot2 restarted successfully.")
         }
 
         @JvmStatic
         fun shutdown() {
-            log.info("Start to shut down lukosBot2...")
+            log.info("Started to shut down lukosBot2...")
             log.info("Shutting down SpringBoot...")
             val exitCode = SpringApplication.exit(context, { 0 })
 
