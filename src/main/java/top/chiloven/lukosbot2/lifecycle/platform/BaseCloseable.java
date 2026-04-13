@@ -13,7 +13,7 @@ public final class BaseCloseable implements AutoCloseable {
      * @param c the closeable resource
      * @return this instance for chaining
      */
-    public BaseCloseable add(AutoCloseable c) {
+    public synchronized BaseCloseable add(AutoCloseable c) {
         if (c != null && c != this) list.add(c);
         return this;
     }
@@ -24,7 +24,7 @@ public final class BaseCloseable implements AutoCloseable {
      * @param cs the list of closeable resources
      * @return this instance for chaining
      */
-    public BaseCloseable addAll(List<? extends AutoCloseable> cs) {
+    public synchronized BaseCloseable addAll(List<? extends AutoCloseable> cs) {
         if (cs != null) {
             cs.stream()
                     .filter(c -> c != null && c != this)
@@ -34,13 +34,14 @@ public final class BaseCloseable implements AutoCloseable {
     }
 
     @Override
-    public void close() {
+    public synchronized void close() {
         for (int i = list.size() - 1; i >= 0; i--) {
             try {
                 list.get(i).close();
             } catch (Exception _) {
             }
         }
+        list.clear();
     }
 
 }

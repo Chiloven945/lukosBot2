@@ -4,6 +4,7 @@ import org.jspecify.annotations.NonNull;
 
 import java.io.PrintStream;
 
+import static top.chiloven.lukosbot2.util.StringUtils.formatStackTrace;
 import static top.chiloven.lukosbot2.util.StringUtils.resolveColorCode;
 
 public final class CliCmdContext {
@@ -22,6 +23,10 @@ public final class CliCmdContext {
         out.print(resolveColorCode(string));
     }
 
+    public void printErr(@NonNull String string, @NonNull Exception e) {
+        print("§4" + string + "\n" + formatStackTrace(e) + "§r");
+    }
+
     public void printlnErr(@NonNull String string) {
         println("§4" + string + "§r");
     }
@@ -30,12 +35,20 @@ public final class CliCmdContext {
         out.println(resolveColorCode(string));
     }
 
+    public void printlnErr(@NonNull String string, @NonNull Exception e) {
+        println("§4" + string + "\n" + formatStackTrace(e) + "§r");
+    }
+
     public void printfErr(@NonNull String format, Object... args) {
         printf("§4" + format + "§r", args);
     }
 
     public void printf(@NonNull String format, Object... args) {
         out.printf(resolveColorCode(format), args);
+    }
+
+    public void printfErr(@NonNull String format, @NonNull Exception e, Object... args) {
+        printf("§4" + format + "\n" + formatStackTrace(e) + "§r", args);
     }
 
     public void printRaw(@NonNull String string) {

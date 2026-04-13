@@ -12,6 +12,8 @@ import top.chiloven.lukosbot2.lifecycle.platform.OneBotLifecycle
 import top.chiloven.lukosbot2.lifecycle.platform.TelegramLifecycle
 import top.chiloven.lukosbot2.platform.ChatPlatform
 import java.util.*
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 @Service
 class ReloadManager(
@@ -23,15 +25,18 @@ class ReloadManager(
 ) {
 
     private val log: Logger = LogManager.getLogger(ReloadManager::class.java)
+    private val reloadLock = ReentrantLock()
 
     fun supportedModules(): Set<String> =
         linkedSetOf("config", "telegram", "discord", "onebot", "bot", "all")
 
     fun reloadWholeBot() {
-        Main.restart()
+        reloadLock.withLock {
+            Main.restart()
+        }
     }
 
-    fun reloadModules(names: Collection<String>): List<String> {
+    fun reloadModules(names: Collection<String>): List<String> = reloadLock.withLock {
         val normalized = names
             .map { it.trim().lowercase(Locale.ROOT) }
             .filter { it.isNotEmpty() }
@@ -40,7 +45,7 @@ class ReloadManager(
         require(normalized.isNotEmpty()) { "No modules specified." }
 
         if (normalized.any { it == "bot" || it == "all" }) {
-            reloadWholeBot()
+            Main.restart()
             return listOf("bot")
         }
 
@@ -48,12 +53,12 @@ class ReloadManager(
 
         for (name in normalized) {
             when (name) {
-                "config" -> {
+                "config", "conf", "cf" -> {
                     reloadConfig()
                     done += "config"
                 }
 
-                "telegram" -> {
+                "telegram", "tg" -> {
                     reloadLifecycle(
                         name = "telegram",
                         platform = ChatPlatform.TELEGRAM,
@@ -62,7 +67,7 @@ class ReloadManager(
                     done += "telegram"
                 }
 
-                "discord" -> {
+                "discord", "dc" -> {
                     reloadLifecycle(
                         name = "discord",
                         platform = ChatPlatform.DISCORD,
@@ -71,7 +76,7 @@ class ReloadManager(
                     done += "discord"
                 }
 
-                "onebot" -> {
+                "onebot", "ob", "qq" -> {
                     reloadLifecycle(
                         name = "onebot",
                         platform = ChatPlatform.ONEBOT,
@@ -88,7 +93,7 @@ class ReloadManager(
             }
         }
 
-        return done
+        done
     }
 
     private fun reloadConfig() {
@@ -112,6 +117,9 @@ class ReloadManager(
 
         if (lifecycle.isRunning) {
             lifecycle.stop()
+            if (platform == ChatPlatform.TELEGRAM) {
+                Thread.sleep(750)
+            }
         }
         lifecycle.start()
 

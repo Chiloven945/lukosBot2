@@ -41,7 +41,7 @@ class ReloadCliCommand(
                             reloadManager.reloadWholeBot()
                             out.println("§2Whole bot reloaded successfully.§r")
                         } catch (e: Exception) {
-                            out.printlnErr("Failed to reload whole bot: ${e.message}")
+                            out.printlnErr("Failed to reload whole bot: ${e.message}", e)
                         }
                     }
 
@@ -62,7 +62,7 @@ class ReloadCliCommand(
                                     val reloaded = reloadManager.reloadModules(modules)
                                     out.println("§2Reloaded: ${reloaded.joinToString(", ")}§r")
                                 } catch (e: Exception) {
-                                    out.printlnErr("Failed to reload module(s): ${e.message}")
+                                    out.printlnErr("Failed to reload module(s): ${e.message}", e)
                                 }
                             }
 

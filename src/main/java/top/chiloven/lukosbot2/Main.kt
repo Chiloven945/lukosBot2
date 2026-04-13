@@ -41,6 +41,7 @@ class Main {
         fun restart() {
             log.info("Restarting lukosBot2...")
             context.close()
+            Thread.sleep(750)
             context = SpringApplication.run(Main::class.java, *startupArgs)
             log.info("lukosBot2 restarted successfully.")
         }
