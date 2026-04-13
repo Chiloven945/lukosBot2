@@ -25,16 +25,33 @@ final class TelegramStack implements AutoCloseable {
         this.client = new OkHttpTelegramClient(token);
     }
 
-    void ensureStarted() throws TelegramApiException {
-        if (bot != null) return;
-        app = new TelegramBotsLongPollingApplication();
-        bot = new TelegramBot(username);
-        app.registerBot(token, bot);
+    synchronized void ensureStarted() throws TelegramApiException {
+        if (bot != null && app != null) return;
+
+        TelegramBotsLongPollingApplication newApp = new TelegramBotsLongPollingApplication();
+        TelegramBot newBot = new TelegramBot(username);
+        try {
+            newApp.registerBot(token, newBot);
+            app = newApp;
+            bot = newBot;
+        } catch (TelegramApiException e) {
+            try {
+                newApp.stop();
+            } catch (Exception _) {
+            }
+            throw e;
+        }
     }
 
     @Override
-    public void close() throws TelegramApiException {
-        if (app != null) app.stop();
+    public synchronized void close() throws TelegramApiException {
+        TelegramBotsLongPollingApplication oldApp = app;
+        app = null;
+        bot = null;
+
+        if (oldApp != null) {
+            oldApp.stop();
+        }
     }
 
     <T extends Serializable, M extends BotApiMethod<T>> T execute(M method) {

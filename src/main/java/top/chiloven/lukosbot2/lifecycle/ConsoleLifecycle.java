@@ -8,8 +8,7 @@ import top.chiloven.lukosbot2.core.cli.CliCmdContext;
 import top.chiloven.lukosbot2.core.cli.CliCmdProcessor;
 import top.chiloven.lukosbot2.util.concurrent.Execs;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.concurrent.ExecutorService;
 
 @Service
@@ -35,8 +34,8 @@ public class ConsoleLifecycle implements SmartLifecycle {
 
         executor = Execs.newVirtualExecutor("cli-");
         executor.submit(() -> {
-            try (var reader = new BufferedReader(new InputStreamReader(System.in))) {
-                while (running) {
+            try (var reader = new BufferedReader(new InputStreamReader(new NonClosingInputStream(System.in)))) {
+                while (running && !Thread.currentThread().isInterrupted()) {
                     String line = reader.readLine();
                     if (line == null) break;
                     if (line.isBlank()) continue;
@@ -48,7 +47,7 @@ public class ConsoleLifecycle implements SmartLifecycle {
                     }
                 }
             } catch (Exception e) {
-                if (running) {
+                if (running && !isExpectedShutdown(e)) {
                     log.warn("[Cli] Console lifecycle stopped unexpectedly: {}", e.getMessage(), e);
                 }
             } finally {
@@ -71,6 +70,13 @@ public class ConsoleLifecycle implements SmartLifecycle {
         return running;
     }
 
+    private static boolean isExpectedShutdown(Exception e) {
+        if (e instanceof IOException io && "Stream closed".equalsIgnoreCase(io.getMessage())) {
+            return true;
+        }
+        return e instanceof InterruptedException;
+    }
+
     @Override
     public void stop(Runnable callback) {
         stop();
@@ -80,6 +86,19 @@ public class ConsoleLifecycle implements SmartLifecycle {
     @Override
     public int getPhase() {
         return 0;
+    }
+
+    private static final class NonClosingInputStream extends FilterInputStream {
+
+        private NonClosingInputStream(InputStream in) {
+            super(in);
+        }
+
+        @Override
+        public void close() {
+            // Never close System.in, otherwise a whole-process restart cannot recreate the console lifecycle.
+        }
+
     }
 
 }

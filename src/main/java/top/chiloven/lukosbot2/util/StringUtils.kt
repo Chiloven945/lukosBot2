@@ -255,4 +255,29 @@ object StringUtils {
     fun resolveColorCode(target: String): String =
         replaceWithMap(target, CMD_TO_ANSI_MAP)!!
 
+    /**
+     * Formats an exception's stack trace into a string where each element
+     * starts with `\tat ` on a new line.
+     *
+     * @param e The exception containing the stack trace to be formatted.
+     * @return A formatted string representation of the stack trace.
+     */
+    @JvmStatic
+    fun formatStackTrace(e: Exception): String {
+        return e.stackTrace.joinToString(separator = "\n") { element ->
+            "\tat $element"
+        }
+    }
+
+    /**
+     * Formats the exception's stack trace into a standard "at xxx" string format.
+     *
+     * Each element is prefixed with a tab and "at ", separated by newlines.
+     *
+     * @return A multi-line string representing the stack trace.
+     */
+    fun Exception.fmtSt(): String {
+        return formatStackTrace(this)
+    }
+
 }
