@@ -11,6 +11,7 @@ import top.chiloven.lukosbot2.lifecycle.platform.DiscordLifecycle
 import top.chiloven.lukosbot2.lifecycle.platform.OneBotLifecycle
 import top.chiloven.lukosbot2.lifecycle.platform.TelegramLifecycle
 import top.chiloven.lukosbot2.platform.ChatPlatform
+import top.chiloven.lukosbot2.util.StringUtils
 import java.util.*
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -32,6 +33,7 @@ class ReloadManager(
 
     fun reloadWholeBot() {
         reloadLock.withLock {
+            repeat(3) { println(StringUtils.resolveColorCode("§6Error log message from \"telegrambots.longpolling.BotSession\" might occur, please just ignored it.§r")) }
             Main.restart()
         }
     }
@@ -59,6 +61,7 @@ class ReloadManager(
                 }
 
                 "telegram", "tg" -> {
+                    repeat(3) { println(StringUtils.resolveColorCode("§6Error log message from \"telegrambots.longpolling.BotSession\" might occur, please just ignored it.§r")) }
                     reloadLifecycle(
                         name = "telegram",
                         platform = ChatPlatform.TELEGRAM,

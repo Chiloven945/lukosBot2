@@ -37,7 +37,7 @@ class ReloadCliCommand(
 
                     Thread.ofVirtual().name("reload-bot").start {
                         try {
-                            out.println("§eReloading whole bot...§r")
+                            out.println("§6Reloading whole bot...§r")
                             reloadManager.reloadWholeBot()
                             out.println("§2Whole bot reloaded successfully.§r")
                         } catch (e: Exception) {
