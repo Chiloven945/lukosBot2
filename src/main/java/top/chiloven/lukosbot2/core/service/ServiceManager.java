@@ -69,11 +69,13 @@ public class ServiceManager {
         rescheduleAllChats();
 
         if (changed) {
+            // Ensure DB has all defaults + missing chat entries.
             persistAll();
         }
     }
 
     private void loadFromStore() {
+        // defaults
         defaultStates.clear();
         store.getNamespaceJson(Scope.global(), NS_SERVICE).forEach((serviceName, json) -> {
             try {
@@ -83,6 +85,7 @@ public class ServiceManager {
             }
         });
 
+        // chats
         chatStates.clear();
         store.scanByScopeTypeAndNamespace(ScopeType.CHAT, NS_SERVICE).forEach((chatKey, kv) -> {
             ConcurrentMap<String, ServiceState> cm = new ConcurrentHashMap<>();
@@ -100,18 +103,30 @@ public class ServiceManager {
     }
 
     private void persistAll() {
+        // defaults
         for (var de : defaultStates.entrySet()) {
             persistDefault(de.getKey(), de.getValue());
         }
 
+        // chats
         for (var ce : chatStates.entrySet()) {
             persistChatAll(ce.getKey(), ce.getValue());
         }
     }
 
+    /**
+     * Ensure:
+     * <ul>
+     *   <li>{@code defaultStates} has entries for every allowed service</li>
+     *   <li>every known chat has entries for every allowed service</li>
+     * </ul>
+     *
+     * @return {@code true} if any in-memory state was created and should be persisted.
+     */
     private boolean ensureDefaultsEverywhere() {
         boolean changed = false;
 
+        // defaults
         for (IBotService s : registry.all()) {
             if (!props.isAllowed(s.name())) continue;
 
@@ -124,6 +139,7 @@ public class ServiceManager {
             }
         }
 
+        // each chat
         for (var ce : chatStates.entrySet()) {
             String chatKey = ce.getKey();
             ConcurrentMap<String, ServiceState> perChat = ce.getValue();
@@ -154,6 +170,12 @@ public class ServiceManager {
         }
     }
 
+    /**
+     * Called by {@code MessageDispatcher} for incoming messages.
+     *
+     * @param in inbound message.
+     * @return outbound messages produced by enabled trigger services for this message; may be empty.
+     */
     public List<OutboundMessage> onMessage(InboundMessage in) {
         if (in == null || in.addr() == null) return List.of();
 
@@ -232,6 +254,13 @@ public class ServiceManager {
         );
     }
 
+    /**
+     * External trigger that fires one service event to one chat.
+     *
+     * @param addr        target chat.
+     * @param serviceName service to invoke.
+     * @param event       event payload.
+     */
     public void fire(Address addr, String serviceName, ServiceEvent event) {
         if (addr == null) return;
 
@@ -261,6 +290,12 @@ public class ServiceManager {
         s.onEvent(ctx, new ServiceConfig(st.getConfig()), event);
     }
 
+    /**
+     * External trigger that fires one service event to all chats that currently have the service enabled.
+     *
+     * @param serviceName service to invoke.
+     * @param event       event payload.
+     */
     public void fireAll(String serviceName, ServiceEvent event) {
         Optional<IBotService> opt = registry.find(serviceName);
         if (opt.isEmpty()) return;

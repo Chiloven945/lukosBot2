@@ -158,6 +158,7 @@ final class DiscordStack implements AutoCloseable {
                 parts.add(new InText(text));
             }
 
+            // attachments
             var atts = e.getMessage().getAttachments();
             for (var a : atts) {
                 if (a == null) continue;
@@ -176,6 +177,7 @@ final class DiscordStack implements AutoCloseable {
                 }
             }
 
+            // ignore empty messages
             if (parts.isEmpty()) return;
 
             sink.accept(new InboundMessage(addr, sender, chat, meta, parts, buildExtForMessage(e)));

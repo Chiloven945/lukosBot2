@@ -1,23 +1,23 @@
 package top.chiloven.lukosbot2.core.state;
 
 import org.springframework.stereotype.Service;
-import top.chiloven.lukosbot2.core.state.definition.StateDefinition;
+import top.chiloven.lukosbot2.core.state.definition.IStateDefinition;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Registry for all {@link StateDefinition} beans.
+ * Registry for all {@link IStateDefinition} beans.
  */
 @Service
 public class StateRegistry {
 
-    private final Map<String, StateDefinition<?>> defs;
+    private final Map<String, IStateDefinition<?>> defs;
 
-    public StateRegistry(List<StateDefinition<?>> list) {
-        Map<String, StateDefinition<?>> m = new LinkedHashMap<>();
+    public StateRegistry(List<IStateDefinition<?>> list) {
+        Map<String, IStateDefinition<?>> m = new LinkedHashMap<>();
         if (list != null) {
-            for (StateDefinition<?> d : list) {
+            for (IStateDefinition<?> d : list) {
                 if (d == null || d.name() == null) continue;
                 m.put(d.name(), d);
             }
@@ -25,11 +25,11 @@ public class StateRegistry {
         this.defs = Collections.unmodifiableMap(m);
     }
 
-    public Optional<StateDefinition<?>> find(String name) {
+    public Optional<IStateDefinition<?>> find(String name) {
         return name == null ? Optional.empty() : Optional.ofNullable(defs.get(name));
     }
 
-    public Collection<StateDefinition<?>> all() {
+    public Collection<IStateDefinition<?>> all() {
         return defs.values();
     }
 

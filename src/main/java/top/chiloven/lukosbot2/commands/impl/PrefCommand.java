@@ -13,7 +13,7 @@ import top.chiloven.lukosbot2.core.state.Scope;
 import top.chiloven.lukosbot2.core.state.ScopeType;
 import top.chiloven.lukosbot2.core.state.StateRegistry;
 import top.chiloven.lukosbot2.core.state.StateService;
-import top.chiloven.lukosbot2.core.state.definition.StateDefinition;
+import top.chiloven.lukosbot2.core.state.definition.IStateDefinition;
 
 import java.util.Comparator;
 import java.util.List;
@@ -140,7 +140,7 @@ public class PrefCommand implements IBotCommand {
 
     private String renderList() {
         String defs = registry.all().stream()
-                .sorted(Comparator.comparing(StateDefinition::name))
+                .sorted(Comparator.comparing(IStateDefinition::name))
                 .map(d -> {
                     String line = "- %s (%s) scopes=%s resolve=%s".formatted(
                             d.name(),
@@ -172,7 +172,7 @@ public class PrefCommand implements IBotCommand {
         }
 
         @SuppressWarnings("unchecked")
-        StateDefinition<Object> def = (StateDefinition<Object>) opt.get();
+        IStateDefinition<Object> def = (IStateDefinition<Object>) opt.get();
         Object v = states.resolve(def, src.addr(), src.userIdOrNull());
         src.reply("%s = %s （resolved）".formatted(def.name(), def.format(v)));
     }
@@ -185,7 +185,7 @@ public class PrefCommand implements IBotCommand {
         }
 
         @SuppressWarnings("unchecked")
-        StateDefinition<Object> def = (StateDefinition<Object>) opt.get();
+        IStateDefinition<Object> def = (IStateDefinition<Object>) opt.get();
 
         try {
             Scope scope = parseScope(scopeRaw, src, def);
@@ -208,7 +208,7 @@ public class PrefCommand implements IBotCommand {
         }
 
         @SuppressWarnings("unchecked")
-        StateDefinition<Object> def = (StateDefinition<Object>) opt.get();
+        IStateDefinition<Object> def = (IStateDefinition<Object>) opt.get();
 
         try {
             Scope scope = parseScope(scopeRaw, src, def);
@@ -234,7 +234,7 @@ public class PrefCommand implements IBotCommand {
         }
 
         @SuppressWarnings("unchecked")
-        StateDefinition<Object> def = (StateDefinition<Object>) opt.get();
+        IStateDefinition<Object> def = (IStateDefinition<Object>) opt.get();
 
         try {
             Scope scope = parseScope(scopeRaw, src, def);
@@ -249,7 +249,7 @@ public class PrefCommand implements IBotCommand {
         }
     }
 
-    private Scope parseScope(String raw, CommandSource src, StateDefinition<?> def) {
+    private Scope parseScope(String raw, CommandSource src, IStateDefinition<?> def) {
         if (raw == null || raw.isBlank()) {
             throw new IllegalArgumentException("scope 不能为空，可选值：user/chat/global");
         }
@@ -267,6 +267,7 @@ public class PrefCommand implements IBotCommand {
 
         return switch (type) {
             case USER -> {
+                // If the userId is missing but preferred scope is USER, make it obvious.
                 Long userId = src.userIdOrNull();
                 if (userId == null) throw new IllegalArgumentException("当前来源没有 userId，无法使用 user scope");
                 yield Scope.user(src.platform(), userId);

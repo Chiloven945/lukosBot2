@@ -6,7 +6,7 @@ import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.meta.api.methods.groupadministration.GetChatMember;
 import org.telegram.telegrambots.meta.api.objects.chatmember.ChatMember;
 import top.chiloven.lukosbot2.config.AppProperties;
-import top.chiloven.lukosbot2.core.auth.ChatAdminResolver;
+import top.chiloven.lukosbot2.core.auth.IChatAdminResolver;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
 
@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
-public class TelegramChatAdminResolver implements ChatAdminResolver {
+public class TelegramChatAdminResolver implements IChatAdminResolver {
 
     private static final long CACHE_TTL_MS = 60_000L;
 

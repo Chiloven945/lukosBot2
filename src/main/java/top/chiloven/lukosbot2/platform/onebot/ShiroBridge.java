@@ -69,6 +69,7 @@ public class ShiroBridge {
                 break;
             }
 
+            // text before CQ
             if (start > i) {
                 String t = message.substring(i, start);
                 if (!t.isBlank()) parts.add(new InText(t));
@@ -76,12 +77,13 @@ public class ShiroBridge {
 
             int end = message.indexOf(']', start);
             if (end < 0) {
+                // malformed, treat rest as text
                 String rest = message.substring(start);
                 if (!rest.isBlank()) parts.add(new InText(rest));
                 break;
             }
 
-            String cq = message.substring(start + 4, end);
+            String cq = message.substring(start + 4, end); // after "[CQ:"
             parseOneCq(cq, parts);
 
             i = end + 1;
@@ -97,6 +99,7 @@ public class ShiroBridge {
 
         String type = seg[0].trim();
 
+        // parse key-values
         java.util.Map<String, String> kv = new java.util.LinkedHashMap<>();
         for (int j = 1; j < seg.length; j++) {
             String s = seg[j];
@@ -136,12 +139,14 @@ public class ShiroBridge {
                 }
             }
             case "at" -> {
+                // Represent @ as plain text to preserve meaning for commands/services.
                 String qq = kv.get("qq");
                 if (qq != null && !qq.isBlank()) {
                     parts.add(new InText("@" + qq));
                 }
             }
             default -> {
+                // ignore unknown
             }
         }
     }

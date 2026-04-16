@@ -10,11 +10,11 @@ import java.util.List;
 public class AuthorizationService {
 
     private final BotAdminService botAdminService;
-    private final List<ChatAdminResolver> chatAdminResolvers;
+    private final List<IChatAdminResolver> chatAdminResolvers;
 
     public AuthorizationService(
             BotAdminService botAdminService,
-            List<ChatAdminResolver> chatAdminResolvers
+            List<IChatAdminResolver> chatAdminResolvers
     ) {
         this.botAdminService = botAdminService;
         this.chatAdminResolvers = chatAdminResolvers;
@@ -44,7 +44,7 @@ public class AuthorizationService {
         ChatPlatform platform = src.platform();
         if (platform == null) return false;
 
-        for (ChatAdminResolver resolver : chatAdminResolvers) {
+        for (IChatAdminResolver resolver : chatAdminResolvers) {
             if (resolver.supports(platform) && resolver.isChatAdmin(src)) {
                 return true;
             }

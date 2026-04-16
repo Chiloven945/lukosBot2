@@ -3,14 +3,14 @@ package top.chiloven.lukosbot2.core.state;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.json.JsonMapper;
-import top.chiloven.lukosbot2.core.state.definition.StateDefinition;
+import top.chiloven.lukosbot2.core.state.definition.IStateDefinition;
 import top.chiloven.lukosbot2.core.state.store.IStateStore;
 import top.chiloven.lukosbot2.model.message.Address;
 
 import java.time.Instant;
 
 /**
- * High-level service for reading/writing {@link StateDefinition} values.
+ * High-level service for reading/writing {@link IStateDefinition} values.
  */
 @Service
 @Log4j2
@@ -24,7 +24,8 @@ public class StateService {
         this.mapper = mapper;
     }
 
-    public <T> T resolve(StateDefinition<T> def, Address addr, Long userId) {
+    public <T> T resolve(IStateDefinition<T> def, Address addr, Long userId) {
+        // Resolve in definition-specific order, e.g. CHAT -> USER -> GLOBAL.
         for (ScopeType type : def.resolveOrder()) {
             Scope scope = scopeByType(type, def, addr, userId);
             if (scope == null) continue;
@@ -37,7 +38,7 @@ public class StateService {
         return def.defaultValue();
     }
 
-    private Scope scopeByType(ScopeType type, StateDefinition<?> def, Address addr, Long userId) {
+    private Scope scopeByType(ScopeType type, IStateDefinition<?> def, Address addr, Long userId) {
         if (type == null || !def.allowedScopes().contains(type)) return null;
         return switch (type) {
             case CHAT -> Scope.chat(addr);
@@ -46,7 +47,7 @@ public class StateService {
         };
     }
 
-    public <T> T getAtScope(StateDefinition<T> def, Scope scope) {
+    public <T> T getAtScope(IStateDefinition<T> def, Scope scope) {
         if (def == null || scope == null) return null;
         if (!def.allowedScopes().contains(scope.type())) return null;
 
@@ -61,15 +62,17 @@ public class StateService {
         }
     }
 
-    public <T> void set(StateDefinition<T> def, Address addr, Long userId, String rawValue) {
+    public <T> void set(IStateDefinition<T> def, Address addr, Long userId, String rawValue) {
         Scope scope = preferredScope(def, addr, userId);
         setAtScope(def, scope, rawValue);
     }
 
-    public Scope preferredScope(StateDefinition<?> def, Address addr, Long userId) {
+    public Scope preferredScope(IStateDefinition<?> def, Address addr, Long userId) {
+        // 1) Try the definition's preferred scope first.
         Scope s = scopeByType(def.preferredScope(), def, addr, userId);
         if (s != null) return s;
 
+        // 2) Fall back to USER -> CHAT -> GLOBAL.
         s = scopeByType(ScopeType.USER, def, addr, userId);
         if (s != null) return s;
         s = scopeByType(ScopeType.CHAT, def, addr, userId);
@@ -77,10 +80,11 @@ public class StateService {
         s = scopeByType(ScopeType.GLOBAL, def, addr, userId);
         if (s != null) return s;
 
+        // Should never happen for a well-defined StateDefinition.
         return Scope.chat(addr);
     }
 
-    public <T> void setAtScope(StateDefinition<T> def, Scope scope, String rawValue) {
+    public <T> void setAtScope(IStateDefinition<T> def, Scope scope, String rawValue) {
         if (rawValue == null) throw new IllegalArgumentException("value is null");
         if (scope == null) throw new IllegalArgumentException("scope is null");
         if (!def.allowedScopes().contains(scope.type())) {
@@ -94,12 +98,12 @@ public class StateService {
         store.upsertJson(scope, def.namespace(), def.name(), mapper.writeValueAsString(v), exp);
     }
 
-    public void clear(StateDefinition<?> def, Address addr, Long userId) {
+    public void clear(IStateDefinition<?> def, Address addr, Long userId) {
         Scope scope = preferredScope(def, addr, userId);
         clearAtScope(def, scope);
     }
 
-    public void clearAtScope(StateDefinition<?> def, Scope scope) {
+    public void clearAtScope(IStateDefinition<?> def, Scope scope) {
         if (scope == null) throw new IllegalArgumentException("scope is null");
         if (!def.allowedScopes().contains(scope.type())) {
             throw new IllegalArgumentException("scope " + scope.type() + " is not allowed for state " + def.name());

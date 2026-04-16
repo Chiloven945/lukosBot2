@@ -1,12 +1,12 @@
 package top.chiloven.lukosbot2.core.auth.impl;
 
 import org.springframework.stereotype.Component;
-import top.chiloven.lukosbot2.core.auth.ChatAdminResolver;
+import top.chiloven.lukosbot2.core.auth.IChatAdminResolver;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
 
 @Component
-public class DiscordChatAdminResolver implements ChatAdminResolver {
+public class DiscordChatAdminResolver implements IChatAdminResolver {
 
     @Override
     public boolean supports(ChatPlatform platform) {
