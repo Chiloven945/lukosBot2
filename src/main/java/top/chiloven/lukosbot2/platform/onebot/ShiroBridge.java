@@ -16,7 +16,9 @@ import top.chiloven.lukosbot2.model.message.media.PlatformFileRef;
 import top.chiloven.lukosbot2.model.message.media.UrlRef;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -67,7 +69,6 @@ public class ShiroBridge {
                 break;
             }
 
-            // text before CQ
             if (start > i) {
                 String t = message.substring(i, start);
                 if (!t.isBlank()) parts.add(new InText(t));
@@ -75,13 +76,12 @@ public class ShiroBridge {
 
             int end = message.indexOf(']', start);
             if (end < 0) {
-                // malformed, treat rest as text
                 String rest = message.substring(start);
                 if (!rest.isBlank()) parts.add(new InText(rest));
                 break;
             }
 
-            String cq = message.substring(start + 4, end); // after "[CQ:"
+            String cq = message.substring(start + 4, end);
             parseOneCq(cq, parts);
 
             i = end + 1;
@@ -97,7 +97,6 @@ public class ShiroBridge {
 
         String type = seg[0].trim();
 
-        // parse key-values
         java.util.Map<String, String> kv = new java.util.LinkedHashMap<>();
         for (int j = 1; j < seg.length; j++) {
             String s = seg[j];
@@ -137,14 +136,12 @@ public class ShiroBridge {
                 }
             }
             case "at" -> {
-                // Represent @ as plain text to preserve meaning for commands/services.
                 String qq = kv.get("qq");
                 if (qq != null && !qq.isBlank()) {
                     parts.add(new InText("@" + qq));
                 }
             }
             default -> {
-                // ignore unknown
             }
         }
     }
@@ -163,8 +160,37 @@ public class ShiroBridge {
             parts = List.of(new InText(raw));
         }
 
-        InboundMessage in = new InboundMessage(addr, sender, chat, meta, parts, Map.of("raw", raw));
+        Map<String, Object> ext = new LinkedHashMap<>();
+        ext.put("raw", raw);
+        String role = extractGroupRole(e);
+        if (role != null) {
+            ext.put("onebot.groupRole", role);
+        }
+
+        InboundMessage in = new InboundMessage(addr, sender, chat, meta, parts, ext);
         dispatcher.receive(in);
+    }
+
+    private static String extractGroupRole(GroupMessageEvent e) {
+        String fromSender = invokeRole(invokeNoArg(e, "getSender"));
+        if (fromSender != null) return fromSender;
+        return invokeRole(e);
+    }
+
+    private static String invokeRole(Object target) {
+        Object value = invokeNoArg(target, "getRole");
+        if (value == null) return null;
+        return String.valueOf(value);
+    }
+
+    private static Object invokeNoArg(Object target, String name) {
+        if (target == null) return null;
+        try {
+            Method m = target.getClass().getMethod(name);
+            return m.invoke(target);
+        } catch (Exception _) {
+            return null;
+        }
     }
 
 }

@@ -69,13 +69,11 @@ public class ServiceManager {
         rescheduleAllChats();
 
         if (changed) {
-            // Ensure DB has all defaults + missing chat entries.
             persistAll();
         }
     }
 
     private void loadFromStore() {
-        // defaults
         defaultStates.clear();
         store.getNamespaceJson(Scope.global(), NS_SERVICE).forEach((serviceName, json) -> {
             try {
@@ -85,7 +83,6 @@ public class ServiceManager {
             }
         });
 
-        // chats
         chatStates.clear();
         store.scanByScopeTypeAndNamespace(ScopeType.CHAT, NS_SERVICE).forEach((chatKey, kv) -> {
             ConcurrentMap<String, ServiceState> cm = new ConcurrentHashMap<>();
@@ -103,34 +100,18 @@ public class ServiceManager {
     }
 
     private void persistAll() {
-        // defaults
         for (var de : defaultStates.entrySet()) {
             persistDefault(de.getKey(), de.getValue());
         }
 
-        // chats
         for (var ce : chatStates.entrySet()) {
             persistChatAll(ce.getKey(), ce.getValue());
         }
     }
 
-    private void persistDefault(String serviceName, ServiceState st) {
-        store.upsertJson(
-                Scope.global(),
-                NS_SERVICE,
-                serviceName,
-                mapper.writeValueAsString(st),
-                null
-        );
-    }
-
-    /**
-     * Ensure: - defaultStates has entries for every allowed service - every chat has entries for every allowed service
-     */
     private boolean ensureDefaultsEverywhere() {
         boolean changed = false;
 
-        // defaults
         for (IBotService s : registry.all()) {
             if (!props.isAllowed(s.name())) continue;
 
@@ -143,7 +124,6 @@ public class ServiceManager {
             }
         }
 
-        // each chat
         for (var ce : chatStates.entrySet()) {
             String chatKey = ce.getKey();
             ConcurrentMap<String, ServiceState> perChat = ce.getValue();
@@ -174,11 +154,6 @@ public class ServiceManager {
         }
     }
 
-    /**
-     * Called by MessageDispatcher (incoming messages).
-     *
-     * @return outbound messages produced by services for this inbound message (may be empty)
-     */
     public List<OutboundMessage> onMessage(InboundMessage in) {
         if (in == null || in.addr() == null) return List.of();
 
@@ -257,9 +232,6 @@ public class ServiceManager {
         );
     }
 
-    /**
-     * External trigger: fire an event to a single chat.
-     */
     public void fire(Address addr, String serviceName, ServiceEvent event) {
         if (addr == null) return;
 
@@ -289,9 +261,6 @@ public class ServiceManager {
         s.onEvent(ctx, new ServiceConfig(st.getConfig()), event);
     }
 
-    /**
-     * External trigger: fire an event to ALL chats that enabled the given service.
-     */
     public void fireAll(String serviceName, ServiceEvent event) {
         Optional<IBotService> opt = registry.find(serviceName);
         if (opt.isEmpty()) return;
@@ -344,8 +313,44 @@ public class ServiceManager {
         return perChat;
     }
 
+    public Map<String, ServiceState> snapshotDefaultStates() {
+        ensureDefaultStatesInitialized();
+        return new LinkedHashMap<>(defaultStates);
+    }
+
+    private void ensureDefaultStatesInitialized() {
+        boolean changed = false;
+        for (IBotService s : registry.all()) {
+            if (!props.isAllowed(s.name())) continue;
+            if (!defaultStates.containsKey(s.name())) {
+                defaultStates.put(s.name(), new ServiceState(false, new LinkedHashMap<>(s.defaultConfig())));
+                changed = true;
+            }
+        }
+        if (changed) {
+            for (var e : defaultStates.entrySet()) {
+                persistDefault(e.getKey(), e.getValue());
+            }
+        }
+    }
+
+    private void persistDefault(String serviceName, ServiceState st) {
+        store.upsertJson(
+                Scope.global(),
+                NS_SERVICE,
+                serviceName,
+                mapper.writeValueAsString(st),
+                null
+        );
+    }
+
     public ServiceState stateOf(Address addr, String serviceName) {
         return getOrCreateChatStates(addr).get(serviceName);
+    }
+
+    public ServiceState defaultStateOf(String serviceName) {
+        ensureDefaultStatesInitialized();
+        return defaultStates.get(serviceName);
     }
 
     public void setEnabled(Address addr, String serviceName, boolean enabled) {
@@ -404,6 +409,22 @@ public class ServiceManager {
         return chatKey + "|" + serviceName;
     }
 
+    public void setDefaultEnabled(String serviceName, boolean enabled) {
+        if (!props.isAllowed(serviceName)) return;
+        ensureDefaultStatesInitialized();
+
+        ServiceState st = defaultStates.get(serviceName);
+        if (st == null) {
+            IBotService svc = registry.find(serviceName).orElse(null);
+            if (svc == null) return;
+            st = new ServiceState(false, new LinkedHashMap<>(svc.defaultConfig()));
+            defaultStates.put(serviceName, st);
+        }
+
+        st.setEnabled(enabled);
+        persistDefault(serviceName, st);
+    }
+
     public void setConfigValue(Address addr, String serviceName, String key, String value) {
         if (!props.isAllowed(serviceName)) return;
 
@@ -438,6 +459,27 @@ public class ServiceManager {
         persistChatState(chatKey, serviceName, st);
     }
 
+    public void setDefaultConfigValue(String serviceName, String key, String value) {
+        if (!props.isAllowed(serviceName)) return;
+        ensureDefaultStatesInitialized();
+
+        ServiceState st = defaultStates.get(serviceName);
+        if (st == null) {
+            IBotService svc = registry.find(serviceName).orElse(null);
+            if (svc == null) return;
+            st = new ServiceState(false, new LinkedHashMap<>(svc.defaultConfig()));
+            defaultStates.put(serviceName, st);
+        }
+
+        if (st.getConfig() == null) {
+            st.setConfig(new LinkedHashMap<>());
+        }
+
+        if (value == null) st.getConfig().remove(key);
+        else st.getConfig().put(key, value);
+
+        persistDefault(serviceName, st);
+    }
 
     @PreDestroy
     public void destroy() {

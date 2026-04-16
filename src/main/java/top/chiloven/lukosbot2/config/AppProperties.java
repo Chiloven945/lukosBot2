@@ -4,6 +4,10 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 @Data
 @Configuration
 @ConfigurationProperties(prefix = "lukos")
@@ -21,6 +25,7 @@ public class AppProperties {
     private OneBot onebot = new OneBot();
     private Discord discord = new Discord();
     private Cli cli = new Cli();
+    private Security security = new Security();
 
     /// Properties dealing with the Telegram bot.
     @Data
@@ -67,4 +72,20 @@ public class AppProperties {
 
     }
 
+    @Data
+    public static class Security {
+
+        /**
+         * Bootstrap bot admins defined in config.
+         *
+         * <p>Example:</p>
+         * <pre>
+         * bootstrapBotAdmins:
+         *   telegram: [123456789]
+         *   discord: [987654321]
+         * </pre>
+         */
+        private Map<String, List<Long>> bootstrapBotAdmins = new LinkedHashMap<>();
+
+    }
 }

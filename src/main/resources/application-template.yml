@@ -23,8 +23,8 @@ lukos:
     type: "NONE"
     host: "127.0.0.1"
     port: 1080
-    username: ""     # 可选
-    password: ""     # 可选
+    username: ""     # Optional
+    password: ""     # Optional
     non-proxy-hosts-list:
       - "*.local"
       - "localhost"
@@ -50,6 +50,12 @@ lukos:
   discord:
     enabled: false
     token: "${DISCORD_TOKEN:}"
+
+  security:
+    bootstrap-bot-admins:
+      telegram: [ ]
+      discord: [ ]
+      onebot: [ ]
 
   commands:
     control:

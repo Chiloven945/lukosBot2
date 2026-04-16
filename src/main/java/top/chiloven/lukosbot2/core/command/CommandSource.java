@@ -11,9 +11,12 @@ import top.chiloven.lukosbot2.model.message.outbound.OutFile;
 import top.chiloven.lukosbot2.model.message.outbound.OutImage;
 import top.chiloven.lukosbot2.model.message.outbound.OutPart;
 import top.chiloven.lukosbot2.model.message.outbound.OutboundMessage;
+import top.chiloven.lukosbot2.platform.ChatPlatform;
 import top.chiloven.lukosbot2.util.message.TextExtractor;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -76,6 +79,18 @@ public final class CommandSource {
 
     public List<InPart> parts() {
         return inbound == null ? List.of() : inbound.partsSafe();
+    }
+
+    public Object ext(String key) {
+        return ext().get(key);
+    }
+
+    public Map<String, Object> ext() {
+        return inbound == null ? Collections.emptyMap() : inbound.ext();
+    }
+
+    public ChatPlatform platform() {
+        return addr.platform();
     }
 
     /**

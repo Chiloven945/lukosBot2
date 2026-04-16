@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.IBotCommand;
 import top.chiloven.lukosbot2.commands.UsageNode;
+import top.chiloven.lukosbot2.core.auth.AuthorizationService;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 import top.chiloven.lukosbot2.core.service.ServiceManager;
 import top.chiloven.lukosbot2.core.service.ServiceState;
@@ -29,9 +30,11 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.CommandRAB.argument;
 public class ServiceCommand implements IBotCommand {
 
     private final ServiceManager services;
+    private final AuthorizationService authz;
 
-    public ServiceCommand(ServiceManager services) {
+    public ServiceCommand(ServiceManager services, AuthorizationService authz) {
         this.services = services;
+        this.authz = authz;
     }
 
     @Override
@@ -41,7 +44,7 @@ public class ServiceCommand implements IBotCommand {
 
     @Override
     public String description() {
-        return "管理 Bot 服务（按当前聊天独立配置）";
+        return "管理 Bot 服务（支持当前聊天和全局默认配置）";
     }
 
     @Override
@@ -50,20 +53,27 @@ public class ServiceCommand implements IBotCommand {
                 .description(description())
                 .syntax("显示本命令帮助")
                 .syntax("启用/禁用指定服务（在当前聊天中生效）", UsageNode.arg("service"))
-                .syntax("获取服务配置", UsageNode.arg("service"), UsageNode.arg("key"))
-                .syntax("设置服务配置", UsageNode.arg("service"), UsageNode.arg("key"), UsageNode.arg("value"))
-                .subcommand("list", "列出当前聊天支持的服务与开关状态", b -> b
-                        .syntax("列出服务列表")
+                .syntax("获取服务配置（当前聊天）", UsageNode.arg("service"), UsageNode.arg("key"))
+                .syntax("设置服务配置（当前聊天）", UsageNode.arg("service"), UsageNode.arg("key"), UsageNode.arg("value"))
+                .subcommand("list", "列出当前聊天支持的服务与开关状态", b -> b.syntax("列出服务列表"))
+                .subcommand("global", "bot admin 管理全局默认服务状态", b -> b
+                        .syntax("列出全局默认服务列表", UsageNode.arg("list"))
+                        .syntax("切换全局默认服务开关", UsageNode.arg("service"))
+                        .syntax("读取全局默认服务配置", UsageNode.arg("service"), UsageNode.arg("key"))
+                        .syntax("设置全局默认服务配置", UsageNode.arg("service"), UsageNode.arg("key"), UsageNode.arg("value"))
                 )
                 .param("service", "服务名（见 /service list）")
                 .param("key", "配置项键")
                 .param("value", "配置项值（字符串）")
-                .note("服务配置按“当前聊天”独立保存。")
+                .note("聊天级修改要求当前聊天管理员或 bot admin；global 仅允许 bot admin。")
                 .example(
                         "service list",
                         "service weather",
                         "service weather intervalMs",
-                        "service weather intervalMs 60000"
+                        "service weather intervalMs 60000",
+                        "service global list",
+                        "service global weather",
+                        "service global weather intervalMs 60000"
                 )
                 .build();
     }
@@ -81,6 +91,41 @@ public class ServiceCommand implements IBotCommand {
                                     ctx.getSource().reply(renderList(ctx.getSource()));
                                     return 1;
                                 })
+                        )
+                        .then(literal("global")
+                                .executes(ctx -> {
+                                    sendUsage(ctx.getSource());
+                                    return 1;
+                                })
+                                .then(literal("list")
+                                        .executes(ctx -> {
+                                            listGlobal(ctx.getSource());
+                                            return 1;
+                                        })
+                                )
+                                .then(argument("service", StringArgumentType.word())
+                                        .executes(ctx -> {
+                                            toggleGlobal(ctx.getSource(), getString(ctx, "service"));
+                                            return 1;
+                                        })
+                                        .then(argument("key", StringArgumentType.word())
+                                                .executes(ctx -> {
+                                                    String svc = getString(ctx, "service");
+                                                    String key = getString(ctx, "key");
+                                                    getGlobal(ctx.getSource(), svc, key);
+                                                    return 1;
+                                                })
+                                                .then(argument("value", StringArgumentType.greedyString())
+                                                        .executes(ctx -> {
+                                                            String svc = getString(ctx, "service");
+                                                            String key = getString(ctx, "key");
+                                                            String value = getString(ctx, "value");
+                                                            setGlobal(ctx.getSource(), svc, key, value);
+                                                            return 1;
+                                                        })
+                                                )
+                                        )
+                                )
                         )
                         .then(argument("service", StringArgumentType.word())
                                 .executes(ctx -> {
@@ -127,7 +172,33 @@ public class ServiceCommand implements IBotCommand {
                 .collect(Collectors.joining("\n", "服务（本聊天）：\n", ""));
     }
 
+    private void listGlobal(CommandSource src) {
+        if (!authz.ensureBotAdmin(src, "查看全局服务配置")) {
+            return;
+        }
+
+        Map<String, ServiceState> st = services.snapshotDefaultStates();
+        String text = services.getRegistry().all().stream()
+                .filter(s -> services.isAllowed(s.name()))
+                .sorted(Comparator.comparing(IBotService::name))
+                .map(s -> {
+                    ServiceState ss = st.get(s.name());
+                    boolean enabled = ss != null && ss.isEnabled();
+                    String desc = s.description() == null ? "" : s.description();
+                    return "- %s [%s] (%s)".formatted(
+                            s.name(),
+                            enabled ? "ENABLED" : "DISABLED",
+                            desc
+                    );
+                })
+                .collect(Collectors.joining("\n", "服务（GLOBAL 默认）：\n", ""));
+        src.reply(text);
+    }
+
     private void toggle(CommandSource src, String name) {
+        if (!authz.ensureChatManager(src, "修改当前聊天服务开关")) {
+            return;
+        }
         if (!services.isAllowed(name)) {
             src.reply("服务未被允许使用：" + name);
             return;
@@ -168,6 +239,9 @@ public class ServiceCommand implements IBotCommand {
     }
 
     private void set(CommandSource src, String svc, String key, String value) {
+        if (!authz.ensureChatManager(src, "修改当前聊天服务配置")) {
+            return;
+        }
         if (!services.isAllowed(svc)) {
             src.reply("服务未被允许使用：" + svc);
             return;
@@ -180,6 +254,67 @@ public class ServiceCommand implements IBotCommand {
 
         services.setConfigValue(src.addr(), svc, key, value);
         src.reply("已更新（本聊天）%s.%s = %s".formatted(svc, key, value));
+    }
+
+    private void toggleGlobal(CommandSource src, String name) {
+        if (!authz.ensureBotAdmin(src, "修改全局服务开关")) {
+            return;
+        }
+        if (!services.isAllowed(name)) {
+            src.reply("服务未被允许使用：" + name);
+            return;
+        }
+
+        var opt = services.getRegistry().find(name);
+        if (opt.isEmpty()) {
+            src.reply("未知的服务：" + name);
+            return;
+        }
+
+        ServiceState st = services.defaultStateOf(name);
+        boolean nowEnabled = (st == null) || !st.isEnabled();
+        services.setDefaultEnabled(name, nowEnabled);
+        src.reply("服务“%s”的 GLOBAL 默认现为 %s 状态。".formatted(name, nowEnabled ? "ENABLED" : "DISABLED"));
+    }
+
+    private void getGlobal(CommandSource src, String svc, String key) {
+        if (!authz.ensureBotAdmin(src, "查看全局服务配置")) {
+            return;
+        }
+        if (!services.isAllowed(svc)) {
+            src.reply("服务未被允许使用：" + svc);
+            return;
+        }
+        if (services.getRegistry().find(svc).isEmpty()) {
+            src.reply("未知的服务：" + svc);
+            return;
+        }
+
+        ServiceState st = services.defaultStateOf(svc);
+        if (st == null || st.getConfig() == null) {
+            src.reply("服务 %s 没有 GLOBAL 默认配置。".formatted(svc));
+            return;
+        }
+
+        String v = st.getConfig().get(key);
+        src.reply(v == null ? "(null)" : v);
+    }
+
+    private void setGlobal(CommandSource src, String svc, String key, String value) {
+        if (!authz.ensureBotAdmin(src, "修改全局服务配置")) {
+            return;
+        }
+        if (!services.isAllowed(svc)) {
+            src.reply("服务未被允许使用：" + svc);
+            return;
+        }
+        if (services.getRegistry().find(svc).isEmpty()) {
+            src.reply("未知的服务：" + svc);
+            return;
+        }
+
+        services.setDefaultConfigValue(svc, key, value);
+        src.reply("已更新（GLOBAL 默认）%s.%s = %s".formatted(svc, key, value));
     }
 
 }
