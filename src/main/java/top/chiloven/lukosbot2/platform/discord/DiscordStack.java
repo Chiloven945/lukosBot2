@@ -3,6 +3,7 @@ package top.chiloven.lukosbot2.platform.discord;
 import lombok.extern.log4j.Log4j2;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
+import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -123,7 +124,7 @@ final class DiscordStack implements AutoCloseable {
             List<InPart> parts = new ArrayList<>();
             parts.add(new InText(text));
 
-            sink.accept(new InboundMessage(addr, sender, chat, meta, parts, Map.of("slash", true)));
+            sink.accept(new InboundMessage(addr, sender, chat, meta, parts, buildExtForSlash(e)));
 
             e.reply("（推荐直接发送消息）").queue();
         }
@@ -146,7 +147,7 @@ final class DiscordStack implements AutoCloseable {
             Long ts = null;
             try {
                 ts = e.getMessage().getTimeCreated().toInstant().toEpochMilli();
-            } catch (Exception ignored) {
+            } catch (Exception _) {
             }
             MessageMeta meta = new MessageMeta(msgId, ts, null, null);
 
@@ -179,7 +180,50 @@ final class DiscordStack implements AutoCloseable {
             // ignore empty messages
             if (parts.isEmpty()) return;
 
-            sink.accept(new InboundMessage(addr, sender, chat, meta, parts, Map.of()));
+            sink.accept(new InboundMessage(addr, sender, chat, meta, parts, buildExtForMessage(e)));
+        }
+
+        private Map<String, Object> buildExtForMessage(MessageReceivedEvent e) {
+            Map<String, Object> ext = new LinkedHashMap<>();
+            if (!e.isFromGuild()) {
+                return ext;
+            }
+
+            boolean guildAdmin = false;
+            boolean chatAdmin = false;
+            if (e.getMember() != null) {
+                guildAdmin = e.getMember().hasPermission(Permission.ADMINISTRATOR)
+                        || e.getMember().hasPermission(Permission.MANAGE_SERVER);
+                chatAdmin = guildAdmin || e.getMember().hasPermission(e.getGuildChannel(), Permission.MANAGE_CHANNEL);
+            }
+
+            ext.put("discord.guildId", e.getGuild().getIdLong());
+            ext.put("discord.channelId", e.getChannel().getIdLong());
+            ext.put("discord.guildAdmin", guildAdmin);
+            ext.put("discord.chatAdmin", chatAdmin);
+            return ext;
+        }
+
+        private Map<String, Object> buildExtForSlash(SlashCommandInteractionEvent e) {
+            Map<String, Object> ext = new LinkedHashMap<>();
+            ext.put("slash", true);
+            if (!e.isFromGuild()) {
+                return ext;
+            }
+
+            boolean guildAdmin = false;
+            boolean chatAdmin = false;
+            if (e.getMember() != null) {
+                guildAdmin = e.getMember().hasPermission(Permission.ADMINISTRATOR)
+                        || e.getMember().hasPermission(Permission.MANAGE_SERVER);
+                chatAdmin = guildAdmin || e.getMember().hasPermission(e.getGuildChannel(), Permission.MANAGE_CHANNEL);
+            }
+
+            ext.put("discord.guildId", e.getGuild().getIdLong());
+            ext.put("discord.channelId", e.getChannel().getIdLong());
+            ext.put("discord.guildAdmin", guildAdmin);
+            ext.put("discord.chatAdmin", chatAdmin);
+            return ext;
         }
 
     }

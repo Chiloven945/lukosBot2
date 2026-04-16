@@ -16,7 +16,9 @@ import top.chiloven.lukosbot2.model.message.media.PlatformFileRef;
 import top.chiloven.lukosbot2.model.message.media.UrlRef;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -163,8 +165,37 @@ public class ShiroBridge {
             parts = List.of(new InText(raw));
         }
 
-        InboundMessage in = new InboundMessage(addr, sender, chat, meta, parts, Map.of("raw", raw));
+        Map<String, Object> ext = new LinkedHashMap<>();
+        ext.put("raw", raw);
+        String role = extractGroupRole(e);
+        if (role != null) {
+            ext.put("onebot.groupRole", role);
+        }
+
+        InboundMessage in = new InboundMessage(addr, sender, chat, meta, parts, ext);
         dispatcher.receive(in);
+    }
+
+    private static String extractGroupRole(GroupMessageEvent e) {
+        String fromSender = invokeRole(invokeNoArg(e, "getSender"));
+        if (fromSender != null) return fromSender;
+        return invokeRole(e);
+    }
+
+    private static String invokeRole(Object target) {
+        Object value = invokeNoArg(target, "getRole");
+        if (value == null) return null;
+        return String.valueOf(value);
+    }
+
+    private static Object invokeNoArg(Object target, String name) {
+        if (target == null) return null;
+        try {
+            Method m = target.getClass().getMethod(name);
+            return m.invoke(target);
+        } catch (Exception _) {
+            return null;
+        }
     }
 
 }

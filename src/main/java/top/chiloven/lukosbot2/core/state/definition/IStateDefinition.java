@@ -43,13 +43,14 @@ import java.util.List;
  * The {@code /pref} command usually supports:
  * <ul>
  *   <li>{@code /pref} list definitions (name + description + suggestions)</li>
- *   <li>{@code /pref &lt;name&gt;} show resolved value</li>
- *   <li>{@code /pref [set] &lt;name&gt; &lt;value&gt;} persist value into {@link #preferredScope()}
- *       (or into an explicit scope if such syntax is added later)</li>
+ *   <li>{@code /pref get &lt;name&gt;} show the resolved value</li>
+ *   <li>{@code /pref get &lt;scope&gt; &lt;name&gt;} show the raw value stored at one scope</li>
+ *   <li>{@code /pref set &lt;scope&gt; &lt;name&gt; &lt;value&gt;} persist a value into an explicit scope</li>
+ *   <li>{@code /pref clear &lt;scope&gt; &lt;name&gt;} remove a value from an explicit scope</li>
  * </ul>
  *
  * <p>This interface is intentionally focused on "definition" (metadata + parse/format/validate).
- * The actual persistence, scope resolution, and command wiring are handled elsewhere.</p>
+ * The actual persistence, scope resolution, authorization, and command wiring are handled elsewhere.</p>
  *
  * <h2>Parsing & validation contract</h2>
  * Implementations should follow this flow:
@@ -81,7 +82,7 @@ import java.util.List;
  *
  * @param <T> the typed Java value of this state, which will be serialized/deserialized as JSON.
  */
-public interface StateDefinition<T> {
+public interface IStateDefinition<T> {
 
     /**
      * Stable identifier used in the {@code /pref} command and as the persisted key name.
@@ -141,9 +142,8 @@ public interface StateDefinition<T> {
     /**
      * Preferred scope for implicit writes.
      *
-     * <p>When a user runs {@code /pref [set] <name> <value>} without explicitly specifying a scope,
-     * the command should store the value into this preferred scope (as long as it is included in
-     * {@link #allowedScopes()}).</p>
+     * <p>When a user runs a shorthand form without an explicit scope, the command layer may store the value into
+     * this preferred scope, as long as it is also included in {@link #allowedScopes()}.</p>
      *
      * <p>Recommended defaults:</p>
      * <ul>
@@ -155,6 +155,18 @@ public interface StateDefinition<T> {
      * @return preferred scope type for implicit writes.
      */
     ScopeType preferredScope();
+
+    /**
+     * Scope resolution order for this state.
+     *
+     * <p>Default is {@code CHAT -> USER -> GLOBAL}. Definitions can override this to opt out of
+     * user scope or to prefer user scope over chat scope.</p>
+     *
+     * @return the ordered list of scope types to try when resolving the effective value.
+     */
+    default List<ScopeType> resolveOrder() {
+        return List.of(ScopeType.CHAT, ScopeType.USER, ScopeType.GLOBAL);
+    }
 
     /**
      * Fallback value used when no persisted value exists in any applicable scope.
@@ -195,7 +207,7 @@ public interface StateDefinition<T> {
     /**
      * Format a typed value into a user-facing string for display.
      *
-     * <p>This is used by {@code /pref <name>} or confirmation messages after setting a value.</p>
+     * <p>This is used by {@code /pref get ...} and confirmation messages after setting a value.</p>
      *
      * @param value typed value.
      * @return user-facing string representation.

@@ -114,18 +114,14 @@ public class ServiceManager {
         }
     }
 
-    private void persistDefault(String serviceName, ServiceState st) {
-        store.upsertJson(
-                Scope.global(),
-                NS_SERVICE,
-                serviceName,
-                mapper.writeValueAsString(st),
-                null
-        );
-    }
-
     /**
-     * Ensure: - defaultStates has entries for every allowed service - every chat has entries for every allowed service
+     * Ensure:
+     * <ul>
+     *   <li>{@code defaultStates} has entries for every allowed service</li>
+     *   <li>every known chat has entries for every allowed service</li>
+     * </ul>
+     *
+     * @return {@code true} if any in-memory state was created and should be persisted.
      */
     private boolean ensureDefaultsEverywhere() {
         boolean changed = false;
@@ -175,9 +171,10 @@ public class ServiceManager {
     }
 
     /**
-     * Called by MessageDispatcher (incoming messages).
+     * Called by {@code MessageDispatcher} for incoming messages.
      *
-     * @return outbound messages produced by services for this inbound message (may be empty)
+     * @param in inbound message.
+     * @return outbound messages produced by enabled trigger services for this message; may be empty.
      */
     public List<OutboundMessage> onMessage(InboundMessage in) {
         if (in == null || in.addr() == null) return List.of();
@@ -258,7 +255,11 @@ public class ServiceManager {
     }
 
     /**
-     * External trigger: fire an event to a single chat.
+     * External trigger that fires one service event to one chat.
+     *
+     * @param addr        target chat.
+     * @param serviceName service to invoke.
+     * @param event       event payload.
      */
     public void fire(Address addr, String serviceName, ServiceEvent event) {
         if (addr == null) return;
@@ -290,7 +291,10 @@ public class ServiceManager {
     }
 
     /**
-     * External trigger: fire an event to ALL chats that enabled the given service.
+     * External trigger that fires one service event to all chats that currently have the service enabled.
+     *
+     * @param serviceName service to invoke.
+     * @param event       event payload.
      */
     public void fireAll(String serviceName, ServiceEvent event) {
         Optional<IBotService> opt = registry.find(serviceName);
@@ -344,8 +348,44 @@ public class ServiceManager {
         return perChat;
     }
 
+    public Map<String, ServiceState> snapshotDefaultStates() {
+        ensureDefaultStatesInitialized();
+        return new LinkedHashMap<>(defaultStates);
+    }
+
+    private void ensureDefaultStatesInitialized() {
+        boolean changed = false;
+        for (IBotService s : registry.all()) {
+            if (!props.isAllowed(s.name())) continue;
+            if (!defaultStates.containsKey(s.name())) {
+                defaultStates.put(s.name(), new ServiceState(false, new LinkedHashMap<>(s.defaultConfig())));
+                changed = true;
+            }
+        }
+        if (changed) {
+            for (var e : defaultStates.entrySet()) {
+                persistDefault(e.getKey(), e.getValue());
+            }
+        }
+    }
+
+    private void persistDefault(String serviceName, ServiceState st) {
+        store.upsertJson(
+                Scope.global(),
+                NS_SERVICE,
+                serviceName,
+                mapper.writeValueAsString(st),
+                null
+        );
+    }
+
     public ServiceState stateOf(Address addr, String serviceName) {
         return getOrCreateChatStates(addr).get(serviceName);
+    }
+
+    public ServiceState defaultStateOf(String serviceName) {
+        ensureDefaultStatesInitialized();
+        return defaultStates.get(serviceName);
     }
 
     public void setEnabled(Address addr, String serviceName, boolean enabled) {
@@ -404,6 +444,22 @@ public class ServiceManager {
         return chatKey + "|" + serviceName;
     }
 
+    public void setDefaultEnabled(String serviceName, boolean enabled) {
+        if (!props.isAllowed(serviceName)) return;
+        ensureDefaultStatesInitialized();
+
+        ServiceState st = defaultStates.get(serviceName);
+        if (st == null) {
+            IBotService svc = registry.find(serviceName).orElse(null);
+            if (svc == null) return;
+            st = new ServiceState(false, new LinkedHashMap<>(svc.defaultConfig()));
+            defaultStates.put(serviceName, st);
+        }
+
+        st.setEnabled(enabled);
+        persistDefault(serviceName, st);
+    }
+
     public void setConfigValue(Address addr, String serviceName, String key, String value) {
         if (!props.isAllowed(serviceName)) return;
 
@@ -438,6 +494,27 @@ public class ServiceManager {
         persistChatState(chatKey, serviceName, st);
     }
 
+    public void setDefaultConfigValue(String serviceName, String key, String value) {
+        if (!props.isAllowed(serviceName)) return;
+        ensureDefaultStatesInitialized();
+
+        ServiceState st = defaultStates.get(serviceName);
+        if (st == null) {
+            IBotService svc = registry.find(serviceName).orElse(null);
+            if (svc == null) return;
+            st = new ServiceState(false, new LinkedHashMap<>(svc.defaultConfig()));
+            defaultStates.put(serviceName, st);
+        }
+
+        if (st.getConfig() == null) {
+            st.setConfig(new LinkedHashMap<>());
+        }
+
+        if (value == null) st.getConfig().remove(key);
+        else st.getConfig().put(key, value);
+
+        persistDefault(serviceName, st);
+    }
 
     @PreDestroy
     public void destroy() {

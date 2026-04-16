@@ -7,12 +7,13 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.IBotCommand;
 import top.chiloven.lukosbot2.commands.UsageNode;
+import top.chiloven.lukosbot2.core.auth.AuthorizationService;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 import top.chiloven.lukosbot2.core.state.Scope;
 import top.chiloven.lukosbot2.core.state.ScopeType;
 import top.chiloven.lukosbot2.core.state.StateRegistry;
 import top.chiloven.lukosbot2.core.state.StateService;
-import top.chiloven.lukosbot2.core.state.definition.StateDefinition;
+import top.chiloven.lukosbot2.core.state.definition.IStateDefinition;
 
 import java.util.Comparator;
 import java.util.List;
@@ -34,10 +35,16 @@ public class PrefCommand implements IBotCommand {
 
     private final StateRegistry registry;
     private final StateService states;
+    private final AuthorizationService authz;
 
-    public PrefCommand(StateRegistry registry, StateService states) {
+    public PrefCommand(
+            StateRegistry registry,
+            StateService states,
+            AuthorizationService authz
+    ) {
         this.registry = registry;
         this.states = states;
+        this.authz = authz;
     }
 
     @Override
@@ -47,23 +54,30 @@ public class PrefCommand implements IBotCommand {
 
     @Override
     public String description() {
-        return "配置/记忆状态（例如语言、状态等）";
+        return "查看和管理状态/偏好设置";
     }
 
     @Override
     public UsageNode usage() {
         return UsageNode.root(name())
                 .description(description())
-                .syntax("显示可用的 StateDefinition 列表")
-                .syntax("读取当前生效值", UsageNode.arg("state"))
-                .syntax("设置值", UsageNode.arg("state"), UsageNode.arg("value"))
-                .param("state", "StateDefinition 名称（如 lang/status）")
-                .param("value", "值（字符串；不同 state 有不同约束）")
+                .syntax("列出所有可用 state")
+                .syntax("查看解析后的值", UsageNode.arg("get"), UsageNode.arg("state"))
+                .syntax("查看指定 scope 的值", UsageNode.arg("get"), UsageNode.arg("scope"), UsageNode.arg("state"))
+                .syntax("设置指定 scope 的值", UsageNode.arg("set"), UsageNode.arg("scope"), UsageNode.arg("state"), UsageNode.arg("value"))
+                .syntax("清除指定 scope 的值", UsageNode.arg("clear"), UsageNode.arg("scope"), UsageNode.arg("state"))
+                .subcommand("list", "列出状态定义", b -> b.syntax("列出状态定义"))
+                .param("scope", "user | chat | global")
+                .param("state", "状态名（见 /pref list）")
+                .param("value", "要写入的值")
+                .note("user scope 允许本人修改；chat scope 允许当前聊天管理员或 bot admin 修改；global scope 仅允许 bot admin 修改。")
                 .example(
-                        "pref",
-                        "pref lang",
-                        "pref lang zh-cn",
-                        "pref status busy"
+                        "pref list",
+                        "pref get lang",
+                        "pref get chat lang",
+                        "pref set user lang en-us",
+                        "pref set chat quietMode true",
+                        "pref clear global notifyMode"
                 )
                 .build();
     }
@@ -77,16 +91,48 @@ public class PrefCommand implements IBotCommand {
                             ctx.getSource().reply(renderList());
                             return 1;
                         })
-                        .then(argument("state", StringArgumentType.word())
+                        .then(literal("list")
                                 .executes(ctx -> {
-                                    get(ctx.getSource(), getString(ctx, "state"));
+                                    ctx.getSource().reply(renderList());
                                     return 1;
                                 })
-                                .then(argument("value", StringArgumentType.greedyString())
+                        )
+                        .then(literal("get")
+                                .then(argument("state", StringArgumentType.word())
                                         .executes(ctx -> {
-                                            set(ctx.getSource(), getString(ctx, "state"), getString(ctx, "value"));
+                                            getResolved(ctx.getSource(), getString(ctx, "state"));
                                             return 1;
                                         })
+                                )
+                                .then(argument("scope", StringArgumentType.word())
+                                        .then(argument("state", StringArgumentType.word())
+                                                .executes(ctx -> {
+                                                    getExplicit(ctx.getSource(), getString(ctx, "scope"), getString(ctx, "state"));
+                                                    return 1;
+                                                })
+                                        )
+                                )
+                        )
+                        .then(literal("set")
+                                .then(argument("scope", StringArgumentType.word())
+                                        .then(argument("state", StringArgumentType.word())
+                                                .then(argument("value", StringArgumentType.greedyString())
+                                                        .executes(ctx -> {
+                                                            setExplicit(ctx.getSource(), getString(ctx, "scope"), getString(ctx, "state"), getString(ctx, "value"));
+                                                            return 1;
+                                                        })
+                                                )
+                                        )
+                                )
+                        )
+                        .then(literal("clear")
+                                .then(argument("scope", StringArgumentType.word())
+                                        .then(argument("state", StringArgumentType.word())
+                                                .executes(ctx -> {
+                                                    clearExplicit(ctx.getSource(), getString(ctx, "scope"), getString(ctx, "state"));
+                                                    return 1;
+                                                })
+                                        )
                                 )
                         )
         );
@@ -94,9 +140,19 @@ public class PrefCommand implements IBotCommand {
 
     private String renderList() {
         String defs = registry.all().stream()
-                .sorted(Comparator.comparing(StateDefinition::name))
+                .sorted(Comparator.comparing(IStateDefinition::name))
                 .map(d -> {
-                    String line = "- %s (%s)".formatted(d.name(), d.description());
+                    String line = "- %s (%s) scopes=%s resolve=%s".formatted(
+                            d.name(),
+                            d.description(),
+                            d.allowedScopes().stream()
+                                    .map(Enum::name)
+                                    .sorted()
+                                    .collect(Collectors.joining("/")),
+                            d.resolveOrder().stream()
+                                    .map(Enum::name)
+                                    .collect(Collectors.joining(" -> "))
+                    );
                     List<String> sv = d.suggestValues();
                     if (sv != null && !sv.isEmpty()) {
                         line += "  可选值: " + String.join(", ", sv);
@@ -108,7 +164,7 @@ public class PrefCommand implements IBotCommand {
         return "可用的配置：\n" + (defs.isBlank() ? "(none)" : defs);
     }
 
-    private void get(CommandSource src, String stateName) {
+    private void getResolved(CommandSource src, String stateName) {
         var opt = registry.find(stateName);
         if (opt.isEmpty()) {
             src.reply("未知的 state：" + stateName + "\n\n" + renderList());
@@ -116,12 +172,33 @@ public class PrefCommand implements IBotCommand {
         }
 
         @SuppressWarnings("unchecked")
-        StateDefinition<Object> def = (StateDefinition<Object>) opt.get();
-        Object v = states.resolve(def, src.addr(), src.userId());
-        src.reply("%s = %s".formatted(def.name(), def.format(v)));
+        IStateDefinition<Object> def = (IStateDefinition<Object>) opt.get();
+        Object v = states.resolve(def, src.addr(), src.userIdOrNull());
+        src.reply("%s = %s （resolved）".formatted(def.name(), def.format(v)));
     }
 
-    private void set(CommandSource src, String stateName, String rawValue) {
+    private void getExplicit(CommandSource src, String scopeRaw, String stateName) {
+        var opt = registry.find(stateName);
+        if (opt.isEmpty()) {
+            src.reply("未知的 state：" + stateName + "\n\n" + renderList());
+            return;
+        }
+
+        @SuppressWarnings("unchecked")
+        IStateDefinition<Object> def = (IStateDefinition<Object>) opt.get();
+
+        try {
+            Scope scope = parseScope(scopeRaw, src, def);
+            Object v = states.getAtScope(def, scope);
+            src.reply(v == null
+                    ? "%s @ %s = (unset)".formatted(def.name(), scope.type().name())
+                    : "%s @ %s = %s".formatted(def.name(), scope.type().name(), def.format(v)));
+        } catch (IllegalArgumentException e) {
+            src.reply("读取失败：" + e.getMessage());
+        }
+    }
+
+    private void setExplicit(CommandSource src, String scopeRaw, String stateName, String rawValue) {
         log.info("Setting state {} to {} for user {} in chat {}.", stateName, rawValue, src.userId(), src.chatId());
 
         var opt = registry.find(stateName);
@@ -131,30 +208,81 @@ public class PrefCommand implements IBotCommand {
         }
 
         @SuppressWarnings("unchecked")
-        StateDefinition<Object> def = (StateDefinition<Object>) opt.get();
+        IStateDefinition<Object> def = (IStateDefinition<Object>) opt.get();
 
         try {
-            Scope scope = states.preferredScope(def, src.addr(), src.userId());
-            states.set(def, src.addr(), src.userId(), rawValue);
-
-            Object v = states.resolve(def, src.addr(), src.userId());
-            String scopeHint = switch (scope.type()) {
-                case USER -> "USER";
-                case CHAT -> "CHAT";
-                case GLOBAL -> "GLOBAL";
-            };
-
-            // If the userId is missing but preferred scope is USER, make it obvious
-            if (def.preferredScope() == ScopeType.USER) {
-                scopeHint += "(no userId -> fallback)";
+            Scope scope = parseScope(scopeRaw, src, def);
+            if (!ensureWriteAllowed(src, scope.type(), def.name())) {
+                return;
             }
 
-            src.reply("已设置 %s = %s （scope=%s）".formatted(def.name(), def.format(v), scopeHint));
+            states.setAtScope(def, scope, rawValue);
+            Object v = states.getAtScope(def, scope);
+            src.reply("已设置 %s @ %s = %s".formatted(def.name(), scope.type().name(), def.format(v)));
         } catch (IllegalArgumentException e) {
             src.reply("设置失败：" + e.getMessage());
         } catch (Exception e) {
             src.reply("设置失败：" + e.getClass().getSimpleName());
         }
+    }
+
+    private void clearExplicit(CommandSource src, String scopeRaw, String stateName) {
+        var opt = registry.find(stateName);
+        if (opt.isEmpty()) {
+            src.reply("未知的 state：" + stateName + "\n\n" + renderList());
+            return;
+        }
+
+        @SuppressWarnings("unchecked")
+        IStateDefinition<Object> def = (IStateDefinition<Object>) opt.get();
+
+        try {
+            Scope scope = parseScope(scopeRaw, src, def);
+            if (!ensureWriteAllowed(src, scope.type(), def.name())) {
+                return;
+            }
+
+            states.clearAtScope(def, scope);
+            src.reply("已清除 %s @ %s".formatted(def.name(), scope.type().name()));
+        } catch (IllegalArgumentException e) {
+            src.reply("清除失败：" + e.getMessage());
+        }
+    }
+
+    private Scope parseScope(String raw, CommandSource src, IStateDefinition<?> def) {
+        if (raw == null || raw.isBlank()) {
+            throw new IllegalArgumentException("scope 不能为空，可选值：user/chat/global");
+        }
+
+        ScopeType type = switch (raw.trim().toLowerCase()) {
+            case "user" -> ScopeType.USER;
+            case "chat" -> ScopeType.CHAT;
+            case "global" -> ScopeType.GLOBAL;
+            default -> throw new IllegalArgumentException("未知 scope：" + raw + "，可选值：user/chat/global");
+        };
+
+        if (!def.allowedScopes().contains(type)) {
+            throw new IllegalArgumentException("state " + def.name() + " 不支持 scope=" + type.name());
+        }
+
+        return switch (type) {
+            case USER -> {
+                // If the userId is missing but preferred scope is USER, make it obvious.
+                Long userId = src.userIdOrNull();
+                if (userId == null) throw new IllegalArgumentException("当前来源没有 userId，无法使用 user scope");
+                yield Scope.user(src.platform(), userId);
+            }
+            case CHAT -> Scope.chat(src.addr());
+            case GLOBAL -> Scope.global();
+        };
+    }
+
+    private boolean ensureWriteAllowed(CommandSource src, ScopeType type, String stateName) {
+        return switch (type) {
+            case USER -> true;
+            case CHAT -> authz.ensureChatManager(src, "修改当前聊天的 state（" + stateName + "）");
+            case GLOBAL -> authz.ensureBotAdmin(src, "修改全局 state（" + stateName + "）");
+        };
     }
 
 }
