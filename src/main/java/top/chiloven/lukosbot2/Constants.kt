@@ -15,8 +15,9 @@ object Constants {
         System.getProperty("java.version"),
         System.getProperty("java.vendor.version")
     )
-
+    val kotlinVersion: String = KotlinVersion.CURRENT.toString()
     val springBootVersion: String = getImplVersion("org.springframework.boot.SpringApplication")
+
     val tgVersion: String = getMavenVersion("org.telegram", "telegrambots-client")
     val jdaVersion: String = getImplVersion("net.dv8tion.jda.api.JDA")
     val shiroVersion: String = getImplVersion("com.mikuac.shiro.boot.Shiro")
