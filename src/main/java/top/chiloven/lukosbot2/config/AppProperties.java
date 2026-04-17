@@ -4,6 +4,7 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +27,7 @@ public class AppProperties {
     private Discord discord = new Discord();
     private Cli cli = new Cli();
     private Security security = new Security();
+    private Policy policy = new Policy();
 
     /// Properties dealing with the Telegram bot.
     @Data
@@ -72,6 +74,47 @@ public class AppProperties {
 
     }
 
+
+    @Data
+    public static class Policy {
+
+        /**
+         * Runtime policy rules evaluated against the current chat context.
+         *
+         * <p>Typical uses:</p>
+         * <ul>
+         *   <li>Disable a command on a whole platform.</li>
+         *   <li>Disable a command outside private chats.</li>
+         *   <li>Constrain feature values such as e621 rating by chat context.</li>
+         * </ul>
+         */
+        private List<Rule> rules = new ArrayList<>();
+
+        @Data
+        public static class Rule {
+
+            private String id = "";
+            private int priority = 0;
+            private Match when = new Match();
+            private List<String> disableCommands = new ArrayList<>();
+            private Map<String, List<String>> allowValues = new LinkedHashMap<>();
+
+        }
+
+        @Data
+        public static class Match {
+
+            private String platform;
+            private Boolean privateChat;
+            private Boolean group;
+            private Boolean nsfw;
+            private Long chatId;
+            private Long userId;
+
+        }
+
+    }
+
     @Data
     public static class Security {
 
@@ -88,4 +131,5 @@ public class AppProperties {
         private Map<String, List<Long>> bootstrapBotAdmins = new LinkedHashMap<>();
 
     }
+
 }

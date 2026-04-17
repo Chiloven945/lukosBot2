@@ -57,6 +57,31 @@ lukos:
       discord: [ ]
       onebot: [ ]
 
+  policy:
+    rules:
+      # Example rules:
+      # Telegram: forbid kemono outside private chats
+      - id: telegram-no-nsfw-in-public
+        when:
+          platform: telegram
+          private-chat: false
+        disable-commands: [ kemono ]
+        allow-values:
+          "[e621.rating]": [ s, q ]
+      # Discord: only allow safe/questionable ratings outside NSFW channels
+      - id: discord-non-nsfw-channel-limits
+        when:
+          platform: discord
+          nsfw: false
+        disable-commands: [ kemono ]
+        allow-values:
+          "[e621.rating]": [ s, q ]
+      # OneBot: disable commands on the entire platform
+      - id: onebot-disable-sensitive-commands
+        when:
+          platform: onebot
+        disable-commands: [ e621, kemono, wiki ]
+
   commands:
     control:
       weather: false

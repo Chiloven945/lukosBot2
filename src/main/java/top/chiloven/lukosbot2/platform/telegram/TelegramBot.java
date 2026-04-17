@@ -12,6 +12,7 @@ import top.chiloven.lukosbot2.model.message.media.PlatformFileRef;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -33,7 +34,7 @@ final class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
      * @param sink message handler, usually bound to MessageDispatcher::receive
      */
     void setSink(Consumer<InboundMessage> sink) {
-        this.sink = (sink != null) ? sink : __ -> {
+        this.sink = (sink != null) ? sink : _ -> {
         };
     }
 
@@ -94,11 +95,16 @@ final class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
         }
 
         // (Other message types can be added later: audio/voice/video/sticker/location...)
+        Map<String, Object> ext = new LinkedHashMap<>();
+        ext.put("updateId", u.getUpdateId());
+        ext.put("botUsername", username);
+        ext.put("policy.privateChat", !isGroup);
+        ext.put("policy.nsfw", false);
+        if (m.getChat() != null) {
+            ext.put("telegram.chatType", m.getChat().getType());
+        }
 
-        InboundMessage in = new InboundMessage(addr, sender, chat, meta, parts, Map.of(
-                "updateId", u.getUpdateId(),
-                "botUsername", username
-        ));
+        InboundMessage in = new InboundMessage(addr, sender, chat, meta, parts, ext);
 
         sink.accept(in);
     }

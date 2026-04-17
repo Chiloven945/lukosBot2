@@ -31,9 +31,19 @@ public record OutboundMessage(
     }
 
     public static OutboundMessage text(Address addr, String text) {
-        List<OutPart> ps = new ArrayList<>();
-        ps.add(new OutText(text));
-        return new OutboundMessage(addr, ps, DeliveryHints.defaults());
+        return new OutboundMessage(
+                addr,
+                List.of(new OutText(text)),
+                DeliveryHints.defaults()
+        );
+    }
+
+    public static OutboundMessage img(Address addr, OutImage... images) {
+        return new OutboundMessage(
+                addr,
+                List.of(images),
+                DeliveryHints.defaults()
+        );
     }
 
     public static OutboundMessage imageBytesPng(Address addr, byte[] bytes, String name) {
