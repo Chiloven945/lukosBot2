@@ -8,6 +8,7 @@ import top.chiloven.lukosbot2.commands.*;
 import top.chiloven.lukosbot2.config.AppProperties;
 import top.chiloven.lukosbot2.core.command.CommandRegistry;
 import top.chiloven.lukosbot2.core.command.CommandSource;
+import top.chiloven.lukosbot2.core.policy.PolicyService;
 
 import java.util.List;
 
@@ -19,10 +20,15 @@ public class HelpCommand implements IBotCommand {
 
     private final ObjectProvider<CommandRegistry> registryProvider;
     private final AppProperties appProperties;
+    private final PolicyService policyService;
 
-    public HelpCommand(ObjectProvider<CommandRegistry> registryProvider, AppProperties appProperties) {
+    public HelpCommand(
+            ObjectProvider<CommandRegistry> registryProvider, AppProperties appProperties,
+            PolicyService policyService
+    ) {
         this.registryProvider = registryProvider;
         this.appProperties = appProperties;
+        this.policyService = policyService;
     }
 
     @Override
@@ -36,6 +42,7 @@ public class HelpCommand implements IBotCommand {
 
                             registry().all().stream()
                                     .filter(IBotCommand::isVisible)
+                                    .filter(c -> policyService.isCommandAllowed(ctx.getSource(), c.name()))
                                     .forEach(c -> sb.append(p)
                                             .append(c.name())
                                             .append(c.aliases().isEmpty() ? "" : c.aliases())
@@ -72,6 +79,11 @@ public class HelpCommand implements IBotCommand {
 
         if (cmd == null || !cmd.isVisible()) {
             src.reply("未知的命令: %s\n使用 `%s%s` 查看可用命令列表。".formatted(cmdName, p, name()));
+            return 0;
+        }
+
+        if (!policyService.isCommandAllowed(src, cmd.name())) {
+            src.reply(policyService.commandDeniedMessage(cmd.name()));
             return 0;
         }
 
