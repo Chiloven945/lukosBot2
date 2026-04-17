@@ -185,6 +185,8 @@ final class DiscordStack implements AutoCloseable {
 
         private Map<String, Object> buildExtForMessage(MessageReceivedEvent e) {
             Map<String, Object> ext = new LinkedHashMap<>();
+            ext.put("policy.privateChat", !e.isFromGuild());
+            ext.put("policy.nsfw", isNsfwChannel(e.getChannel()));
             if (!e.isFromGuild()) {
                 return ext;
             }
@@ -207,6 +209,8 @@ final class DiscordStack implements AutoCloseable {
         private Map<String, Object> buildExtForSlash(SlashCommandInteractionEvent e) {
             Map<String, Object> ext = new LinkedHashMap<>();
             ext.put("slash", true);
+            ext.put("policy.privateChat", !e.isFromGuild());
+            ext.put("policy.nsfw", isNsfwChannel(e.getChannel()));
             if (!e.isFromGuild()) {
                 return ext;
             }
@@ -224,6 +228,23 @@ final class DiscordStack implements AutoCloseable {
             ext.put("discord.guildAdmin", guildAdmin);
             ext.put("discord.chatAdmin", chatAdmin);
             return ext;
+        }
+
+        private boolean isNsfwChannel(Object channel) {
+            if (channel == null) return false;
+            try {
+                var method = channel.getClass().getMethod("isNSFW");
+                Object value = method.invoke(channel);
+                if (value instanceof Boolean b) return b;
+            } catch (ReflectiveOperationException _) {
+            }
+            try {
+                var method = channel.getClass().getMethod("isNsfw");
+                Object value = method.invoke(channel);
+                if (value instanceof Boolean b) return b;
+            } catch (ReflectiveOperationException _) {
+            }
+            return false;
         }
 
     }

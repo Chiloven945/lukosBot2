@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.IBotCommand;
 import top.chiloven.lukosbot2.config.AppProperties;
 import top.chiloven.lukosbot2.core.IProcessor;
+import top.chiloven.lukosbot2.core.policy.PolicyService;
 import top.chiloven.lukosbot2.model.message.inbound.InboundMessage;
 import top.chiloven.lukosbot2.model.message.outbound.OutboundMessage;
 import top.chiloven.lukosbot2.util.brigadier.BrigadierUtils;
@@ -27,20 +28,28 @@ public class CommandProcessor implements IProcessor {
 
     private final CommandDispatcher<CommandSource> dispatcher = new CommandDispatcher<>();
     private final String prefix;
+    private final CommandRegistry registry;
+    private final PolicyService policyService;
 
-    public CommandProcessor(List<IBotCommand> commands, AppProperties props) {
+    public CommandProcessor(
+            List<IBotCommand> commands,
+            AppProperties props,
+            CommandRegistry registry,
+            PolicyService policyService
+    ) {
         String p = props == null ? "/" : props.getPrefix();
-        this.prefix = (p == null || p.isBlank()) ? "/" : p;
 
-        if (commands != null) {
-            for (IBotCommand cmd : commands) {
-                try {
-                    cmd.register(dispatcher);
-                    BrigadierUtils.registerAliases(dispatcher, cmd.name(), cmd.aliases());
-                    log.info("[Cmd] Registered command: {}", cmd.name() + (cmd.aliases().isEmpty() ? "" : " aliases: " + cmd.aliases()));
-                } catch (Exception e) {
-                    log.warn("[Cmd] Failed to register command {}: {}", cmd.name(), e.getMessage(), e);
-                }
+        this.prefix = (p == null || p.isBlank()) ? "/" : p;
+        this.registry = registry;
+        this.policyService = policyService;
+
+        if (commands != null) for (IBotCommand cmd : commands) {
+            try {
+                cmd.register(dispatcher);
+                BrigadierUtils.registerAliases(dispatcher, cmd.name(), cmd.aliases());
+                log.info("[Cmd] Registered command: {}", cmd.name() + (cmd.aliases().isEmpty() ? "" : " aliases: " + cmd.aliases()));
+            } catch (Exception e) {
+                log.warn("[Cmd] Failed to register command {}: {}", cmd.name(), e.getMessage(), e);
             }
         }
     }
@@ -62,6 +71,12 @@ public class CommandProcessor implements IProcessor {
         List<OutboundMessage> outs = new ArrayList<>();
         CommandSource src = CommandSource.forInbound(in, outs::add);
 
+        IBotCommand command = registry.get(firstToken(cmdLine));
+        if (command != null && !policyService.isCommandAllowed(src, command.name())) {
+            src.reply(policyService.commandDeniedMessage(command.name()));
+            return outs;
+        }
+
         try {
             dispatcher.execute(cmdLine, src);
         } catch (CommandSyntaxException e) {
@@ -75,6 +90,14 @@ public class CommandProcessor implements IProcessor {
         }
 
         return outs;
+    }
+
+    private static String firstToken(String cmdLine) {
+        if (cmdLine == null) return "";
+        String trimmed = cmdLine.trim();
+        if (trimmed.isEmpty()) return "";
+        int ws = trimmed.indexOf(' ');
+        return ws < 0 ? trimmed : trimmed.substring(0, ws);
     }
 
 }
