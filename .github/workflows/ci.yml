@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Grant execute permission for Gradle wrapper
         run: chmod +x gradlew
@@ -43,7 +43,7 @@ jobs:
         run: ./gradlew test
 
       - name: Upload JAR artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: lukos-bot-2
           path: build/libs/*.jar
