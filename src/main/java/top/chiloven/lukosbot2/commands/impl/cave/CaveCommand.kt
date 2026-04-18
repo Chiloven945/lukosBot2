@@ -98,7 +98,7 @@ class CaveCommand(
             src.reply("还没有回声洞条目。")
             return
         }
-        src.reply(caveService.toOutbound(src, entry))
+        src.reply(caveService.toOutbound(src, entry, includeMeta = true))
     }
 
     private fun recallByNo(src: CommandSource, no: Int) {

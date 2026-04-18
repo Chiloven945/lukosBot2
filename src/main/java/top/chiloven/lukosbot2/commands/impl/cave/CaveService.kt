@@ -16,6 +16,7 @@ import top.chiloven.lukosbot2.model.message.outbound.OutImage
 import top.chiloven.lukosbot2.model.message.outbound.OutPart
 import top.chiloven.lukosbot2.model.message.outbound.OutText
 import top.chiloven.lukosbot2.model.message.outbound.OutboundMessage
+import top.chiloven.lukosbot2.util.StringUtils
 import java.io.IOException
 import java.util.*
 import java.util.concurrent.locks.ReentrantLock
@@ -98,17 +99,37 @@ class CaveService(
         true
     }
 
-    fun toOutbound(src: CommandSource, entry: CaveEntry): OutboundMessage {
+    fun toOutbound(src: CommandSource, entry: CaveEntry, includeMeta: Boolean = false): OutboundMessage {
         val parts = mutableListOf<OutPart>()
-        entry.text?.takeIf { it.isNotBlank() }?.let { parts += OutText(it) }
+        val metaLine = if (includeMeta) buildMetaLine(entry) else null
+        val textLine = entry.text?.takeIf { it.isNotBlank() }
+
         entry.image?.let {
             val bytes = Base64.getDecoder().decode(it.base64)
-            parts += OutImage(BytesRef(it.name, bytes, it.mime), null, it.name, it.mime)
+            val caption = listOfNotNull(metaLine, textLine)
+                .joinToString("\n")
+                .ifBlank { null }
+
+            parts += OutImage(
+                BytesRef(it.name, bytes, it.mime),
+                caption,
+                it.name,
+                it.mime
+            )
+            return OutboundMessage(src.addr(), parts)
         }
+
+        listOfNotNull(metaLine, textLine).forEach { parts += OutText(it) }
+
         if (parts.isEmpty()) {
             parts += OutText("该条目为空。")
         }
         return OutboundMessage(src.addr(), parts)
+    }
+
+    private fun buildMetaLine(entry: CaveEntry): String {
+        val createdAt = StringUtils.formatTime(entry.createdAt) ?: "-"
+        return "#${entry.no} - $createdAt"
     }
 
     private fun extractPayload(src: CommandSource): CavePayload? {
