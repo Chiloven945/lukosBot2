@@ -70,7 +70,34 @@ final class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
         MessageMeta meta = new MessageMeta(msgId, tsMs, replyToId, null);
 
         // parts
+        List<InPart> parts = extractParts(m);
+
+        // (Other message types can be added later: audio/voice/video/sticker/location...)
+        Map<String, Object> ext = new LinkedHashMap<>();
+        ext.put("updateId", u.getUpdateId());
+        ext.put("botUsername", username);
+        ext.put("policy.privateChat", !isGroup);
+        ext.put("policy.nsfw", false);
+        if (m.getChat() != null) {
+            ext.put("telegram.chatType", m.getChat().getType());
+        }
+
+        QuotedMessage quoted = toQuoted(m.getReplyToMessage());
+        InboundMessage in = new InboundMessage(addr, sender, chat, meta, parts, ext, quoted);
+
+        sink.accept(in);
+    }
+
+    private static String joinName(String first, String last) {
+        String f = (first == null) ? "" : first.trim();
+        String l = (last == null) ? "" : last.trim();
+        String s = (f + " " + l).trim();
+        return s.isEmpty() ? null : s;
+    }
+
+    private static List<InPart> extractParts(Message m) {
         List<InPart> parts = new ArrayList<>();
+        if (m == null) return parts;
 
         String text = m.getText();
         if (text != null && !text.isBlank()) {
@@ -94,26 +121,15 @@ final class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
             parts.add(new InFile(new PlatformFileRef("telegram", doc.getFileId()), doc.getFileName(), doc.getMimeType(), size, caption));
         }
 
-        // (Other message types can be added later: audio/voice/video/sticker/location...)
-        Map<String, Object> ext = new LinkedHashMap<>();
-        ext.put("updateId", u.getUpdateId());
-        ext.put("botUsername", username);
-        ext.put("policy.privateChat", !isGroup);
-        ext.put("policy.nsfw", false);
-        if (m.getChat() != null) {
-            ext.put("telegram.chatType", m.getChat().getType());
-        }
-
-        InboundMessage in = new InboundMessage(addr, sender, chat, meta, parts, ext);
-
-        sink.accept(in);
+        return parts;
     }
 
-    private static String joinName(String first, String last) {
-        String f = (first == null) ? "" : first.trim();
-        String l = (last == null) ? "" : last.trim();
-        String s = (f + " " + l).trim();
-        return s.isEmpty() ? null : s;
+    private static QuotedMessage toQuoted(Message m) {
+        if (m == null) return null;
+        Long senderId = null;
+        if (m.getFrom() != null) senderId = m.getFrom().getId();
+        String messageId = m.getMessageId() == null ? null : String.valueOf(m.getMessageId());
+        return new QuotedMessage(messageId, senderId, extractParts(m));
     }
 
     private static PhotoSize pickLargest(List<PhotoSize> photos) {
