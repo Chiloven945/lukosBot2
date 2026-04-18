@@ -8,6 +8,8 @@ import com.mikuac.shiro.dto.event.message.GroupMessageEvent;
 import com.mikuac.shiro.dto.event.message.PrivateMessageEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 import top.chiloven.lukosbot2.core.MessageDispatcher;
 import top.chiloven.lukosbot2.model.message.Address;
 import top.chiloven.lukosbot2.model.message.inbound.*;
@@ -28,24 +30,7 @@ import java.util.Map;
 public class ShiroBridge {
 
     private final MessageDispatcher dispatcher;
-
-    @PrivateMessageHandler
-    public void onPrivate(Bot bot, PrivateMessageEvent e) {
-        String raw = e.getMessage() == null ? "" : e.getMessage();
-        Address addr = new Address(ChatPlatform.ONEBOT, e.getUserId(), false);
-
-        Sender sender = new Sender(e.getUserId(), null, null, false);
-        Chat chat = new Chat(addr, null);
-        MessageMeta meta = MessageMeta.empty();
-
-        List<InPart> parts = parseCqParts(raw);
-        if (parts.isEmpty() && !raw.isBlank()) {
-            parts = List.of(new InText(raw));
-        }
-
-        InboundMessage in = new InboundMessage(addr, sender, chat, meta, parts, Map.of("raw", raw));
-        dispatcher.receive(in);
-    }
+    private final JsonMapper mapper;
 
     /**
      * Extremely small CQ-code parser.
@@ -57,9 +42,15 @@ public class ShiroBridge {
      * </ul>
      */
     static List<InPart> parseCqParts(String message) {
-        if (message == null || message.isEmpty()) return List.of();
+        return parseCq(message).parts();
+    }
+
+    static ParseResult parseCq(String message) {
+        if (message == null || message.isEmpty()) return new ParseResult(List.of(), null);
 
         List<InPart> parts = new ArrayList<>();
+        String replyId = null;
+
         int i = 0;
         while (i < message.length()) {
             int start = message.indexOf("[CQ:", i);
@@ -83,23 +74,24 @@ public class ShiroBridge {
                 break;
             }
 
-            String cq = message.substring(start + 4, end); // after "[CQ:"
-            parseOneCq(cq, parts);
-
+            String cq = message.substring(start + 4, end);
+            String maybeReplyId = parseOneCq(cq, parts);
+            if (replyId == null && maybeReplyId != null && !maybeReplyId.isBlank()) {
+                replyId = maybeReplyId;
+            }
             i = end + 1;
         }
-        return parts;
+        return new ParseResult(parts, replyId);
     }
 
-    private static void parseOneCq(String cq, List<InPart> parts) {
-        if (cq == null || cq.isBlank()) return;
+    private static String parseOneCq(String cq, List<InPart> parts) {
+        if (cq == null || cq.isBlank()) return null;
 
         String[] seg = cq.split(",");
-        if (seg.length == 0) return;
+        if (seg.length == 0) return null;
 
         String type = seg[0].trim();
 
-        // parse key-values
         java.util.Map<String, String> kv = new java.util.LinkedHashMap<>();
         for (int j = 1; j < seg.length; j++) {
             String s = seg[j];
@@ -123,6 +115,7 @@ public class ShiroBridge {
                 if (ref != null) {
                     parts.add(new InImage(ref, null, file, null));
                 }
+                return null;
             }
             case "file" -> {
                 String url = kv.get("url");
@@ -137,17 +130,128 @@ public class ShiroBridge {
                 if (ref != null) {
                     parts.add(new InFile(ref, name != null ? name : file, null, null, null));
                 }
+                return null;
             }
             case "at" -> {
-                // Represent @ as plain text to preserve meaning for commands/services.
                 String qq = kv.get("qq");
                 if (qq != null && !qq.isBlank()) {
                     parts.add(new InText("@" + qq));
                 }
+                return null;
+            }
+            case "reply" -> {
+                return kv.get("id");
             }
             default -> {
-                // ignore unknown
+                return null;
             }
+        }
+    }
+
+    @PrivateMessageHandler
+    public void onPrivate(Bot bot, PrivateMessageEvent e) {
+        String raw = e.getMessage() == null ? "" : e.getMessage();
+        Address addr = new Address(ChatPlatform.ONEBOT, e.getUserId(), false);
+
+        Sender sender = new Sender(e.getUserId(), null, null, false);
+        Chat chat = new Chat(addr, null);
+
+        ParseResult parsed = parseCq(messageString(raw));
+        List<InPart> parts = parsed.parts();
+        if (parts.isEmpty() && !raw.isBlank()) {
+            parts = List.of(new InText(raw));
+        }
+
+        MessageMeta meta = new MessageMeta(messageIdOf(e), timestampMsOf(e), parsed.replyId(), null);
+        QuotedMessage quoted = resolveQuoted(bot, parsed.replyId());
+
+        InboundMessage in = new InboundMessage(addr, sender, chat, meta, parts, Map.of("raw", raw), quoted);
+        dispatcher.receive(in);
+    }
+
+    private static String messageString(String raw) {
+        return raw == null ? "" : raw;
+    }
+
+    private static String messageIdOf(Object event) {
+        Object value = invokeNoArg(event, "getMessageId");
+        if (value == null) value = invokeNoArg(event, "getMessageSeq");
+        return value == null ? null : String.valueOf(value);
+    }
+
+    private static Long timestampMsOf(Object event) {
+        Object value = invokeNoArg(event, "getTime");
+        if (value instanceof Number n) {
+            return n.longValue() * 1000L;
+        }
+        return null;
+    }
+
+    private QuotedMessage resolveQuoted(Bot bot, String replyId) {
+        if (bot == null || replyId == null || replyId.isBlank()) return null;
+        try {
+            Map<String, Object> params = new LinkedHashMap<>();
+            params.put("message_id", replyId);
+            Object response = bot.customRequest(() -> "get_msg", params);
+            JsonNode root = toNode(response);
+            if (root == null || root.isNull()) return null;
+
+            JsonNode data = root.has("data") ? root.get("data") : root;
+            String messageId = textOrNull(data.path("message_id"));
+            if (messageId == null || messageId.isBlank()) {
+                messageId = replyId;
+            }
+            Long senderId = longOrNull(data.path("sender").path("user_id"));
+            String message = textOrNull(data.path("message"));
+            if (message == null) {
+                message = textOrNull(data.path("raw_message"));
+            }
+            ParseResult parsed = parseCq(message);
+            List<InPart> parts = parsed.parts();
+            if (parts.isEmpty() && message != null && !message.isBlank()) {
+                parts = List.of(new InText(message));
+            }
+            return new QuotedMessage(messageId, senderId, parts);
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private static Object invokeNoArg(Object target, String name) {
+        if (target == null) return null;
+        try {
+            Method m = target.getClass().getMethod(name);
+            return m.invoke(target);
+        } catch (Exception _) {
+            return null;
+        }
+    }
+
+    private JsonNode toNode(Object value) {
+        if (value == null) return null;
+        if (value instanceof JsonNode node) return node;
+        try {
+            if (value instanceof CharSequence seq) {
+                return mapper.readTree(seq.toString());
+            }
+            return mapper.valueToTree(value);
+        } catch (Exception _) {
+            return null;
+        }
+    }
+
+    private static String textOrNull(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) return null;
+        String text = node.asString(null);
+        return text == null || text.isBlank() ? null : text;
+    }
+
+    private static Long longOrNull(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) return null;
+        try {
+            return node.asLong();
+        } catch (Exception _) {
+            return null;
         }
     }
 
@@ -158,12 +262,14 @@ public class ShiroBridge {
 
         Sender sender = new Sender(e.getUserId(), null, null, false);
         Chat chat = new Chat(addr, null);
-        MessageMeta meta = MessageMeta.empty();
 
-        List<InPart> parts = parseCqParts(raw);
+        ParseResult parsed = parseCq(messageString(raw));
+        List<InPart> parts = parsed.parts();
         if (parts.isEmpty() && !raw.isBlank()) {
             parts = List.of(new InText(raw));
         }
+
+        MessageMeta meta = new MessageMeta(messageIdOf(e), timestampMsOf(e), parsed.replyId(), null);
 
         Map<String, Object> ext = new LinkedHashMap<>();
         ext.put("raw", raw);
@@ -172,7 +278,8 @@ public class ShiroBridge {
             ext.put("onebot.groupRole", role);
         }
 
-        InboundMessage in = new InboundMessage(addr, sender, chat, meta, parts, ext);
+        QuotedMessage quoted = resolveQuoted(bot, parsed.replyId());
+        InboundMessage in = new InboundMessage(addr, sender, chat, meta, parts, ext, quoted);
         dispatcher.receive(in);
     }
 
@@ -188,14 +295,12 @@ public class ShiroBridge {
         return String.valueOf(value);
     }
 
-    private static Object invokeNoArg(Object target, String name) {
-        if (target == null) return null;
-        try {
-            Method m = target.getClass().getMethod(name);
-            return m.invoke(target);
-        } catch (Exception _) {
-            return null;
+    record ParseResult(List<InPart> parts, String replyId) {
+
+        ParseResult {
+            if (parts == null) parts = List.of();
         }
+
     }
 
 }

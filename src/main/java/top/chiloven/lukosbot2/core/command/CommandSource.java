@@ -112,6 +112,13 @@ public final class CommandSource {
     }
 
     /**
+     * Returns the quoted / replied-to message when present.
+     */
+    public QuotedMessage quoted() {
+        return inbound == null ? null : inbound.quoted();
+    }
+
+    /**
      * Looks up one extra metadata value attached to the inbound message.
      *
      * <p>Extra values are platform-specific hints such as slash-command markers, platform admin flags,

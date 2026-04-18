@@ -18,8 +18,20 @@ public record InboundMessage(
         Chat chat,
         MessageMeta meta,
         List<InPart> parts,
-        Map<String, Object> ext
+        Map<String, Object> ext,
+        QuotedMessage quoted
 ) {
+
+    public InboundMessage(
+            Address addr,
+            Sender sender,
+            Chat chat,
+            MessageMeta meta,
+            List<InPart> parts,
+            Map<String, Object> ext
+    ) {
+        this(addr, sender, chat, meta, parts, ext, null);
+    }
 
     public InboundMessage {
         if (sender == null) sender = Sender.unknown();
@@ -33,4 +45,4 @@ public record InboundMessage(
         return parts == null ? Collections.emptyList() : parts;
     }
 
-}
+} 

@@ -4,6 +4,7 @@ import lombok.extern.log4j.Log4j2;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -124,7 +125,7 @@ final class DiscordStack implements AutoCloseable {
             List<InPart> parts = new ArrayList<>();
             parts.add(new InText(text));
 
-            sink.accept(new InboundMessage(addr, sender, chat, meta, parts, buildExtForSlash(e)));
+            sink.accept(new InboundMessage(addr, sender, chat, meta, parts, buildExtForSlash(e), null));
 
             e.reply("（推荐直接发送消息）").queue();
         }
@@ -149,17 +150,30 @@ final class DiscordStack implements AutoCloseable {
                 ts = e.getMessage().getTimeCreated().toInstant().toEpochMilli();
             } catch (Exception _) {
             }
-            MessageMeta meta = new MessageMeta(msgId, ts, null, null);
-
-            List<InPart> parts = new ArrayList<>();
-
-            String text = e.getMessage().getContentRaw();
-            if (!text.isBlank()) {
-                parts.add(new InText(text));
+            String replyToId = null;
+            try {
+                if (e.getMessage().getMessageReference() != null) {
+                    replyToId = e.getMessage().getMessageReference().getMessageId();
+                }
+            } catch (Exception _) {
             }
+            MessageMeta meta = new MessageMeta(msgId, ts, replyToId, null);
 
-            // attachments
-            var atts = e.getMessage().getAttachments();
+            List<InPart> parts = extractParts(e.getMessage());
+            if (parts.isEmpty()) return;
+
+            QuotedMessage quoted = resolveQuoted(e);
+            sink.accept(new InboundMessage(addr, sender, chat, meta, parts, buildExtForMessage(e), quoted));
+        }
+
+        private List<InPart> extractParts(Message message) {
+            List<InPart> parts = new ArrayList<>();
+            if (message == null) return parts;
+
+            String text = message.getContentRaw();
+            if (!text.isBlank()) parts.add(new InText(text));
+
+            var atts = message.getAttachments();
             for (var a : atts) {
                 if (a == null) continue;
                 String url = a.getUrl();
@@ -170,17 +184,39 @@ final class DiscordStack implements AutoCloseable {
                     if (!url.isBlank()) {
                         parts.add(new InImage(new UrlRef(url), null, name, mime));
                     }
-                } else {
-                    if (!url.isBlank()) {
-                        parts.add(new InFile(new UrlRef(url), name, mime, size, null));
-                    }
+                } else if (!url.isBlank()) {
+                    parts.add(new InFile(new UrlRef(url), name, mime, size, null));
                 }
             }
+            return parts;
+        }
 
-            // ignore empty messages
-            if (parts.isEmpty()) return;
+        private QuotedMessage resolveQuoted(MessageReceivedEvent e) {
+            Message referenced = null;
+            try {
+                referenced = e.getMessage().getReferencedMessage();
+            } catch (Exception _) {
+            }
+            if (referenced == null) {
+                try {
+                    if (e.getMessage().getMessageReference() != null) {
+                        String id = e.getMessage().getMessageReference().getMessageId();
+                        if (!id.isBlank()) {
+                            referenced = e.getChannel().retrieveMessageById(id).complete();
+                        }
+                    }
+                } catch (Exception ex) {
+                    log.debug("Failed to resolve quoted Discord message: {}", ex.getMessage());
+                }
+            }
+            if (referenced == null) return null;
 
-            sink.accept(new InboundMessage(addr, sender, chat, meta, parts, buildExtForMessage(e)));
+            Long senderId = null;
+            try {
+                senderId = referenced.getAuthor().getIdLong();
+            } catch (Exception _) {
+            }
+            return new QuotedMessage(referenced.getId(), senderId, extractParts(referenced));
         }
 
         private Map<String, Object> buildExtForMessage(MessageReceivedEvent e) {
