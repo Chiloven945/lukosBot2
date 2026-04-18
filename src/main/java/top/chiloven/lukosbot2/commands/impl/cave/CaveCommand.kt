@@ -107,7 +107,7 @@ class CaveCommand(
             src.reply("编号 #$no 不存在或已被删除。")
             return
         }
-        src.reply(caveService.toOutbound(src, entry))
+        src.reply(caveService.toOutbound(src, entry, includeMeta = true))
     }
 
     private fun add(src: CommandSource) {
