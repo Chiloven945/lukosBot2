@@ -2,6 +2,7 @@ package top.chiloven.lukosbot2.commands.impl.cave
 
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.IntegerArgumentType
+import com.mojang.brigadier.arguments.StringArgumentType
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
@@ -36,13 +37,16 @@ class CaveCommand(
             .syntax("随机发送一个条目")
             .syntax("发送指定编号条目", UsageNode.arg("number"))
             .syntax("添加当前消息或被引用消息为条目", UsageNode.arg("add"))
+            .syntax("直接添加一段文本为条目", UsageNode.arg("add"), UsageNode.arg("message"))
             .syntax("删除指定编号条目", UsageNode.arg("delete"), UsageNode.arg("number"))
             .param("number", "正整数编号")
+            .param("message", "要直接保存的文本内容")
             .note("add/delete 仅 bot admin 可用。编号单调递增，删除后不会回收。")
             .example(
                 "cave",
                 "cave 12",
                 "cave add",
+                "cave add 今天的洞内留言",
                 "cave delete 12"
             )
             .build()
@@ -60,6 +64,13 @@ class CaveCommand(
                             add(ctx.source)
                             1
                         }
+                        .then(
+                            argument("message", StringArgumentType.greedyString())
+                                .executes { ctx ->
+                                    add(ctx.source)
+                                    1
+                                }
+                        )
                 )
                 .then(
                     literal("delete")

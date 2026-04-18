@@ -61,7 +61,7 @@ class CaveService(
 
     fun add(src: CommandSource): CaveEntry {
         val payload = extractPayload(src)
-            ?: throw IllegalArgumentException("未检测到可保存的文本或图片。请直接发送内容，或回复一条带文本/图片的消息后使用 /cave add。")
+            ?: throw IllegalArgumentException("未检测到可保存的文本或图片。请直接发送内容、使用 /cave add <message>，或回复一条带文本/图片的消息后使用 /cave add。")
 
         return lock.withLock {
             val meta = readMeta()
