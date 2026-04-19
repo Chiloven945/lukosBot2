@@ -43,14 +43,22 @@ class MotdQueryService(
             .build()
     }
 
-    fun query(rawAddress: String): MotdQueryResult {
+    fun query(rawAddress: String, mode: QueryMode = QueryMode.AUTO): MotdQueryResult {
         val address = MinecraftServerAddress.parse(rawAddress)
 
+        return when (mode) {
+            QueryMode.AUTO -> queryAuto(address)
+            QueryMode.API -> queryByApi(address)
+            QueryMode.DIRECT -> queryByDirectPing(address)
+        }
+    }
+
+    private fun queryAuto(address: MinecraftServerAddress): MotdQueryResult {
         return try {
             queryByApi(address)
         } catch (apiError: Exception) {
             log.warn("MOTD API query failed for {}: {}", address.normalized(), apiError.message)
-            queryByDirectPing(address, apiError)
+            queryByDirectPing(address, listOf("API: ${apiError.message ?: apiError::class.java.simpleName}"))
         }
     }
 
@@ -86,11 +94,10 @@ class MotdQueryService(
 
     private fun queryByDirectPing(
         address: MinecraftServerAddress,
-        apiError: Throwable,
+        initialFailures: List<String> = emptyList(),
     ): MotdQueryResult {
         val candidates = MinecraftJavaAddressResolver.resolveCandidates(address)
-        val failures = mutableListOf<String>()
-        failures += "API: ${apiError.message ?: apiError::class.java.simpleName}"
+        val failures = initialFailures.toMutableList()
 
         for (candidate in candidates) {
             runCatching {
@@ -114,7 +121,7 @@ class MotdQueryService(
                     software = null,
                     srvResolved = candidate.viaSrv,
                     eulaBlocked = null,
-                    source = DataSource.DIRECT_FALLBACK,
+                    source = DataSource.DIRECT,
                 )
             }.onFailure { pingError ->
                 failures += "${candidate.displayAddress()}: ${pingError.message ?: pingError::class.java.simpleName}"
@@ -160,9 +167,43 @@ class MotdQueryService(
         return listOf(DEFAULT_DESCRIPTION)
     }
 
+    enum class QueryMode(
+        val token: String,
+        val aliases: Set<String>,
+        val displayName: String,
+    ) {
+
+        AUTO(
+            token = "auto",
+            aliases = setOf("auto", "默认", "自动"),
+            displayName = "自动"
+        ),
+        API(
+            token = "api",
+            aliases = setOf("api"),
+            displayName = "API"
+        ),
+        DIRECT(
+            token = "direct",
+            aliases = setOf("direct", "self", "direct-ping", "直连", "自解析", "自己解析"),
+            displayName = "直连"
+        );
+
+        companion object {
+
+            fun parse(raw: String): QueryMode? {
+                val normalized = raw.trim().lowercase(Locale.ROOT)
+                return entries.firstOrNull {
+                    normalized in it.aliases.map { alias -> alias.lowercase(Locale.ROOT) }.toSet()
+                }
+            }
+
+        }
+    }
+
     enum class DataSource {
         MCSRVSTAT,
-        DIRECT_FALLBACK,
+        DIRECT,
     }
 
     data class MotdQueryResult(
@@ -208,8 +249,11 @@ class MotdQueryService(
             if (eulaBlocked == true) {
                 lines += "EULA 屏蔽：是"
             }
-            if (source == DataSource.DIRECT_FALLBACK) {
-                lines += "数据来源：直连协议兜底"
+            if (source == DataSource.MCSRVSTAT) {
+                lines += "数据来源：mcsrvstat.us"
+            }
+            if (source == DataSource.DIRECT) {
+                lines += "数据来源：直连协议"
             }
 
             return lines.joinToString("\n").trim()
