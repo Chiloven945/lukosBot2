@@ -11,6 +11,14 @@ import okhttp3.Response
 import org.apache.logging.log4j.LogManager
 import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.config.ProxyConfigProp
+import top.chiloven.lukosbot2.util.DownloadUtils.downloadAllToDir
+import top.chiloven.lukosbot2.util.DownloadUtils.downloadAllToDirConcurrent
+import top.chiloven.lukosbot2.util.DownloadUtils.downloadNamedUrlsToDirConcurrent
+import top.chiloven.lukosbot2.util.DownloadUtils.downloadToDir
+import top.chiloven.lukosbot2.util.DownloadUtils.downloadToDirFast
+import top.chiloven.lukosbot2.util.DownloadUtils.downloadToFile
+import top.chiloven.lukosbot2.util.DownloadUtils.downloadToFileFast
+import top.chiloven.lukosbot2.util.DownloadUtils.sanitizeFileName
 import top.chiloven.lukosbot2.util.concurrent.Coroutines
 import top.chiloven.lukosbot2.util.spring.SpringBeans
 import java.io.IOException
@@ -33,7 +41,52 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Utils for downloading files.
+ * Resilient file-download helper built on top of OkHttp.
+ *
+ * This utility centralizes the download flow that is reused across the project:
+ *
+ * 1. Build HTTP requests with shared headers and proxy-aware client reuse.
+ * 2. Download a single file to a target path or target directory.
+ * 3. Optionally resume interrupted downloads when the server supports it.
+ * 4. Optionally split large files into ranged chunks for faster downloads.
+ * 5. Batch-download multiple resources with bounded concurrency.
+ *
+ * ## Scope and design goals
+ *
+ * `DownloadUtils` intentionally focuses on “download a remote resource onto local disk” and keeps
+ * the implementation opinionated:
+ *
+ * - Only **HTTP GET** and **HTTP HEAD** are used.
+ * - Downloads are written through `*.part` temporary files and moved into place only after success.
+ * - Failed downloads are retried with exponential backoff and jitter.
+ * - Batch helpers return a lightweight summary instead of throwing on the first failed item.
+ * - Proxy configuration is auto-discovered from Spring when available.
+ *
+ * ## Public API overview
+ *
+ * The object exposes two groups of helpers:
+ *
+ * - **Single-file helpers** such as [downloadToFile], [downloadToDir], [downloadToFileFast], and
+ *   [downloadToDirFast].
+ * - **Batch helpers** such as [downloadAllToDir], [downloadAllToDirConcurrent], and
+ *   [downloadNamedUrlsToDirConcurrent].
+ *
+ * `downloadAllToDir*` treats each input name as a plain file name inside the target directory,
+ * while [downloadNamedUrlsToDirConcurrent] preserves relative subdirectories from the provided
+ * entry name and auto-deduplicates collisions.
+ *
+ * ## Chunked download behavior
+ *
+ * “Fast” helpers probe whether the remote server supports byte ranges. When range requests are
+ * available and the file is large enough, the payload is downloaded in parallel chunks and merged
+ * into a single target file. Otherwise, the implementation falls back to the normal single-stream
+ * downloader automatically.
+ *
+ * ## Connection reuse
+ *
+ * The object caches a single [OkHttpClient] instance and rebuilds it only when the effective proxy
+ * configuration changes. This keeps connection pooling effective while still honoring updated proxy
+ * settings.
  *
  * @author Chiloven945
  */
@@ -52,12 +105,31 @@ object DownloadUtils {
     const val DEFAULT_PROGRESS_LOG_INTERVAL_MS: Long = 1_000
 
     private const val BUF_SIZE: Int = 64 * 1024
+    private const val NO_PROXY_KEY = "NO_PROXY"
+    private const val INVALID_BATCH_NAME = "file"
 
     @Volatile
     private var cachedClient: OkHttpClient? = null
 
     @Volatile
     private var cachedKey: String? = null
+
+    private enum class BatchNamingMode(val logTag: String) {
+        FLAT_FILES("[DL-BATCH]"),
+        RELATIVE_PATHS("[DL-BATCH-NAMED]")
+    }
+
+    private data class BatchDownloadOptions(
+        val maxConcurrentFiles: Int = 1,
+        val chunkThreadsPerFile: Int = 1,
+        val maxRetries: Int = DEFAULT_MAX_RETRIES,
+    ) {
+
+        val normalizedMaxConcurrentFiles: Int = max(1, maxConcurrentFiles)
+        val normalizedChunkThreadsPerFile: Int = max(1, chunkThreadsPerFile)
+        val normalizedMaxRetries: Int = max(0, maxRetries)
+
+    }
 
     private fun proxyOrNull(): ProxyConfigProp? = try {
         SpringBeans.getBean(ProxyConfigProp::class.java)
@@ -78,7 +150,7 @@ object DownloadUtils {
     private val client: OkHttpClient
         get() {
             val proxy = proxyOrNull()
-            val key = if (proxy != null && proxy.isEnabled) proxyKey(proxy) else "NO_PROXY"
+            val key = if (proxy != null && proxy.isEnabled) proxyKey(proxy) else NO_PROXY_KEY
 
             cachedClient?.let { existing ->
                 if (cachedKey == key) return existing
@@ -105,14 +177,20 @@ object DownloadUtils {
             }
         }
 
-    @JvmStatic
-    fun resolveUrl(server: URI, pathOrUrl: String): URI {
-        val path = pathOrUrl.trim()
-        if (path.startsWith("http://") || path.startsWith("https://")) return URI.create(path)
-        if (path.startsWith('/')) return server.resolve(path)
-        return server.resolve("/$path")
-    }
-
+    /**
+     * Download a list of files into a directory sequentially.
+     *
+     * Each item name is treated as a plain file name and sanitized with [sanitizeFileName] before
+     * the file is written under [dir]. When one item fails, the batch continues and the failed item
+     * name is recorded in the returned [BatchResult].
+     *
+     * @param items resources to download; `null` items are ignored
+     * @param dir destination directory
+     * @param headers optional extra request headers applied to every request
+     * @param timeoutMs per-request timeout in milliseconds
+     * @return batch summary containing succeeded count and failed item names
+     * @throws IOException if the destination directory cannot be created
+     */
     @JvmStatic
     @Throws(IOException::class)
     fun downloadAllToDir(
@@ -120,255 +198,274 @@ object DownloadUtils {
         dir: Path,
         headers: Map<String, String>?,
         timeoutMs: Int,
-    ): BatchResult {
-        Files.createDirectories(dir)
-        if (items.isNullOrEmpty()) return BatchResult(0, emptyList())
-
-        var ok = 0
-        val failed = mutableListOf<String>()
-
-        log.debug("[DL-BATCH] Downloading {} items to {}", items.size, dir)
-        items.forEach { log.debug("[DL-BATCH] item={}", it) }
-
-        for (item in items) {
-            if (item == null) continue
-            val name = item.name.trim()
-            val url = item.url
-
-            if (name.isEmpty()) {
-                failed += "file"
-                continue
-            }
-
-            try {
-                downloadToDir(url, dir, name, headers, timeoutMs)
-                ok++
-            } catch (ex: Exception) {
-                failed += name
-                log.warn("[DL-BATCH] Download failed: name={}, url={}, err={}", name, url, ex.toString())
-            }
-        }
-
-        log.debug("[DL-BATCH] Done: ok={}, failed={}", ok, failed.size)
-        return BatchResult(ok, failed)
-    }
-
-    @JvmStatic
-    @Throws(IOException::class)
-    fun downloadAllToDirConcurrent(
-        items: List<NamedUrl?>?,
-        dir: Path,
-        headers: Map<String, String>?,
-        timeoutMs: Int,
-        maxConcurrentFiles: Int,
-    ): BatchResult =
-        downloadAllToDirConcurrent(items, dir, headers, timeoutMs, maxConcurrentFiles, 1, DEFAULT_MAX_RETRIES)
-
-    @JvmStatic
-    @Throws(IOException::class)
-    fun downloadAllToDirConcurrent(
-        items: List<NamedUrl?>?,
-        dir: Path,
-        headers: Map<String, String>?,
-        timeoutMs: Int,
-        maxConcurrentFiles: Int,
-        chunkThreadsPerFile: Int,
-    ): BatchResult = downloadAllToDirConcurrent(
-        items,
-        dir,
-        headers,
-        timeoutMs,
-        maxConcurrentFiles,
-        chunkThreadsPerFile,
-        DEFAULT_MAX_RETRIES
+    ): BatchResult = downloadBatch(
+        items = items,
+        dir = dir,
+        headers = headers,
+        timeoutMs = timeoutMs,
+        namingMode = BatchNamingMode.FLAT_FILES,
+        options = BatchDownloadOptions()
     )
 
+    /**
+     * Download a list of files into a directory with bounded concurrency.
+     *
+     * Each item name is treated as a plain file name inside [dir]. When [chunkThreadsPerFile] is
+     * greater than `1`, each file may use ranged chunk downloading via [downloadToDirFast].
+     * Otherwise, the normal single-stream downloader is used.
+     *
+     * @param items resources to download; `null` items are ignored
+     * @param dir destination directory
+     * @param headers optional extra request headers applied to every request
+     * @param timeoutMs per-request timeout in milliseconds
+     * @param maxConcurrentFiles maximum number of files downloaded at the same time
+     * @param chunkThreadsPerFile chunk workers used per file when chunk download is enabled
+     * @param maxRetries retry count for each individual file request
+     * @return batch summary containing succeeded count and failed item names
+     * @throws IOException if the destination directory cannot be created
+     */
     @JvmStatic
+    @JvmOverloads
     @Throws(IOException::class)
     fun downloadAllToDirConcurrent(
         items: List<NamedUrl?>?,
         dir: Path,
         headers: Map<String, String>?,
         timeoutMs: Int,
-        maxConcurrentFiles: Int,
-        chunkThreadsPerFile: Int,
-        maxRetries: Int,
-    ): BatchResult {
-        Files.createDirectories(dir)
-        if (items.isNullOrEmpty()) return BatchResult(0, emptyList())
+        maxConcurrentFiles: Int = DEFAULT_MAX_CONCURRENT_FILES,
+        chunkThreadsPerFile: Int = 1,
+        maxRetries: Int = DEFAULT_MAX_RETRIES,
+    ): BatchResult = downloadBatch(
+        items = items,
+        dir = dir,
+        headers = headers,
+        timeoutMs = timeoutMs,
+        namingMode = BatchNamingMode.FLAT_FILES,
+        options = BatchDownloadOptions(maxConcurrentFiles, chunkThreadsPerFile, maxRetries)
+    )
 
-        val maxConc = max(1, maxConcurrentFiles)
-        val chunkThreads = max(1, chunkThreadsPerFile)
-        val retries = max(0, maxRetries)
-        val ok = AtomicInteger(0)
-        val failed = ConcurrentLinkedQueue<String>()
-
-        log.debug(
-            "[DL-BATCH] Concurrent downloading {} items to {}, maxConc={}, chunkThreadsPerFile={}, maxRetries={}",
-            items.size,
-            dir,
-            maxConc,
-            chunkThreads,
-            retries
-        )
-
-        Coroutines.runBlockingIo {
-            Coroutines.forEachLimited(items.filterNotNull(), maxConc) { item ->
-                val name = item.name.trim()
-                val url = item.url
-
-                if (name.isEmpty()) {
-                    failed += "file"
-                    return@forEachLimited
-                }
-
-                try {
-                    val startNs = System.nanoTime()
-
-                    if (chunkThreads > 1) {
-                        downloadToDirFast(url, dir, name, headers, timeoutMs, chunkThreads, retries)
-                    } else {
-                        downloadToDir(url, dir, name, headers, timeoutMs, retries)
-                    }
-
-                    val costMs = (System.nanoTime() - startNs) / 1_000_000
-                    log.debug("[DL-BATCH] OK name={}, url={}, cost={}ms", name, url, costMs)
-                    ok.incrementAndGet()
-                } catch (_: InterruptedException) {
-                    Thread.currentThread().interrupt()
-                    failed += name
-                    log.warn("[DL-BATCH] Download interrupted: name={}, url={}", name, url)
-                } catch (ex: Exception) {
-                    failed += name
-                    log.warn("[DL-BATCH] Download failed: name={}, url={}, err={}", name, url, ex.toString())
-                }
-            }
-        }
-
-        log.debug("[DL-BATCH] Done: ok={}, failed={}", ok.get(), failed.size)
-        return BatchResult(ok.get(), failed.toList())
-    }
-
+    /**
+     * Download a list of named files into a directory while preserving relative paths.
+     *
+     * Unlike [downloadAllToDirConcurrent], each item name is interpreted as a relative entry path.
+     * Nested directories are created automatically, path traversal is rejected, and duplicate entry
+     * names are deduplicated by appending ` (2)`, ` (3)`, and so on.
+     *
+     * @param items resources to download; `null` items are ignored
+     * @param dir destination directory
+     * @param headers optional extra request headers applied to every request
+     * @param timeoutMs per-request timeout in milliseconds
+     * @param maxConcurrentFiles maximum number of files downloaded at the same time
+     * @param chunkThreadsPerFile chunk workers used per file when chunk download is enabled
+     * @param maxRetries retry count for each individual file request
+     * @return batch summary containing succeeded count and failed entry names
+     * @throws IOException if the destination directory cannot be created
+     */
     @JvmStatic
+    @JvmOverloads
     @Throws(IOException::class)
     fun downloadNamedUrlsToDirConcurrent(
         items: List<NamedUrl?>?,
         dir: Path,
         headers: Map<String, String>?,
         timeoutMs: Int,
-    ): BatchResult = downloadNamedUrlsToDirConcurrent(
-        items,
-        dir,
-        headers,
-        timeoutMs,
-        DEFAULT_MAX_CONCURRENT_FILES,
-        DEFAULT_CHUNK_THREADS,
-        DEFAULT_MAX_RETRIES
+        maxConcurrentFiles: Int = DEFAULT_MAX_CONCURRENT_FILES,
+        chunkThreadsPerFile: Int = DEFAULT_CHUNK_THREADS,
+        maxRetries: Int = DEFAULT_MAX_RETRIES,
+    ): BatchResult = downloadBatch(
+        items = items,
+        dir = dir,
+        headers = headers,
+        timeoutMs = timeoutMs,
+        namingMode = BatchNamingMode.RELATIVE_PATHS,
+        options = BatchDownloadOptions(maxConcurrentFiles, chunkThreadsPerFile, maxRetries)
     )
 
-    @JvmStatic
     @Throws(IOException::class)
-    fun downloadNamedUrlsToDirConcurrent(
+    private fun downloadBatch(
         items: List<NamedUrl?>?,
         dir: Path,
         headers: Map<String, String>?,
         timeoutMs: Int,
-        maxConcurrentFiles: Int,
-        chunkThreadsPerFile: Int,
-        maxRetries: Int,
+        namingMode: BatchNamingMode,
+        options: BatchDownloadOptions,
     ): BatchResult {
         Files.createDirectories(dir)
-        if (items.isNullOrEmpty()) return BatchResult(0, emptyList())
 
-        val maxConc = max(1, maxConcurrentFiles)
-        val chunkThreads = max(1, chunkThreadsPerFile)
-        val retries = max(0, maxRetries)
+        val actualItems = items.orEmpty().filterNotNull()
+        if (actualItems.isEmpty()) return BatchResult(0, emptyList())
+
         val ok = AtomicInteger(0)
         val failed = ConcurrentLinkedQueue<String>()
-        val usedNames = Collections.synchronizedSet(mutableSetOf<String>())
+        val usedNames = if (namingMode == BatchNamingMode.RELATIVE_PATHS) {
+            Collections.synchronizedSet(mutableSetOf<String>())
+        } else {
+            null
+        }
 
         log.debug(
-            "[DL-BATCH-NAMED] Concurrent downloading {} items to {}, maxConc={}, chunkThreadsPerFile={}, maxRetries={}",
-            items.size,
+            "{} Downloading {} items to {}, maxConc={}, chunkThreadsPerFile={}, maxRetries={}",
+            namingMode.logTag,
+            actualItems.size,
             dir,
-            maxConc,
-            chunkThreads,
-            retries
+            options.normalizedMaxConcurrentFiles,
+            options.normalizedChunkThreadsPerFile,
+            options.normalizedMaxRetries
         )
+        actualItems.forEach { log.debug("{} item={}", namingMode.logTag, it) }
 
         Coroutines.runBlockingIo {
-            Coroutines.forEachLimited(items.filterNotNull(), maxConc) { item ->
-                val entryName = item.name.trim()
-                val url = item.url
-
-                if (entryName.isEmpty()) {
-                    failed += "file"
+            Coroutines.forEachLimited(actualItems, options.normalizedMaxConcurrentFiles) { item ->
+                val requestedName = item.name.trim()
+                if (requestedName.isEmpty()) {
+                    failed += INVALID_BATCH_NAME
                     return@forEachLimited
                 }
 
                 try {
-                    val uniqueEntryName = uniqueEntryName(entryName, usedNames)
-                    val target = resolveNamedTarget(dir, uniqueEntryName)
-                    target.parent?.let(Files::createDirectories)
-
                     val startNs = System.nanoTime()
-                    if (chunkThreads > 1) {
-                        downloadToFileFast(
-                            url,
-                            target,
-                            headers,
-                            timeoutMs,
-                            chunkThreads,
-                            DEFAULT_MIN_SIZE_FOR_CHUNKING_BYTES,
-                            DEFAULT_MIN_PART_SIZE_BYTES,
-                            retries
-                        )
-                    } else {
-                        downloadToFile(url, target, headers, timeoutMs, retries)
+                    val loggedName = when (namingMode) {
+                        BatchNamingMode.FLAT_FILES -> {
+                            downloadBatchItemToFlatDir(
+                                url = item.url,
+                                dir = dir,
+                                fileName = requestedName,
+                                headers = headers,
+                                timeoutMs = timeoutMs,
+                                options = options
+                            )
+                            requestedName
+                        }
+
+                        BatchNamingMode.RELATIVE_PATHS -> {
+                            val uniqueEntryName = uniqueEntryName(
+                                entryName = requestedName,
+                                usedNames = checkNotNull(usedNames)
+                            )
+                            downloadBatchItemToNamedTarget(
+                                url = item.url,
+                                dir = dir,
+                                entryName = uniqueEntryName,
+                                headers = headers,
+                                timeoutMs = timeoutMs,
+                                options = options
+                            )
+                            uniqueEntryName
+                        }
                     }
 
                     val costMs = (System.nanoTime() - startNs) / 1_000_000
-                    log.debug("[DL-BATCH-NAMED] OK entry={}, url={}, cost={}ms", uniqueEntryName, url, costMs)
+                    log.debug("{} OK name={}, url={}, cost={}ms", namingMode.logTag, loggedName, item.url, costMs)
                     ok.incrementAndGet()
                 } catch (_: InterruptedException) {
                     Thread.currentThread().interrupt()
-                    failed += entryName
-                    log.warn("[DL-BATCH-NAMED] Download interrupted: entry={}, url={}", entryName, url)
+                    failed += requestedName
+                    log.warn("{} Download interrupted: name={}, url={}", namingMode.logTag, requestedName, item.url)
                 } catch (ex: Exception) {
-                    failed += entryName
+                    failed += requestedName
                     log.warn(
-                        "[DL-BATCH-NAMED] Download failed: entry={}, url={}, err={}",
-                        entryName,
-                        url,
+                        "{} Download failed: name={}, url={}, err={}",
+                        namingMode.logTag,
+                        requestedName,
+                        item.url,
                         ex.toString()
                     )
                 }
             }
         }
 
-        log.debug("[DL-BATCH-NAMED] Done: ok={}, failed={}", ok.get(), failed.size)
+        log.debug("{} Done: ok={}, failed={}", namingMode.logTag, ok.get(), failed.size)
         return BatchResult(ok.get(), failed.toList())
     }
 
-    @JvmStatic
     @Throws(IOException::class)
-    fun downloadToFile(
+    private fun downloadBatchItemToFlatDir(
         url: URI,
-        targetFile: Path,
+        dir: Path,
+        fileName: String,
         headers: Map<String, String>?,
         timeoutMs: Int,
+        options: BatchDownloadOptions,
     ) {
-        downloadToFile(url, targetFile, headers, timeoutMs, DEFAULT_MAX_RETRIES)
+        if (options.normalizedChunkThreadsPerFile > 1) {
+            downloadToDirFast(
+                url = url,
+                dir = dir,
+                fileName = fileName,
+                headers = headers,
+                timeoutMs = timeoutMs,
+                chunkThreads = options.normalizedChunkThreadsPerFile,
+                maxRetries = options.normalizedMaxRetries
+            )
+        } else {
+            downloadToDir(
+                url = url,
+                dir = dir,
+                fileName = fileName,
+                headers = headers,
+                timeoutMs = timeoutMs,
+                maxRetries = options.normalizedMaxRetries
+            )
+        }
     }
 
+    @Throws(IOException::class)
+    private fun downloadBatchItemToNamedTarget(
+        url: URI,
+        dir: Path,
+        entryName: String,
+        headers: Map<String, String>?,
+        timeoutMs: Int,
+        options: BatchDownloadOptions,
+    ) {
+        val target = resolveNamedTarget(dir, entryName)
+        target.parent?.let(Files::createDirectories)
+
+        if (options.normalizedChunkThreadsPerFile > 1) {
+            downloadToFileFast(
+                url = url,
+                targetFile = target,
+                headers = headers,
+                timeoutMs = timeoutMs,
+                chunkThreads = options.normalizedChunkThreadsPerFile,
+                minSizeForChunking = DEFAULT_MIN_SIZE_FOR_CHUNKING_BYTES,
+                minPartSizeBytes = DEFAULT_MIN_PART_SIZE_BYTES,
+                maxRetries = options.normalizedMaxRetries
+            )
+        } else {
+            downloadToFile(
+                url = url,
+                targetFile = target,
+                headers = headers,
+                timeoutMs = timeoutMs,
+                maxRetries = options.normalizedMaxRetries
+            )
+        }
+    }
+
+    /**
+     * Download a single resource into the specified file.
+     *
+     * The download is written to a sibling `*.part` file first and moved into place only after the
+     * request completes successfully. Retry attempts reuse the partial file when possible and may
+     * resume from the last written offset.
+     *
+     * @param url resource URL
+     * @param targetFile final target path on disk
+     * @param headers optional extra request headers
+     * @param timeoutMs per-request timeout in milliseconds
+     * @param maxRetries retry count used for transport or retryable HTTP failures
+     * @throws IOException if the download ultimately fails
+     */
     @JvmStatic
+    @JvmOverloads
     @Throws(IOException::class)
     fun downloadToFile(
         url: URI,
         targetFile: Path,
         headers: Map<String, String>?,
         timeoutMs: Int,
-        maxRetries: Int,
+        maxRetries: Int = DEFAULT_MAX_RETRIES,
     ) {
         val retries = max(0, maxRetries)
         val maxAttempts = 1 + retries
@@ -571,7 +668,22 @@ object DownloadUtils {
         }
     }
 
+    /**
+     * Download a single resource into the specified directory using [fileName] as the target name.
+     *
+     * The file name is sanitized with [sanitizeFileName] before the target path is resolved.
+     *
+     * @param url resource URL
+     * @param dir destination directory
+     * @param fileName desired file name inside [dir]
+     * @param headers optional extra request headers
+     * @param timeoutMs per-request timeout in milliseconds
+     * @param maxRetries retry count used for transport or retryable HTTP failures
+     * @return final target path
+     * @throws IOException if directory creation or download fails
+     */
     @JvmStatic
+    @JvmOverloads
     @Throws(IOException::class)
     fun downloadToDir(
         url: URI,
@@ -579,17 +691,7 @@ object DownloadUtils {
         fileName: String,
         headers: Map<String, String>?,
         timeoutMs: Int,
-    ): Path = downloadToDir(url, dir, fileName, headers, timeoutMs, DEFAULT_MAX_RETRIES)
-
-    @JvmStatic
-    @Throws(IOException::class)
-    fun downloadToDir(
-        url: URI,
-        dir: Path,
-        fileName: String,
-        headers: Map<String, String>?,
-        timeoutMs: Int,
-        maxRetries: Int,
+        maxRetries: Int = DEFAULT_MAX_RETRIES,
     ): Path {
         Files.createDirectories(dir)
         val target = dir.resolve(sanitizeFileName(fileName))
@@ -597,60 +699,34 @@ object DownloadUtils {
         return target
     }
 
+    /**
+     * Download a single resource using ranged chunk downloads when beneficial.
+     *
+     * The method first probes server range support. If chunking is not supported or the payload is
+     * too small, it transparently falls back to [downloadToFile].
+     *
+     * @param url resource URL
+     * @param targetFile final target path on disk
+     * @param headers optional extra request headers
+     * @param timeoutMs per-request timeout in milliseconds
+     * @param chunkThreads maximum chunk workers used when range download is enabled
+     * @param minSizeForChunking minimum total file size required before chunking is considered
+     * @param minPartSizeBytes minimum desired part size used to derive the final part count
+     * @param maxRetries retry count used for transport or retryable HTTP failures
+     * @throws IOException if the download ultimately fails
+     */
     @JvmStatic
+    @JvmOverloads
     @Throws(IOException::class)
     fun downloadToFileFast(
         url: URI,
         targetFile: Path,
         headers: Map<String, String>?,
         timeoutMs: Int,
-    ) {
-        downloadToFileFast(
-            url,
-            targetFile,
-            headers,
-            timeoutMs,
-            DEFAULT_CHUNK_THREADS,
-            DEFAULT_MIN_SIZE_FOR_CHUNKING_BYTES,
-            DEFAULT_MIN_PART_SIZE_BYTES,
-            DEFAULT_MAX_RETRIES
-        )
-    }
-
-    @JvmStatic
-    @Throws(IOException::class)
-    fun downloadToFileFast(
-        url: URI,
-        targetFile: Path,
-        headers: Map<String, String>?,
-        timeoutMs: Int,
-        chunkThreads: Int,
-        minSizeForChunking: Long,
-        minPartSizeBytes: Long,
-    ) {
-        downloadToFileFast(
-            url,
-            targetFile,
-            headers,
-            timeoutMs,
-            chunkThreads,
-            minSizeForChunking,
-            minPartSizeBytes,
-            DEFAULT_MAX_RETRIES
-        )
-    }
-
-    @JvmStatic
-    @Throws(IOException::class)
-    fun downloadToFileFast(
-        url: URI,
-        targetFile: Path,
-        headers: Map<String, String>?,
-        timeoutMs: Int,
-        chunkThreads: Int,
-        minSizeForChunking: Long,
-        minPartSizeBytes: Long,
-        maxRetries: Int,
+        chunkThreads: Int = DEFAULT_CHUNK_THREADS,
+        minSizeForChunking: Long = DEFAULT_MIN_SIZE_FOR_CHUNKING_BYTES,
+        minPartSizeBytes: Long = DEFAULT_MIN_PART_SIZE_BYTES,
+        maxRetries: Int = DEFAULT_MAX_RETRIES,
     ) {
         val threads = max(1, chunkThreads)
         if (threads == 1) {
@@ -780,7 +856,23 @@ object DownloadUtils {
         }
     }
 
+    /**
+     * Download a single resource into a directory using ranged chunk downloads when beneficial.
+     *
+     * This is the directory-targeting convenience wrapper over [downloadToFileFast].
+     *
+     * @param url resource URL
+     * @param dir destination directory
+     * @param fileName desired file name inside [dir]
+     * @param headers optional extra request headers
+     * @param timeoutMs per-request timeout in milliseconds
+     * @param chunkThreads maximum chunk workers used when range download is enabled
+     * @param maxRetries retry count used for transport or retryable HTTP failures
+     * @return final target path
+     * @throws IOException if directory creation or download fails
+     */
     @JvmStatic
+    @JvmOverloads
     @Throws(IOException::class)
     fun downloadToDirFast(
         url: URI,
@@ -788,19 +880,8 @@ object DownloadUtils {
         fileName: String,
         headers: Map<String, String>?,
         timeoutMs: Int,
-        chunkThreads: Int,
-    ): Path = downloadToDirFast(url, dir, fileName, headers, timeoutMs, chunkThreads, DEFAULT_MAX_RETRIES)
-
-    @JvmStatic
-    @Throws(IOException::class)
-    fun downloadToDirFast(
-        url: URI,
-        dir: Path,
-        fileName: String,
-        headers: Map<String, String>?,
-        timeoutMs: Int,
-        chunkThreads: Int,
-        maxRetries: Int,
+        chunkThreads: Int = DEFAULT_CHUNK_THREADS,
+        maxRetries: Int = DEFAULT_MAX_RETRIES,
     ): Path {
         Files.createDirectories(dir)
         val target = dir.resolve(sanitizeFileName(fileName))
@@ -817,6 +898,15 @@ object DownloadUtils {
         return target
     }
 
+    /**
+     * Sanitize an arbitrary file name into a filesystem-friendly single-path-segment name.
+     *
+     * Directory separators, control characters, and characters commonly rejected by desktop file
+     * systems are replaced with underscores. Blank inputs fall back to `"file"`.
+     *
+     * @param name original file name text
+     * @return sanitized single-file name
+     */
     @JvmStatic
     fun sanitizeFileName(name: String?): String {
         var sanitized = name?.trim().orEmpty()
@@ -966,7 +1056,17 @@ object DownloadUtils {
             log.debug("[DL-PROBE] HEAD failed, will try Range probe: url={}", url)
         }
 
-        execute(buildRequest(url, headers, timeoutMs, true, 0L, null, 0L), timeoutMs).use { response ->
+        execute(
+            buildRequest(
+                url,
+                headers,
+                timeoutMs,
+                true,
+                0L,
+                null,
+                0L
+            ), timeoutMs
+        ).use { response ->
             val code = response.code
             debugResponseSummary(url, code, response.headers, true, 0)
             if (code == 206) {
@@ -1208,7 +1308,14 @@ object DownloadUtils {
         val ifRangeToken: String?,
     )
 
-    class NamedUrl(
+    /**
+     * Pair a target file name (or relative entry name) with a download URL.
+     *
+     * @property name plain file name for flat downloads, or relative entry path for named batch
+     * downloads
+     * @property url resource URL
+     */
+    data class NamedUrl(
         val name: String,
         val url: URI,
     ) {
@@ -1216,27 +1323,21 @@ object DownloadUtils {
         fun name(): String = name
         fun url(): URI = url
 
-        override fun toString(): String = "NamedUrl(name=$name, url=$url)"
-        override fun equals(other: Any?): Boolean =
-            this === other || (other is NamedUrl && name == other.name && url == other.url)
-
-        override fun hashCode(): Int = 31 * name.hashCode() + url.hashCode()
-
     }
 
-    class BatchResult(
+    /**
+     * Summary returned by best-effort batch download helpers.
+     *
+     * @property ok number of items downloaded successfully
+     * @property failed requested names that could not be downloaded
+     */
+    data class BatchResult(
         val ok: Int,
         val failed: List<String>,
     ) {
 
         fun ok(): Int = ok
         fun failed(): List<String> = failed
-
-        override fun toString(): String = "BatchResult(ok=$ok, failed=$failed)"
-        override fun equals(other: Any?): Boolean =
-            this === other || (other is BatchResult && ok == other.ok && failed == other.failed)
-
-        override fun hashCode(): Int = 31 * ok + failed.hashCode()
 
     }
 
