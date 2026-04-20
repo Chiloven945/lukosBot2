@@ -4,8 +4,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.apache.logging.log4j.LogManager
 import top.chiloven.lukosbot2.Constants
-import top.chiloven.lukosbot2.config.ProxyConfigProp
-import top.chiloven.lukosbot2.util.spring.SpringBeans
 import java.io.IOException
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
@@ -73,11 +71,10 @@ object HttpBytes {
      */
     private const val UA = "Mozilla/5.0 (compatible; ${Constants.UA})"
 
-    @Volatile
-    private var cachedClient: OkHttpClient? = null
-
-    @Volatile
-    private var cachedKey: String? = null
+    private val clientCache = OkHttpUtils.ProxyAwareOkHttpClientCache(
+        connectTimeoutMs = 15_000,
+        readTimeoutMs = DEFAULT_TIMEOUT_MS.toLong()
+    )
 
     /**
      * Result of a binary download request.
@@ -95,69 +92,10 @@ object HttpBytes {
     )
 
     /**
-     * Try to obtain [ProxyConfigProp] from the Spring container.
-     *
-     * Returning `null` is considered a normal outcome when the application is running in a context
-     * where the bean is not available.
-     */
-    private fun proxyOrNull(): ProxyConfigProp? = try {
-        SpringBeans.getBean(ProxyConfigProp::class.java)
-    } catch (_: Throwable) {
-        null
-    }
-
-    /**
-     * Build a stable cache key for the current proxy configuration.
-     *
-     * The key is used to decide whether the shared [OkHttpClient] can be reused or must be rebuilt.
-     */
-    private fun proxyKey(proxy: ProxyConfigProp): String = listOf(
-        proxy.isEnabled,
-        proxy.type,
-        proxy.host,
-        proxy.port,
-        proxy.username,
-        proxy.password,
-        proxy.nonProxyHostsList?.joinToString("|")
-    ).joinToString("#")
-
-    /**
      * Lazily initialized and proxy-aware [OkHttpClient].
-     *
-     * The client is cached and reused as long as the derived proxy cache key remains unchanged.
-     * This allows the utility to benefit from OkHttp connection pooling without permanently locking
-     * itself to an outdated proxy configuration.
      */
     private val client: OkHttpClient
-        get() {
-            val proxy = proxyOrNull()
-            val key = if (proxy != null && proxy.isEnabled) proxyKey(proxy) else "NO_PROXY"
-
-            cachedClient?.let { existing ->
-                if (cachedKey == key) return existing
-            }
-
-            synchronized(this) {
-                cachedClient?.let { existing ->
-                    if (cachedKey == key) return existing
-                }
-
-                val builder = OkHttpClient.Builder()
-                    .connectTimeout(15, TimeUnit.SECONDS)
-                    .readTimeout(DEFAULT_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
-                    .followRedirects(true)
-                    .followSslRedirects(true)
-
-                if (proxy != null && proxy.isEnabled) {
-                    proxy.applyTo(builder)
-                }
-
-                return builder.build().also {
-                    cachedClient = it
-                    cachedKey = key
-                }
-            }
-        }
+        get() = clientCache.client
 
     /**
      * Execute an HTTP GET request and return the response body as raw bytes plus basic metadata.
@@ -199,7 +137,7 @@ object HttpBytes {
                 ?.substringBefore(';')
                 ?.trim()
                 ?.ifBlank { null }
-            val fileName = parseFileName(resp.header("Content-Disposition")) ?: inferName(url)
+            val fileName = parseFileName(resp.header("Content-Disposition")) ?: PathUtils.inferFileNameFromUrl(url)
             val bytes = resp.body.bytes()
             log.debug("Fetched {} bytes from {}", bytes.size, url)
             return BytePayload(bytes = bytes, mime = mime, fileName = fileName)
@@ -235,20 +173,6 @@ object HttpBytes {
             }
         }
         return null
-    }
-
-    /**
-     * Infer a filename from the last path segment of the request URL.
-     *
-     * Query and fragment components are stripped before inference. Empty path tails yield `null`.
-     *
-     * @param url request URL
-     * @return inferred filename, or `null` when the URL path does not contain one
-     */
-    private fun inferName(url: String): String? {
-        val clean = url.substringBefore('?').substringBefore('#')
-        val tail = clean.substringAfterLast('/', "")
-        return tail.ifBlank { null }
     }
 
 }

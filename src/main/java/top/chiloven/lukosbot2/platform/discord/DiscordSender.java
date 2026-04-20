@@ -3,7 +3,6 @@ package top.chiloven.lukosbot2.platform.discord;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.User;
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.utils.FileUpload;
 import top.chiloven.lukosbot2.model.message.media.BytesRef;
@@ -12,9 +11,9 @@ import top.chiloven.lukosbot2.model.message.media.PlatformFileRef;
 import top.chiloven.lukosbot2.model.message.media.UrlRef;
 import top.chiloven.lukosbot2.model.message.outbound.*;
 import top.chiloven.lukosbot2.platform.ISender;
+import top.chiloven.lukosbot2.util.message.OutboundPartUtils;
 
 import java.io.ByteArrayInputStream;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -36,49 +35,6 @@ public final class DiscordSender implements ISender {
         this.stack = stack;
     }
 
-    private static String pickName(String preferred, String fallback, String mime, boolean imageDefault) {
-        if (preferred != null && !preferred.isBlank()) return preferred;
-        if (fallback != null && !fallback.isBlank()) return fallback;
-
-        if (mime != null && mime.toLowerCase().contains("image")) return "image.bin";
-        return imageDefault ? "image.bin" : "file.bin";
-    }
-
-    private static String safe(String s) {
-        return s == null ? "" : s;
-    }
-
-    private static List<OutPart> mergeTextParts(List<OutPart> parts) {
-        if (parts == null || parts.isEmpty()) return List.of();
-
-        List<OutPart> out = new ArrayList<>();
-        StringBuilder sb = new StringBuilder();
-
-        for (OutPart p : parts) {
-            if (p instanceof OutText(String text)) {
-                String tx = safe(text);
-                if (!tx.isBlank()) {
-                    if (!sb.isEmpty()) sb.append('\n');
-                    sb.append(tx);
-                }
-                continue;
-            }
-
-            flushText(sb, out);
-            if (p != null) out.add(p);
-        }
-
-        flushText(sb, out);
-        return out;
-    }
-
-    private static void flushText(StringBuilder sb, List<OutPart> out) {
-        if (sb == null || out == null) return;
-        if (sb.isEmpty()) return;
-        out.add(new OutText(sb.toString()));
-        sb.setLength(0);
-    }
-
     @Override
     public void send(OutboundMessage out) {
         if (out == null) return;
@@ -86,10 +42,10 @@ public final class DiscordSender implements ISender {
         List<OutPart> parts = out.parts() == null ? Collections.emptyList() : out.parts();
         if (parts.isEmpty()) return;
 
-        List<OutPart> normalized = mergeTextParts(parts);
+        List<OutPart> normalized = OutboundPartUtils.mergeAdjacentTextParts(parts);
 
         if (out.addr().group()) {
-            TextChannel ch = stack.jda.getTextChannelById(out.addr().chatId());
+            var ch = stack.jda.getTextChannelById(out.addr().chatId());
             if (ch == null) return;
             sendParts(ch, normalized);
             return;
@@ -102,7 +58,7 @@ public final class DiscordSender implements ISender {
             MessageChannel pc = u.openPrivateChannel().complete();
             if (pc == null) return;
             sendParts(pc, normalized);
-        } catch (Exception ignored) {
+        } catch (Exception _) {
             // ignore errors opening DMs
         }
     }
@@ -112,12 +68,8 @@ public final class DiscordSender implements ISender {
 
         for (OutPart p : parts) {
             switch (p) {
-                case OutText(String text) -> {
-                    sendTextChunks(ch, safe(text));
-                }
-                case OutImage img -> {
-                    sendImagePart(ch, img);
-                }
+                case OutText(String text) -> sendTextChunks(ch, OutboundPartUtils.safeText(text));
+                case OutImage img -> sendImagePart(ch, img);
                 case OutFile f -> sendFilePart(ch, f);
                 case null, default -> {
                 }
@@ -141,43 +93,59 @@ public final class DiscordSender implements ISender {
     private void sendImagePart(MessageChannel ch, OutImage img) {
         if (img == null || img.ref() == null) return;
 
-        String caption = safe(img.caption());
+        String caption = OutboundPartUtils.safeText(img.caption());
         MediaRef ref = img.ref();
 
-        if (ref instanceof BytesRef b) {
-            FileUpload upload = FileUpload.fromData(new ByteArrayInputStream(b.bytes()), pickName(img.name(), b.name(), img.mime(), true));
-            if (caption.isBlank()) {
-                ch.sendFiles(upload).complete();
-            } else {
-                sendWithOptionalUpload(ch, caption, List.of(upload), List.of());
+        switch (ref) {
+            case BytesRef b -> {
+                var upload = FileUpload.fromData(
+                        new ByteArrayInputStream(b.bytes()),
+                        OutboundPartUtils.pickMediaName(
+                                img.name(),
+                                b.name(),
+                                img.mime(),
+                                true
+                        )
+                );
+                if (caption.isBlank()) {
+                    ch.sendFiles(upload).complete();
+                } else {
+                    sendWithOptionalUpload(ch, caption, List.of(upload), List.of());
+                }
             }
-            return;
-        }
-
-        if (ref instanceof UrlRef(String url)) {
-            MessageEmbed embed = new EmbedBuilder().setImage(url).build();
-            sendWithOptionalUpload(ch, caption, List.of(), List.of(embed));
-            return;
-        }
-
-        if (ref instanceof PlatformFileRef(String platform, String fileId)) {
-            // Not directly usable on Discord; fall back to showing the identifier.
-            String msg = caption.isBlank()
-                    ? ("[image ref] " + platform + ":" + fileId)
-                    : (caption + "\n[image ref] " + platform + ":" + fileId);
-            sendTextChunks(ch, msg);
+            case UrlRef(String url) -> {
+                var embed = new EmbedBuilder().setImage(url).build();
+                sendWithOptionalUpload(ch, caption, List.of(), List.of(embed));
+            }
+            case PlatformFileRef(String platform, String fileId) -> {
+                // Not directly usable on Discord; fall back to showing the identifier.
+                String msg = caption.isBlank()
+                        ? ("[image ref] " + platform + ":" + fileId)
+                        : (caption + "\n[image ref] " + platform + ":" + fileId);
+                sendTextChunks(ch, msg);
+            }
+            default -> {
+            }
         }
     }
 
     private void sendFilePart(MessageChannel ch, OutFile f) {
         if (f == null || f.ref() == null) return;
 
-        String caption = safe(f.caption());
+        String caption = OutboundPartUtils.safeText(f.caption());
         MediaRef ref = f.ref();
 
         switch (ref) {
             case BytesRef b -> {
-                FileUpload upload = FileUpload.fromData(new ByteArrayInputStream(b.bytes()), pickName(f.name(), b.name(), f.mime(), false));
+                var upload = FileUpload.fromData(
+                        new ByteArrayInputStream(b.bytes()),
+                        OutboundPartUtils.pickMediaName(
+                                f.name(),
+                                b.name(),
+                                f.mime(),
+                                false
+                        )
+                );
                 sendWithOptionalUpload(ch, caption, List.of(upload), List.of());
             }
             case UrlRef(String url) -> {
@@ -201,7 +169,7 @@ public final class DiscordSender implements ISender {
             List<FileUpload> uploads,
             List<MessageEmbed> embeds
     ) {
-        String c = safe(content);
+        String c = OutboundPartUtils.safeText(content);
 
         // If content is too long, send content first (chunked), then embeds/files.
         if (c.length() > MAX_CONTENT) {

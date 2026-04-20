@@ -10,7 +10,6 @@ import okhttp3.Request
 import okhttp3.Response
 import org.apache.logging.log4j.LogManager
 import top.chiloven.lukosbot2.Constants
-import top.chiloven.lukosbot2.config.ProxyConfigProp
 import top.chiloven.lukosbot2.util.DownloadUtils.downloadAllToDir
 import top.chiloven.lukosbot2.util.DownloadUtils.downloadAllToDirConcurrent
 import top.chiloven.lukosbot2.util.DownloadUtils.downloadNamedUrlsToDirConcurrent
@@ -20,7 +19,6 @@ import top.chiloven.lukosbot2.util.DownloadUtils.downloadToFile
 import top.chiloven.lukosbot2.util.DownloadUtils.downloadToFileFast
 import top.chiloven.lukosbot2.util.DownloadUtils.sanitizeFileName
 import top.chiloven.lukosbot2.util.concurrent.Coroutines
-import top.chiloven.lukosbot2.util.spring.SpringBeans
 import java.io.IOException
 import java.io.RandomAccessFile
 import java.net.URI
@@ -105,14 +103,9 @@ object DownloadUtils {
     const val DEFAULT_PROGRESS_LOG_INTERVAL_MS: Long = 1_000
 
     private const val BUF_SIZE: Int = 64 * 1024
-    private const val NO_PROXY_KEY = "NO_PROXY"
+    private val clientCache = OkHttpUtils.ProxyAwareOkHttpClientCache(connectTimeoutMs = 20_000)
+
     private const val INVALID_BATCH_NAME = "file"
-
-    @Volatile
-    private var cachedClient: OkHttpClient? = null
-
-    @Volatile
-    private var cachedKey: String? = null
 
     private enum class BatchNamingMode(val logTag: String) {
         FLAT_FILES("[DL-BATCH]"),
@@ -131,51 +124,8 @@ object DownloadUtils {
 
     }
 
-    private fun proxyOrNull(): ProxyConfigProp? = try {
-        SpringBeans.getBean(ProxyConfigProp::class.java)
-    } catch (_: Throwable) {
-        null
-    }
-
-    private fun proxyKey(proxy: ProxyConfigProp): String = listOf(
-        proxy.isEnabled,
-        proxy.type,
-        proxy.host,
-        proxy.port,
-        proxy.username,
-        proxy.password,
-        proxy.nonProxyHostsList?.joinToString("|")
-    ).joinToString("#")
-
     private val client: OkHttpClient
-        get() {
-            val proxy = proxyOrNull()
-            val key = if (proxy != null && proxy.isEnabled) proxyKey(proxy) else NO_PROXY_KEY
-
-            cachedClient?.let { existing ->
-                if (cachedKey == key) return existing
-            }
-
-            synchronized(this) {
-                cachedClient?.let { existing ->
-                    if (cachedKey == key) return existing
-                }
-
-                val builder = OkHttpClient.Builder()
-                    .connectTimeout(20, TimeUnit.SECONDS)
-                    .followRedirects(true)
-                    .followSslRedirects(true)
-
-                if (proxy != null && proxy.isEnabled) {
-                    proxy.applyTo(builder)
-                }
-
-                return builder.build().also {
-                    cachedClient = it
-                    cachedKey = key
-                }
-            }
-        }
+        get() = clientCache.client
 
     /**
      * Download a list of files into a directory sequentially.
@@ -471,7 +421,7 @@ object DownloadUtils {
         val maxAttempts = 1 + retries
 
         targetFile.parent?.let(Files::createDirectories)
-        val tmp = tempPathOf(targetFile)
+        val tmp = PathUtils.tempSiblingPath(targetFile)
 
         var success = false
         var ifRangeToken: String? = null
@@ -516,7 +466,7 @@ object DownloadUtils {
                                     url,
                                     tmp
                                 )
-                                safeDelete(tmp)
+                                PathUtils.deleteIfExistsQuietly(tmp)
                                 usedRange = false
                                 finalResumeFrom = 0L
                                 restart = true
@@ -589,8 +539,8 @@ object DownloadUtils {
                                                     "[DL] progress {} -> {}: {} / {} ({}), instSpeed={}",
                                                     url,
                                                     targetFile,
-                                                    formatBytes(pos),
-                                                    if (totalSize > 0) formatBytes(totalSize) else "?",
+                                                    displayBytes(pos),
+                                                    if (totalSize > 0) displayBytes(totalSize) else "?",
                                                     pct,
                                                     formatSpeed(deltaBytes, deltaNs)
                                                 )
@@ -614,7 +564,7 @@ object DownloadUtils {
                                         "[DL] done url={} -> {}, bytes={}, cost={}ms, avgSpeed={}",
                                         url,
                                         targetFile,
-                                        formatBytes(pos),
+                                        displayBytes(pos),
                                         attemptMs,
                                         formatSpeed(pos, System.nanoTime() - attemptStartNs)
                                     )
@@ -624,7 +574,7 @@ object DownloadUtils {
 
                         if (restart) continue
 
-                        moveReplace(tmp, targetFile)
+                        PathUtils.moveReplace(tmp, targetFile)
                         success = true
 
                         val totalMs = (System.nanoTime() - totalStartNs) / 1_000_000
@@ -633,7 +583,7 @@ object DownloadUtils {
                             "[DL] success url={} -> {}, finalSize={}, totalCost={}ms, totalAvgSpeed={}",
                             url,
                             targetFile,
-                            if (finalSize >= 0) formatBytes(finalSize) else "?",
+                            if (finalSize >= 0) displayBytes(finalSize) else "?",
                             totalMs,
                             if (finalSize >= 0) formatSpeed(finalSize, System.nanoTime() - totalStartNs) else "?"
                         )
@@ -664,7 +614,7 @@ object DownloadUtils {
 
             throw IOException("Download failed unexpectedly (should not reach here)")
         } finally {
-            if (!success) safeDelete(tmp)
+            if (!success) PathUtils.deleteIfExistsQuietly(tmp)
         }
     }
 
@@ -773,12 +723,12 @@ object DownloadUtils {
         val parts = max(2, min(threads, partsBySize))
 
         targetFile.parent?.let(Files::createDirectories)
-        val tmp = tempPathOf(targetFile)
+        val tmp = PathUtils.tempSiblingPath(targetFile)
         var chunkOk = false
         val fileStartNs = System.nanoTime()
 
         try {
-            safeDelete(tmp)
+            PathUtils.deleteIfExistsQuietly(tmp)
             RandomAccessFile(tmp.toFile(), "rw").use { it.setLength(total) }
 
             val partSize = (total + parts - 1) / parts
@@ -811,9 +761,9 @@ object DownloadUtils {
             log.debug(
                 "[DL-FAST] plan url={}, total={}, parts={}, partSize~={}, tmp={}",
                 url,
-                formatBytes(total),
+                displayBytes(total),
                 actualParts,
-                formatBytes(partSize),
+                displayBytes(partSize),
                 tmp
             )
 
@@ -827,7 +777,7 @@ object DownloadUtils {
                 }
             }
 
-            moveReplace(tmp, targetFile)
+            PathUtils.moveReplace(tmp, targetFile)
             chunkOk = true
 
             val costMs = (System.nanoTime() - fileStartNs) / 1_000_000
@@ -835,7 +785,7 @@ object DownloadUtils {
                 "[DL-FAST] success url={} -> {}, bytes={}, cost={}ms, avgSpeed={}",
                 url,
                 targetFile,
-                formatBytes(total),
+                displayBytes(total),
                 costMs,
                 formatSpeed(total, System.nanoTime() - fileStartNs)
             )
@@ -848,7 +798,7 @@ object DownloadUtils {
                 ex.toString()
             )
         } finally {
-            if (!chunkOk) safeDelete(tmp)
+            if (!chunkOk) PathUtils.deleteIfExistsQuietly(tmp)
         }
 
         if (!chunkOk) {
@@ -944,7 +894,7 @@ object DownloadUtils {
                         partIndex,
                         start,
                         end,
-                        formatBytes(expected),
+                        displayBytes(expected),
                         attempt,
                         maxAttempts,
                         url
@@ -996,7 +946,7 @@ object DownloadUtils {
                     partIndex,
                     start,
                     end,
-                    formatBytes(expected),
+                    displayBytes(expected),
                     elapsedNs / 1_000_000,
                     formatSpeed(expected, elapsedNs)
                 )
@@ -1040,14 +990,14 @@ object DownloadUtils {
                     val accept = response.header("Accept-Ranges")?.contains("bytes", ignoreCase = true) == true
                     val token = pickIfRangeToken(response.headers)
                     if (accept && len > 0) {
-                        log.debug("[DL-PROBE] HEAD says acceptRanges=true len={} url={}", formatBytes(len), url)
+                        log.debug("[DL-PROBE] HEAD says acceptRanges=true len={} url={}", displayBytes(len), url)
                         return RangeMeta(len, true, token)
                     }
 
                     log.debug(
                         "[DL-PROBE] HEAD insufficient (acceptRanges={}, len={}) url={}",
                         accept,
-                        if (len > 0) formatBytes(len) else "unknown",
+                        if (len > 0) displayBytes(len) else "unknown",
                         url
                     )
                 }
@@ -1073,7 +1023,7 @@ object DownloadUtils {
                 val total = response.header("Content-Range")?.let(::parseTotalFromContentRange) ?: -1L
                 val token = pickIfRangeToken(response.headers)
                 if (total > 0) {
-                    log.debug("[DL-PROBE] Range probe OK: acceptRanges=true total={} url={}", formatBytes(total), url)
+                    log.debug("[DL-PROBE] Range probe OK: acceptRanges=true total={} url={}", displayBytes(total), url)
                     return RangeMeta(total, true, token)
                 }
 
@@ -1133,7 +1083,7 @@ object DownloadUtils {
 
     @Throws(IOException::class)
     private fun resolveNamedTarget(dir: Path, entryName: String): Path {
-        val safe = normalizeRelativeEntryName(entryName)
+        val safe = PathUtils.normalizeRelativeEntryName(entryName)
         val base = dir.toAbsolutePath().normalize()
         val target = base.resolve(safe).normalize()
         if (!target.startsWith(base)) {
@@ -1143,50 +1093,8 @@ object DownloadUtils {
     }
 
     @Throws(IOException::class)
-    private fun uniqueEntryName(entryName: String, usedNames: MutableSet<String>): String {
-        val safe = normalizeRelativeEntryName(entryName)
-        synchronized(usedNames) {
-            if (usedNames.add(safe)) return safe
-
-            val slash = safe.lastIndexOf('/')
-            val dirPart = if (slash >= 0) safe.substring(0, slash + 1) else ""
-            val filePart = if (slash >= 0) safe.substring(slash + 1) else safe
-            val dot = filePart.lastIndexOf('.')
-            val base = if (dot > 0) filePart.substring(0, dot) else filePart
-            val ext = if (dot > 0) filePart.substring(dot) else ""
-
-            var index = 2
-            while (true) {
-                val candidate = "$dirPart$base ($index)$ext"
-                if (usedNames.add(candidate)) return candidate
-                index++
-            }
-        }
-    }
-
-    @Throws(IOException::class)
-    private fun normalizeRelativeEntryName(entryName: String?): String {
-        var normalized = entryName?.trim().orEmpty().replace('\\', '/')
-        while (normalized.startsWith('/')) {
-            normalized = normalized.substring(1)
-        }
-        if (normalized.isBlank()) throw IOException("Empty entry name")
-
-        normalized = Paths.get(normalized).normalize().toString().replace('\\', '/')
-        if (normalized.isBlank() || normalized == "." || normalized.startsWith("..") || normalized.contains("/../")) {
-            throw IOException("Illegal entry name: $entryName")
-        }
-        return normalized
-    }
-
-    @Throws(IOException::class)
-    private fun moveReplace(tmp: Path, targetFile: Path) {
-        try {
-            Files.move(tmp, targetFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-        } catch (_: AtomicMoveNotSupportedException) {
-            Files.move(tmp, targetFile, StandardCopyOption.REPLACE_EXISTING)
-        }
-    }
+    private fun uniqueEntryName(entryName: String, usedNames: MutableSet<String>): String =
+        PathUtils.uniqueRelativeEntryName(entryName, usedNames)
 
     private fun debugResponseSummary(url: URI, code: Int, headers: Headers, askedRange: Boolean, rangeStart: Long) {
         if (!log.isDebugEnabled) return
@@ -1269,31 +1177,13 @@ object DownloadUtils {
         }
     }
 
-    private fun safeDelete(path: Path) {
-        runCatching { Files.deleteIfExists(path) }
-    }
-
-    private fun tempPathOf(targetFile: Path): Path =
-        targetFile.parent?.resolve(targetFile.fileName.toString() + ".part")
-            ?: Paths.get(targetFile.fileName.toString() + ".part")
-
-    private fun formatBytes(bytes: Long): String {
-        if (bytes < 0) return "?"
-        var value = bytes.toDouble()
-        val units = arrayOf("B", "KiB", "MiB", "GiB", "TiB")
-        var index = 0
-        while (value >= 1024.0 && index < units.lastIndex) {
-            value /= 1024.0
-            index++
-        }
-        return if (index == 0) String.format(Locale.ROOT, "%d %s", bytes, units[index])
-        else String.format(Locale.ROOT, "%.2f %s", value, units[index])
-    }
+    private fun displayBytes(bytes: Long): String =
+        if (bytes < 0) "?" else StringUtils.fmtBytes(bytes, 2)
 
     private fun formatSpeed(bytes: Long, elapsedNs: Long): String {
         if (bytes < 0 || elapsedNs <= 0) return "?"
         val sec = elapsedNs / 1_000_000_000.0
-        return formatBytes((bytes / sec).toLong()) + "/s"
+        return displayBytes((bytes / sec).toLong()) + "/s"
     }
 
     private class HttpStatusException(

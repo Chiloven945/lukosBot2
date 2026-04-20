@@ -1,16 +1,15 @@
 package top.chiloven.lukosbot2.commands.impl.motd
 
 import okhttp3.HttpUrl.Companion.toHttpUrl
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.apache.logging.log4j.LogManager
 import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.config.ProxyConfigProp
 import top.chiloven.lukosbot2.util.JsonUtils
+import top.chiloven.lukosbot2.util.OkHttpUtils
 import java.io.IOException
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 @Service
 class MotdQueryService(
@@ -32,16 +31,15 @@ class MotdQueryService(
 
     private val log = LogManager.getLogger(MotdQueryService::class.java)
 
-    private val okHttp: OkHttpClient by lazy {
-        OkHttpClient.Builder()
-            .connectTimeout(API_CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            .readTimeout(API_READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            .callTimeout(API_CALL_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            .followRedirects(true)
-            .followSslRedirects(true)
-            .also(proxyConfigProp::applyTo)
-            .build()
-    }
+    private val clientCache = OkHttpUtils.ProxyAwareOkHttpClientCache(
+        connectTimeoutMs = API_CONNECT_TIMEOUT_SECONDS * 1000,
+        readTimeoutMs = API_READ_TIMEOUT_SECONDS * 1000,
+        callTimeoutMs = API_CALL_TIMEOUT_SECONDS * 1000,
+        proxyProvider = { proxyConfigProp },
+    )
+
+    private val okHttp
+        get() = clientCache.client
 
     fun query(rawAddress: String, mode: QueryMode = QueryMode.AUTO): MotdQueryResult {
         val address = MinecraftServerAddress.parse(rawAddress)

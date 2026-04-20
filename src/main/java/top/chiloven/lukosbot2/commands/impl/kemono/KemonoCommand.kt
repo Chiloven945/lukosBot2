@@ -2,7 +2,6 @@ package top.chiloven.lukosbot2.commands.impl.kemono
 
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.StringArgumentType
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.apache.logging.log4j.LogManager
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -25,6 +24,9 @@ import top.chiloven.lukosbot2.model.message.media.UrlRef
 import top.chiloven.lukosbot2.util.*
 import top.chiloven.lukosbot2.util.JsonUtils.obj
 import top.chiloven.lukosbot2.util.JsonUtils.str
+import top.chiloven.lukosbot2.util.PathUtils.sanitizeFileName
+import top.chiloven.lukosbot2.util.PathUtils.sanitizePathSegment
+import top.chiloven.lukosbot2.util.PathUtils.withTempDirectory
 import top.chiloven.lukosbot2.util.StringUtils.isUrl
 import top.chiloven.lukosbot2.util.brigadier.builder.CommandLAB.literal
 import top.chiloven.lukosbot2.util.brigadier.builder.CommandRAB.argument
@@ -64,16 +66,15 @@ class KemonoCommand(
 
     private val log = LogManager.getLogger(KemonoCommand::class.java)
 
-    private val okHttp: OkHttpClient by lazy {
-        OkHttpClient.Builder()
-            .connectTimeout(20, TimeUnit.SECONDS)
-            .readTimeout(5, TimeUnit.MINUTES)
-            .callTimeout(10, TimeUnit.MINUTES)
-            .followRedirects(true)
-            .followSslRedirects(true)
-            .also { proxyConfigProp.applyTo(it) }
-            .build()
-    }
+    private val clientCache = OkHttpUtils.ProxyAwareOkHttpClientCache(
+        connectTimeoutMs = TimeUnit.SECONDS.toMillis(20),
+        readTimeoutMs = TimeUnit.MINUTES.toMillis(5),
+        callTimeoutMs = TimeUnit.MINUTES.toMillis(10),
+        proxyProvider = { proxyConfigProp },
+    )
+
+    private val okHttp
+        get() = clientCache.client
 
     override fun name(): String = "kemono"
 
@@ -347,7 +348,7 @@ class KemonoCommand(
     private fun parsePostUrl(url: String): PostTarget {
         val uri = URI.create(url)
         val host = (uri.host ?: "").lowercase(Locale.ROOT)
-        val segments = pathSegments(uri.path)
+        val segments = PathUtils.splitPathSegments(uri.path)
 
         if (host.endsWith("kemono.cr")) {
             if (segments.size >= 5 && segments[1] == "user" && segments[3] == "post") {
@@ -365,7 +366,7 @@ class KemonoCommand(
         val host = (uri.host ?: "").lowercase(Locale.ROOT)
         require(host.endsWith("kemono.cr")) { "无法识别的 creator 链接：$url" }
 
-        val segments = pathSegments(uri.path)
+        val segments = PathUtils.splitPathSegments(uri.path)
         if (segments.size >= 3 && segments[1] == "user") {
             return CreatorTarget(parseService(segments[0]), segments[2])
         }
@@ -569,45 +570,24 @@ class KemonoCommand(
         return bytes.size.toLong()
     }
 
-    private inline fun <T> withTempDirectory(prefix: String, block: (Path) -> T): T {
-        val dir = Files.createTempDirectory(prefix)
-        return try {
-            block(dir)
-        } finally {
-            deleteRecursively(dir)
-        }
-    }
-
-    private fun buildArchiveEntryName(serviceId: String, creatorId: String, postId: String, fileName: String): String {
+    private fun buildArchiveEntryName(
+        serviceId: String,
+        creatorId: String,
+        postId: String,
+        fileName: String
+    ): String {
         return listOf(
             sanitizePathSegment(serviceId),
             sanitizePathSegment(creatorId),
             sanitizePathSegment(postId),
-            DownloadUtils.sanitizeFileName(fileName)
+            sanitizeFileName(fileName)
         ).joinToString("/")
     }
 
     private fun buildArchiveFileName(hint: String): String {
         val ts = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
         val suffix = UUID.randomUUID().toString().substring(0, 8)
-        return "${DownloadUtils.sanitizeFileName(hint)}_${ts}_$suffix.zip"
-    }
-
-    private fun deleteRecursively(path: Path?) {
-        if (path == null || Files.notExists(path)) return
-        Files.walk(path).use { stream ->
-            stream.sorted(Comparator.reverseOrder()).forEach { current ->
-                runCatching { Files.deleteIfExists(current) }
-            }
-        }
-    }
-
-    private fun sanitizePathSegment(name: String): String {
-        return DownloadUtils.sanitizeFileName(name).replace('/', '_')
-    }
-
-    private fun pathSegments(path: String?): List<String> {
-        return (path ?: "").split('/').filter { it.isNotEmpty() }
+        return "${sanitizeFileName(hint)}_${ts}_$suffix.zip"
     }
 
     private fun isSha256(value: String): Boolean {

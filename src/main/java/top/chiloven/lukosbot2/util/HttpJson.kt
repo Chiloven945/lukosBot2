@@ -8,7 +8,6 @@ import tools.jackson.databind.JsonNode
 import tools.jackson.databind.node.ArrayNode
 import tools.jackson.databind.node.ObjectNode
 import top.chiloven.lukosbot2.Constants
-import top.chiloven.lukosbot2.config.ProxyConfigProp
 import top.chiloven.lukosbot2.util.HttpJson.DEFAULT_HEADERS
 import top.chiloven.lukosbot2.util.HttpJson.decodeByContentEncoding
 import top.chiloven.lukosbot2.util.HttpJson.getAny
@@ -16,7 +15,6 @@ import top.chiloven.lukosbot2.util.HttpJson.getArray
 import top.chiloven.lukosbot2.util.HttpJson.getObject
 import top.chiloven.lukosbot2.util.JsonUtils.MAPPER
 import top.chiloven.lukosbot2.util.StringUtils.truncate
-import top.chiloven.lukosbot2.util.spring.SpringBeans
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -104,74 +102,13 @@ object HttpJson {
      */
     private const val UA: String = "Mozilla/5.0 (compatible; ${Constants.UA})"
 
-    @Volatile
-    private var cachedClient: OkHttpClient? = null
-
-    @Volatile
-    private var cachedKey: String? = null
-
-    /**
-     * Build a stable cache key for the current proxy configuration.
-     *
-     * The key is used to decide whether the shared [OkHttpClient] can be reused or must be rebuilt.
-     */
-    private fun proxyKey(p: ProxyConfigProp): String =
-        listOf(
-            p.isEnabled,
-            p.type,
-            p.host,
-            p.port,
-            p.username,
-            p.password,
-            p.nonProxyHostsList?.joinToString("|")
-        ).joinToString("#")
-
-    /**
-     * Try to obtain [ProxyConfigProp] from the Spring container.
-     *
-     * Returning `null` is considered a normal outcome when the application is running in a context
-     * where the bean is not available.
-     */
-    private fun proxyOrNull(): ProxyConfigProp? = try {
-        SpringBeans.getBean(ProxyConfigProp::class.java)
-    } catch (_: Throwable) {
-        null
-    }
+    private val clientCache = OkHttpUtils.ProxyAwareOkHttpClientCache(connectTimeoutMs = 10_000)
 
     /**
      * Lazily initialized and proxy-aware [OkHttpClient].
-     *
-     * The client is cached and reused as long as the derived proxy cache key remains unchanged.
-     * This allows the utility to benefit from OkHttp connection pooling without permanently locking
-     * itself to an outdated proxy configuration.
      */
     private val client: OkHttpClient
-        get() {
-            val proxy = proxyOrNull()
-            val key = if (proxy != null && proxy.isEnabled) proxyKey(proxy) else "NO_PROXY"
-
-            val c = cachedClient
-            if (c != null && cachedKey == key) return c
-
-            synchronized(this) {
-                val c2 = cachedClient
-                if (c2 != null && cachedKey == key) return c2
-
-                val b = OkHttpClient.Builder()
-                    .connectTimeout(10L, TimeUnit.SECONDS)
-                    .followRedirects(true)
-                    .followSslRedirects(true)
-
-                if (proxy != null && proxy.isEnabled) {
-                    proxy.applyTo(b)
-                }
-
-                val built = b.build()
-                cachedClient = built
-                cachedKey = key
-                return built
-            }
-        }
+        get() = clientCache.client
 
     /**
      * Decode a raw response body according to the declared `Content-Encoding` header.

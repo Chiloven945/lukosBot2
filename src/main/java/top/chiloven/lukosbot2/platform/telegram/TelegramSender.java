@@ -10,9 +10,9 @@ import top.chiloven.lukosbot2.model.message.media.PlatformFileRef;
 import top.chiloven.lukosbot2.model.message.media.UrlRef;
 import top.chiloven.lukosbot2.model.message.outbound.*;
 import top.chiloven.lukosbot2.platform.ISender;
+import top.chiloven.lukosbot2.util.message.OutboundPartUtils;
 
 import java.io.ByteArrayInputStream;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -31,73 +31,6 @@ public final class TelegramSender implements ISender {
         this.stack = stack;
     }
 
-    private static InputFile toInputFile(MediaRef ref, String name, String mime) {
-        switch (ref) {
-            case null -> {
-                return new InputFile("about:blank");
-            }
-            case BytesRef b -> {
-                String n = pickName(name, b.name(), mime);
-                return new InputFile(new ByteArrayInputStream(b.bytes()), n);
-            }
-            case UrlRef(String url) -> {
-                return new InputFile(url);
-            }
-            case PlatformFileRef p -> {
-                // Telegram accepts file_id in the same field.
-                return new InputFile(p.fileId());
-                // Telegram accepts file_id in the same field.
-            }
-            default -> {
-            }
-        }
-
-        return new InputFile("about:blank");
-    }
-
-    private static String pickName(String preferred, String fallback, String mime) {
-        if (preferred != null && !preferred.isBlank()) return preferred;
-        if (fallback != null && !fallback.isBlank()) return fallback;
-
-        if (mime != null && mime.toLowerCase().contains("image")) return "image.bin";
-        return "file.bin";
-    }
-
-    private static String safe(String s) {
-        return s == null ? "" : s;
-    }
-
-    private static List<OutPart> mergeTextParts(List<OutPart> parts) {
-        if (parts == null || parts.isEmpty()) return List.of();
-
-        List<OutPart> out = new ArrayList<>();
-        StringBuilder sb = new StringBuilder();
-
-        for (OutPart p : parts) {
-            if (p instanceof OutText(String text)) {
-                String tx = safe(text);
-                if (!tx.isBlank()) {
-                    if (!sb.isEmpty()) sb.append('\n');
-                    sb.append(tx);
-                }
-                continue;
-            }
-
-            flushText(sb, out);
-            if (p != null) out.add(p);
-        }
-
-        flushText(sb, out);
-        return out;
-    }
-
-    private static void flushText(StringBuilder sb, List<OutPart> out) {
-        if (sb == null || out == null) return;
-        if (sb.isEmpty()) return;
-        out.add(new OutText(sb.toString()));
-        sb.setLength(0);
-    }
-
     @Override
     public void send(OutboundMessage out) {
         if (out == null) return;
@@ -106,7 +39,7 @@ public final class TelegramSender implements ISender {
         List<OutPart> parts = out.parts() == null ? Collections.emptyList() : out.parts();
         if (parts.isEmpty()) return;
 
-        List<OutPart> normalized = mergeTextParts(parts);
+        List<OutPart> normalized = OutboundPartUtils.mergeAdjacentTextParts(parts);
 
         boolean preferCaption = out.hints() != null && out.hints().preferCaption();
 
@@ -114,7 +47,7 @@ public final class TelegramSender implements ISender {
             OutPart p = normalized.get(i);
             switch (p) {
                 case OutText(String text1) -> {
-                    String text = safe(text1);
+                    String text = OutboundPartUtils.safeText(text1);
                     if (text.isBlank()) continue;
 
                     // If next part is media and prefers caption, try to attach this text as caption.
@@ -134,24 +67,13 @@ public final class TelegramSender implements ISender {
 
                     sendText(chatId, text);
                 }
-                case OutImage img -> {
-                    sendPhoto(chatId, img, safe(img.caption()));
-                }
-                case OutFile f -> sendDocument(chatId, f, safe(f.caption()));
+                case OutImage img -> sendPhoto(chatId, img, OutboundPartUtils.safeText(img.caption()));
+                case OutFile f -> sendDocument(chatId, f, OutboundPartUtils.safeText(f.caption()));
                 case null, default -> {
                 }
             }
 
         }
-    }
-
-    private void sendText(String chatId, String text) {
-        if (text == null || text.isBlank()) return;
-        SendMessage sm = SendMessage.builder()
-                .chatId(chatId)
-                .text(text)
-                .build();
-        stack.execute(sm);
     }
 
     private void sendPhoto(String chatId, OutImage img, String caption) {
@@ -172,6 +94,38 @@ public final class TelegramSender implements ISender {
                 .caption(caption == null || caption.isBlank() ? null : caption)
                 .build();
         stack.execute(sd);
+    }
+
+    private void sendText(String chatId, String text) {
+        if (text == null || text.isBlank()) return;
+        SendMessage sm = SendMessage.builder()
+                .chatId(chatId)
+                .text(text)
+                .build();
+        stack.execute(sm);
+    }
+
+    private static InputFile toInputFile(MediaRef ref, String name, String mime) {
+        switch (ref) {
+            case null -> {
+                return new InputFile("about:blank");
+            }
+            case BytesRef b -> {
+                String n = OutboundPartUtils.pickMediaName(name, b.name(), mime, true);
+                return new InputFile(new ByteArrayInputStream(b.bytes()), n);
+            }
+            case UrlRef(String url) -> {
+                return new InputFile(url);
+            }
+            case PlatformFileRef p -> {
+                // Telegram accepts file_id in the same field.
+                return new InputFile(p.fileId());
+            }
+            default -> {
+            }
+        }
+
+        return new InputFile("about:blank");
     }
 
 }

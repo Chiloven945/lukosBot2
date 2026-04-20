@@ -9,6 +9,7 @@ import top.chiloven.lukosbot2.util.JsonUtils.arr
 import top.chiloven.lukosbot2.util.JsonUtils.long
 import top.chiloven.lukosbot2.util.JsonUtils.obj
 import top.chiloven.lukosbot2.util.JsonUtils.str
+import top.chiloven.lukosbot2.util.StringUtils.firstNonBlank
 import java.net.URI
 import java.net.URLEncoder
 import java.net.http.HttpRequest
@@ -22,6 +23,7 @@ class SoundCloudMusicProvider(
     private companion object {
 
         private const val API_BASE_V2 = "https://api-v2.soundcloud.com"
+
     }
 
     override fun platform(): @NonNull MusicPlatform = MusicPlatform.SOUNDCLOUD
@@ -99,8 +101,5 @@ class SoundCloudMusicProvider(
 
         return TrackInfo(platform(), id, title, artist, album, cover, url, duration)
     }
-
-    private fun firstNonBlank(vararg candidates: String?): String =
-        candidates.firstOrNull { !it.isNullOrBlank() }.orEmpty()
 
 }
