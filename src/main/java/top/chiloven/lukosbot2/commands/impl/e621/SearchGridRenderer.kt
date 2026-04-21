@@ -6,11 +6,11 @@ import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.commands.UsageImageUtils
 import top.chiloven.lukosbot2.commands.impl.e621.schema.Post
 import top.chiloven.lukosbot2.util.ImageTextUtils
+import top.chiloven.lukosbot2.util.OkHttpUtils
 import java.awt.Color
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
-import java.util.concurrent.TimeUnit
 import javax.imageio.ImageIO
 import kotlin.math.ceil
 import kotlin.math.sqrt
@@ -19,12 +19,15 @@ object SearchGridRenderer {
 
     private val style = UsageImageUtils.ImageStyle().resolveFontFallbacks()
 
-    private val http: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(8, TimeUnit.SECONDS)
-        .callTimeout(12, TimeUnit.SECONDS)
-        .followRedirects(true)
-        .followSslRedirects(true)
-        .build()
+    private val clientCache = OkHttpUtils.ProxyAwareOkHttpClientCache(
+        connectTimeoutMs = 8000,
+        callTimeoutMs = 12000,
+        followRedirects = true,
+        followSslRedirects = true
+    )
+
+    val http: OkHttpClient
+        get() = clientCache.client
 
     private fun loadImage(url: String?): BufferedImage? {
         if (url.isNullOrBlank()) return null
@@ -148,4 +151,5 @@ object SearchGridRenderer {
         ImageIO.write(out, "png", bos)
         return bos.toByteArray()
     }
+
 }

@@ -24,6 +24,7 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.CommandRAB.argument;
 )
 @Log4j2
 public class IpCommand implements IBotCommand {
+
     @Override
     public String name() {
         return "ip";
@@ -71,4 +72,5 @@ public class IpCommand implements IBotCommand {
                         )
         );
     }
+
 }

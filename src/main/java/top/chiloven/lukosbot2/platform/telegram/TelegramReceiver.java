@@ -39,13 +39,13 @@ public final class TelegramReceiver implements IReceiver {
     public void stop() {
         try {
             stack.close();
-        } catch (Exception ignored) {
+        } catch (Exception _) {
         }
     }
 
     public ISender sender() throws Exception {
-        start();                           // 确保已启动（幂等）
-        return new TelegramSender(stack);  // TelegramSender 复用同一个 stack.bot 发送
+        start();
+        return new TelegramSender(stack);
     }
 
 }

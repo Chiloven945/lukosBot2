@@ -11,6 +11,7 @@ import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.config.ProxyConfigProp
 import top.chiloven.lukosbot2.model.ContentData
 import top.chiloven.lukosbot2.util.ImageUtils
+import top.chiloven.lukosbot2.util.PathUtils.sanitizeFileName
 import top.chiloven.lukosbot2.util.spring.SpringBeans
 import java.io.File
 import java.io.IOException
@@ -19,6 +20,7 @@ import java.nio.file.Paths
 import java.time.Duration
 
 object WebScreenshot {
+
     private val log = LogManager.getLogger(WebScreenshot::class.java)
 
     private const val USER_AGENT = "Mozilla/5.0 (compatible; ${Constants.UA})"
@@ -29,8 +31,6 @@ object WebScreenshot {
 
     private const val INTRO_WIDTH = 1380
     private const val INTRO_FALLBACK_HEIGHT = 1200
-
-    private val ILLEGAL_FILENAME_CHARS = Regex("""[\\/:*?"<>|\r\n\t]""")
 
     /**
      * Take a full-page screenshot of the given URL.
@@ -130,7 +130,7 @@ object WebScreenshot {
             val jpg = ImageUtils.pngToJpg(png)
 
             val title = fetchMediaWikiTitle(url, defaultFileBase)
-            val filename = "${sanitizeFilename(title, fallback = defaultFileBase)}.jpg"
+            val filename = "${sanitizeFileName(title, fallback = defaultFileBase)}.jpg"
 
             log.info("MediaWiki intro screenshot completed.")
             return ContentData(filename, "image/jpeg", jpg)
@@ -271,12 +271,6 @@ object WebScreenshot {
         }
     }
 
-    private fun sanitizeFilename(raw: String?, fallback: String): String {
-        val base = raw?.takeIf { it.isNotBlank() } ?: fallback
-        val safe = base.replace(ILLEGAL_FILENAME_CHARS, "_").trim()
-        return safe.ifEmpty { fallback }
-    }
-
     private inline fun <T> WebDriver.useDriver(block: (WebDriver) -> T): T {
         try {
             return block(this)
@@ -291,4 +285,5 @@ object WebScreenshot {
             }
         }
     }
+
 }

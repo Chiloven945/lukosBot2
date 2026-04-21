@@ -54,36 +54,6 @@ public class ProxyConfigProp {
     private String password;
     private List<String> nonProxyHostsList;
 
-    private static boolean notBlank(String s) {
-        return s != null && !s.isBlank();
-    }
-
-    private static String printableHost(InetSocketAddress addr) {
-        String h = addr.getHostString();
-        return h.contains(":") && !h.startsWith("[") ? "[" + h + "]" : h;
-    }
-
-    private NormalizedType normalizedType() {
-        String t = (type == null) ? "NONE" : type.trim().toUpperCase();
-        return switch (t) {
-            case "HTTP", "HTTPS" -> NormalizedType.HTTP;
-            case "SOCKS", "SOCKS5" -> NormalizedType.SOCKS5;
-            case "NONE" -> NormalizedType.NONE;
-            default -> {
-                log.warn("[ProxyConfig] Unknown proxy type: {} (expected NONE/HTTP/HTTPS/SOCKS/SOCKS5). Using NONE.", type);
-                yield NormalizedType.NONE;
-            }
-        };
-    }
-
-    private boolean hasValidEndpoint() {
-        return enabled && notBlank(host) && port > 0 && normalizedType() != NormalizedType.NONE;
-    }
-
-    private InetSocketAddress toInetSocketAddress() {
-        return new InetSocketAddress(host, port);
-    }
-
     /**
      * Apply proxy configuration JVM-wide ASAP.
      *
@@ -141,6 +111,31 @@ public class ProxyConfigProp {
         log.info("[ProxyConfig] Applied JVM proxy: type={}, host={}, port={}", normalizedType(), addr.getHostString(), addr.getPort());
     }
 
+    private boolean hasValidEndpoint() {
+        return enabled && notBlank(host) && port > 0 && normalizedType() != NormalizedType.NONE;
+    }
+
+    private NormalizedType normalizedType() {
+        String t = (type == null) ? "NONE" : type.trim().toUpperCase();
+        return switch (t) {
+            case "HTTP", "HTTPS" -> NormalizedType.HTTP;
+            case "SOCKS", "SOCKS5" -> NormalizedType.SOCKS5;
+            case "NONE" -> NormalizedType.NONE;
+            default -> {
+                log.warn("[ProxyConfig] Unknown proxy type: {} (expected NONE/HTTP/HTTPS/SOCKS/SOCKS5). Using NONE.", type);
+                yield NormalizedType.NONE;
+            }
+        };
+    }
+
+    private InetSocketAddress toInetSocketAddress() {
+        return new InetSocketAddress(host, port);
+    }
+
+    private static boolean notBlank(String s) {
+        return s != null && !s.isBlank();
+    }
+
     /**
      * Apply proxy configuration to OkHttp.
      *
@@ -169,6 +164,22 @@ public class ProxyConfigProp {
         if (normalizedType() == NormalizedType.SOCKS5 && notBlank(username)) {
             log.warn("[ProxyConfig] SOCKS username/password is best-effort only for OkHttp. Consider relying on JVM Authenticator (applyJvmWide).");
         }
+    }
+
+    /**
+     * Convert configuration to {@link java.net.Proxy}.
+     *
+     * @return {@link Proxy#NO_PROXY} if disabled/invalid/none
+     */
+    public Proxy toJavaProxy() {
+        if (!hasValidEndpoint()) return Proxy.NO_PROXY;
+
+        InetSocketAddress address = toInetSocketAddress();
+        return switch (normalizedType()) {
+            case SOCKS5 -> new Proxy(Proxy.Type.SOCKS, address);
+            case HTTP -> new Proxy(Proxy.Type.HTTP, address);
+            case NONE -> Proxy.NO_PROXY;
+        };
     }
 
     /**
@@ -203,8 +214,8 @@ public class ProxyConfigProp {
     /**
      * Chromium proxy argument.
      *
-     * @return argument string like {@code --proxy-server=socks5://host:port} or {@code --proxy-server=http://host:port},
-     * or {@code null} if proxy is disabled / invalid.
+     * @return argument string like {@code --proxy-server=socks5://host:port} or
+     * {@code --proxy-server=http://host:port}, or {@code null} if proxy is disabled / invalid.
      */
     public String chromiumProxyArg() {
         if (!hasValidEndpoint()) return null;
@@ -215,6 +226,11 @@ public class ProxyConfigProp {
 
         String scheme = (p.type() == Proxy.Type.SOCKS) ? "socks5" : "http";
         return "--proxy-server=" + scheme + "://" + printableHost(addr) + ":" + addr.getPort();
+    }
+
+    private static String printableHost(InetSocketAddress addr) {
+        String h = addr.getHostString();
+        return h.contains(":") && !h.startsWith("[") ? "[" + h + "]" : h;
     }
 
     /**
@@ -242,23 +258,10 @@ public class ProxyConfigProp {
         return sp;
     }
 
-    /**
-     * Convert configuration to {@link java.net.Proxy}.
-     *
-     * @return {@link Proxy#NO_PROXY} if disabled/invalid/none
-     */
-    public Proxy toJavaProxy() {
-        if (!hasValidEndpoint()) return Proxy.NO_PROXY;
-
-        InetSocketAddress address = toInetSocketAddress();
-        return switch (normalizedType()) {
-            case SOCKS5 -> new Proxy(Proxy.Type.SOCKS, address);
-            case HTTP -> new Proxy(Proxy.Type.HTTP, address);
-            case NONE -> Proxy.NO_PROXY;
-        };
-    }
-
     private enum NormalizedType {
-        NONE, HTTP, SOCKS5
+        NONE,
+        HTTP,
+        SOCKS5
     }
+
 }

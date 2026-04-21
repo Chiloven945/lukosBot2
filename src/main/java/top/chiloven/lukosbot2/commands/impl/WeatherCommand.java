@@ -39,4 +39,5 @@ public class WeatherCommand implements IBotCommand {
     public void register(CommandDispatcher<CommandSource> dispatcher) {
 
     }
+
 }

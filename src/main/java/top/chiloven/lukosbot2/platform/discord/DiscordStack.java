@@ -11,7 +11,6 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 import net.dv8tion.jda.api.requests.GatewayIntent;
-import okhttp3.OkHttpClient;
 import top.chiloven.lukosbot2.commands.IBotCommand;
 import top.chiloven.lukosbot2.config.ProxyConfigProp;
 import top.chiloven.lukosbot2.core.command.CommandRegistry;
@@ -19,6 +18,7 @@ import top.chiloven.lukosbot2.model.message.Address;
 import top.chiloven.lukosbot2.model.message.inbound.*;
 import top.chiloven.lukosbot2.model.message.media.UrlRef;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
+import top.chiloven.lukosbot2.util.OkHttpUtils;
 import top.chiloven.lukosbot2.util.spring.SpringBeans;
 
 import java.util.*;
@@ -55,11 +55,7 @@ final class DiscordStack implements AutoCloseable {
 
         JDABuilder builder = JDABuilder.createLight(token, intents)
                 .addEventListeners(new Listener());
-
-        OkHttpClient.Builder http = new OkHttpClient.Builder();
-        if (proxyConfigProp != null) proxyConfigProp.applyTo(http);
-        builder.setHttpClientBuilder(http);
-
+        builder.setHttpClientBuilder(OkHttpUtils.newBuilder(proxyConfigProp));
         jda = builder.build().awaitReady();
 
         try {

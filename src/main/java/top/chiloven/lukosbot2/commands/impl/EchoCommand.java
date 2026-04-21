@@ -20,6 +20,7 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.CommandRAB.argument;
         matchIfMissing = true
 )
 public class EchoCommand implements IBotCommand {
+
     @Override
     public String name() {
         return "echo";
@@ -57,4 +58,5 @@ public class EchoCommand implements IBotCommand {
                         )
         );
     }
+
 }

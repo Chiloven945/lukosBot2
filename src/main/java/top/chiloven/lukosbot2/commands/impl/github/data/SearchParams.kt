@@ -9,6 +9,7 @@ data class SearchParams(
 ) {
 
     companion object {
+
         fun parse(input: String): SearchParams {
             val tokens = input.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
 
@@ -35,6 +36,7 @@ data class SearchParams(
                 order = opts["order"]
             )
         }
+
     }
 
 }

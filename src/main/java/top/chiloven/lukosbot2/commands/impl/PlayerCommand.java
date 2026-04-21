@@ -29,6 +29,7 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.CommandRAB.argument;
 )
 @Log4j2
 public class PlayerCommand implements IBotCommand {
+
     @Override
     public String name() {
         return "player";
@@ -104,4 +105,5 @@ public class PlayerCommand implements IBotCommand {
                         )
         );
     }
+
 }

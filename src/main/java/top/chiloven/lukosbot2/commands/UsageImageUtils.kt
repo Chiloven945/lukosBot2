@@ -1,6 +1,7 @@
 package top.chiloven.lukosbot2.commands
 
 import top.chiloven.lukosbot2.util.ImageTextUtils
+import top.chiloven.lukosbot2.util.PathUtils
 import java.awt.Color
 import java.awt.Font
 import java.awt.RenderingHints
@@ -33,13 +34,12 @@ object UsageImageUtils {
         style0: ImageStyle
     ): RenderedImage {
         val style = style0.resolveFontFallbacks()
-        val safeBase = sanitizeFilenameBase(filenameBase)
+        val safeBase = PathUtils.sanitizeFileName(filenameBase, fallback = "usage", maxLength = 64)
         val filename = "$safeBase.png"
 
         var contentMaxWidth = style.maxWidth - style.padding * 2
         if (contentMaxWidth < 100) contentMaxWidth = 100
 
-        // measurement context
         val tmp = BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB)
         val g0 = tmp.createGraphics()
         g0.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
@@ -122,20 +122,14 @@ object UsageImageUtils {
         }
     }
 
-    private fun fontFor(kind: UsageTextRenderer.LineKind, style: ImageStyle): Font =
-        when (kind) {
-            UsageTextRenderer.LineKind.TITLE -> style.titleFont
-            UsageTextRenderer.LineKind.HEADING -> style.headingFont
-            UsageTextRenderer.LineKind.CODE -> style.codeFont
-            UsageTextRenderer.LineKind.TEXT, UsageTextRenderer.LineKind.BLANK -> style.bodyFont
-        }
-
-    private fun sanitizeFilenameBase(base: String?): String {
-        var s = (base?.takeIf { it.isNotBlank() } ?: "usage").trim()
-        s = s.replace(Regex("[^a-zA-Z0-9._-]"), "_")
-        if (s.length > 64) s = s.substring(0, 64)
-        if (s.isBlank()) s = "usage"
-        return s
+    private fun fontFor(
+        kind: UsageTextRenderer.LineKind,
+        style: ImageStyle
+    ): Font = when (kind) {
+        UsageTextRenderer.LineKind.TITLE -> style.titleFont
+        UsageTextRenderer.LineKind.HEADING -> style.headingFont
+        UsageTextRenderer.LineKind.CODE -> style.codeFont
+        UsageTextRenderer.LineKind.TEXT, UsageTextRenderer.LineKind.BLANK -> style.bodyFont
     }
 
     data class ImageStyle(
@@ -150,9 +144,12 @@ object UsageImageUtils {
         val bodyFont: Font = Font(Font.SANS_SERIF, Font.PLAIN, 14),
         val codeFont: Font = Font(Font.MONOSPACED, Font.PLAIN, 14),
     ) {
+
         companion object {
+
             @JvmStatic
             fun defaults(): ImageStyle = ImageStyle()
+
         }
 
         fun resolveFontFallbacks(): ImageStyle {
@@ -168,9 +165,14 @@ object UsageImageUtils {
                 codeFont = resolvedCode
             )
         }
+
     }
 
-    data class RenderedImage(val filename: String, val bytes: ByteArray, val mime: String)
+    data class RenderedImage(
+        val filename: String,
+        val bytes: ByteArray,
+        val mime: String
+    )
 
     private data class DrawLine(
         val blank: Boolean,
@@ -180,10 +182,14 @@ object UsageImageUtils {
         val width: Int,
         val height: Int
     ) {
+
         companion object {
+
             fun blank(height: Int) = DrawLine(true, UsageTextRenderer.LineKind.BLANK, "", null, 0, height)
             fun text(kind: UsageTextRenderer.LineKind, text: String, font: Font, width: Int, height: Int) =
                 DrawLine(false, kind, text, font, width, height)
         }
+
     }
+
 }

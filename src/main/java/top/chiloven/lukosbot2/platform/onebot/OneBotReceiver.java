@@ -35,13 +35,13 @@ public final class OneBotReceiver implements IReceiver, AutoCloseable {
     }
 
     @Override
-    public void stop() {
-        // nothing to stop here
+    public void close() {
+        // nothing to close
     }
 
     @Override
-    public void close() {
-        // nothing to close
+    public void stop() {
+        // nothing to stop here
     }
 
     public OneBotSender sender() {

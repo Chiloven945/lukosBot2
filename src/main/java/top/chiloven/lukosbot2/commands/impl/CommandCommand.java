@@ -6,6 +6,7 @@ import top.chiloven.lukosbot2.commands.UsageNode;
 import top.chiloven.lukosbot2.core.command.CommandSource;
 
 public class CommandCommand implements IBotCommand {
+
     @Override
     public String name() {
         return "command";
@@ -28,4 +29,5 @@ public class CommandCommand implements IBotCommand {
     public void register(CommandDispatcher<CommandSource> dispatcher) {
 
     }
+
 }

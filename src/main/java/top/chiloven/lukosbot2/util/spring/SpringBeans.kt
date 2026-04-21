@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component
  */
 @Component
 object SpringBeans : ApplicationContextAware {
+
     @Volatile
     private var ctx: ApplicationContext? = null
 
@@ -43,4 +44,5 @@ object SpringBeans : ApplicationContextAware {
      * @return the Spring bean instance
      */
     inline fun <reified T : Any> getBean(): T = getBean(T::class.java)
+
 }

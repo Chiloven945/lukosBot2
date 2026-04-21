@@ -38,4 +38,5 @@ public class ServiceConfigProp {
         Boolean v = allow.get(name);
         return v == null || v;
     }
+
 }

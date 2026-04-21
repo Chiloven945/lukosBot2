@@ -51,6 +51,10 @@ object StringUtils {
     @JvmOverloads
     fun replaceNull(str: String?, replace: String = ""): String = str ?: replace
 
+    @JvmStatic
+    fun firstNonBlank(vararg candidates: String?): String =
+        candidates.firstOrNull { !it.isNullOrBlank() }.orEmpty()
+
     /**
      * Format a number into a human-readable string with suffixes (k, M, B).
      * 

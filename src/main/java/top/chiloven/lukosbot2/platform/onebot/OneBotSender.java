@@ -9,6 +9,8 @@ import top.chiloven.lukosbot2.model.message.media.PlatformFileRef;
 import top.chiloven.lukosbot2.model.message.media.UrlRef;
 import top.chiloven.lukosbot2.model.message.outbound.*;
 import top.chiloven.lukosbot2.platform.ISender;
+import top.chiloven.lukosbot2.util.PathUtils;
+import top.chiloven.lukosbot2.util.message.OutboundPartUtils;
 
 import java.util.*;
 
@@ -46,11 +48,11 @@ public final class OneBotSender implements ISender {
         for (OutPart p : parts) {
             switch (p) {
                 case OutText(String text1) -> {
-                    String text = safe(text1);
+                    String text = OutboundPartUtils.safeText(text1);
                     if (!text.isBlank()) builder.text(text);
                 }
                 case OutImage img -> {
-                    String caption = safe(img.caption());
+                    String caption = OutboundPartUtils.safeText(img.caption());
                     if (!caption.isBlank()) builder.text(caption);
 
                     String imgRef = toOneBotImageRef(img.ref());
@@ -58,7 +60,7 @@ public final class OneBotSender implements ISender {
                     else builder.text("[image unsupported]");
                 }
                 case OutFile f -> {
-                    String caption = safe(f.caption());
+                    String caption = OutboundPartUtils.safeText(f.caption());
                     if (!caption.isBlank()) builder.text(caption);
 
                     if (f.ref() instanceof UrlRef) {
@@ -88,7 +90,7 @@ public final class OneBotSender implements ISender {
         for (OutFile f : fileUploads) {
             UrlRef u = (UrlRef) f.ref();
             Map<String, Object> params = new HashMap<>();
-            params.put("name", pickName(f.name(), u.url()));
+            params.put("name", OutboundPartUtils.pickMediaName(f.name(), PathUtils.inferFileNameFromUrl(u.url()), null, false));
             params.put("url", u.url());
 
             if (out.addr().group()) {
@@ -111,10 +113,6 @@ public final class OneBotSender implements ISender {
         return botContainer.robots.values().stream().findFirst().orElse(null);
     }
 
-    private static String safe(String s) {
-        return s == null ? "" : s;
-    }
-
     private static String toOneBotImageRef(MediaRef ref) {
         switch (ref) {
             case null -> {
@@ -131,26 +129,12 @@ public final class OneBotSender implements ISender {
                 // OneBot image segment file=... may support local fileId on some implementations,
                 // but there is no universal mapping; fall back to text.
                 return null;
-                // OneBot image segment file=... may support local fileId on some implementations,
-                // but there is no universal mapping; fall back to text.
             }
             default -> {
             }
         }
 
         return null;
-    }
-
-    private static String pickName(String preferred, String url) {
-        if (preferred != null && !preferred.isBlank()) return preferred;
-        // derive from url
-        if (url == null || url.isBlank()) return "file.bin";
-        int slash = url.lastIndexOf('/');
-        if (slash >= 0 && slash + 1 < url.length()) {
-            String tail = url.substring(slash + 1);
-            if (!tail.isBlank()) return tail;
-        }
-        return "file.bin";
     }
 
 }

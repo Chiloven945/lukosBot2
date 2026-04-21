@@ -5,6 +5,7 @@ import java.net.http.HttpClient;
 import java.net.http.WebSocket;
 
 final class OneBotStack implements AutoCloseable {
+
     final WebSocket ws;
 
     OneBotStack(String wsUrl, String accessToken, WebSocket.Listener listener) {
@@ -18,4 +19,5 @@ final class OneBotStack implements AutoCloseable {
     public void close() {
         if (ws != null) ws.abort();
     }
+
 }
