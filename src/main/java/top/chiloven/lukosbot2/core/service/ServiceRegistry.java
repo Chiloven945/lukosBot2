@@ -31,4 +31,5 @@ public class ServiceRegistry {
     public Collection<IBotService> all() {
         return services.values();
     }
+
 }

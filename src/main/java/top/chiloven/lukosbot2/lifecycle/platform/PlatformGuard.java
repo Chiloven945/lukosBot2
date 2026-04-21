@@ -8,10 +8,12 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * If none of the three platform adapters are enabled, fail fast during startup (semantically equivalent to the check at the end of Boot.startPlatforms)
+ * If none of the three platform adapters are enabled, fail fast during startup (semantically equivalent to the check at
+ * the end of Boot.startPlatforms)
  */
 @Component
 public class PlatformGuard implements SmartLifecycle {
+
     private final List<IPlatformAdapter> adapters;
     private volatile boolean running = false;
 
@@ -33,6 +35,11 @@ public class PlatformGuard implements SmartLifecycle {
     }
 
     @Override
+    public boolean isRunning() {
+        return running;
+    }
+
+    @Override
     public void stop(@NotNull Runnable cb) {
         try {
             stop();
@@ -42,12 +49,8 @@ public class PlatformGuard implements SmartLifecycle {
     }
 
     @Override
-    public boolean isRunning() {
-        return running;
-    }
-
-    @Override
     public int getPhase() {
         return -100;
     }
+
 }

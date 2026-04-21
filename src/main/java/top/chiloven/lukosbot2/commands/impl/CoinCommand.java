@@ -27,11 +27,32 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.CommandRAB.argument;
 )
 @Log4j2
 public class CoinCommand implements IBotCommand {
+
+    @Override
+    public String name() {
+        return "coin";
+    }
+
+    @Override
+    public String description() {
+        return "抛硬币";
+    }
+
+    @Override
+    public UsageNode usage() {
+        return UsageNode.root(name())
+                .description(description())
+                .syntax("抛 count 个硬币", UsageNode.opt(UsageNode.arg("count")))
+                .param("count", "硬币数量（正整数）")
+                .example("coin 10")
+                .build();
+    }
+
     @Override
     public void register(CommandDispatcher<CommandSource> dispatcher) {
         dispatcher.register(literal(name())
                 .executes(ctx -> {
-                    sendUsage(ctx.getSource());
+                    ctx.getSource().reply(runCoin(1L));
                     return 1;
                 })
                 .then(argument("count", StringArgumentType.greedyString())
@@ -51,26 +72,6 @@ public class CoinCommand implements IBotCommand {
         );
     }
 
-    @Override
-    public String name() {
-        return "coin";
-    }
-
-    @Override
-    public String description() {
-        return "抛硬币";
-    }
-
-    @Override
-    public UsageNode usage() {
-        return UsageNode.root(name())
-                .description(description())
-                .syntax("抛 count 个硬币", UsageNode.arg("count"))
-                .param("count", "硬币数量（正整数）")
-                .example("coin 10")
-                .build();
-    }
-
     private String runCoin(long times) {
         if (times <= 0) {
             return "硬币数量必须是一个正整数。\n" + usage();
@@ -79,13 +80,16 @@ public class CoinCommand implements IBotCommand {
         try {
             long[] r = MathUtils.approximateMultinomial(times, 0.499999999999d, 0.499999999999d, 0.000000000002d);
 
-            return """
+            return (times == 1)
+                    ? "你抛了 1 个硬币。\n" + (r[0] == 1 ? "是正面。" : r[1] == 1 ? "是反面。" : "它立起来了！")
+                    : """
                     你抛了 %d 个硬币。
                     在这些硬币中，有 %d 个是正面，%d 个是反面……
                     还有 %d 个立起来了！
                     """.formatted(times, r[0], r[1], r[2]);
         } catch (IllegalArgumentException e) {
-            return e.getMessage();
+            return "出现错误：" + e.getMessage();
         }
     }
+
 }

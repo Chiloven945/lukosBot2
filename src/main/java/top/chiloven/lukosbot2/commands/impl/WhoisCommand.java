@@ -31,6 +31,16 @@ public class WhoisCommand implements IBotCommand {
 
     private final Map<String, String> whoisServerMap = new HashMap<>();
 
+    @PostConstruct
+    private void initWhoisServers() {
+        whoisServerMap.put("com", WhoisClient.DEFAULT_HOST);
+        whoisServerMap.put("net", WhoisClient.DEFAULT_HOST);
+        whoisServerMap.put("edu", WhoisClient.DEFAULT_HOST);
+
+        whoisServerMap.put("cn", "whois.cnnic.cn");
+        whoisServerMap.put("中国", "whois.cnnic.cn");
+    }
+
     @Override
     public String name() {
         return "whois";
@@ -43,15 +53,7 @@ public class WhoisCommand implements IBotCommand {
 
     @Override
     public UsageNode usage() {
-        return UsageNode.root(name())
-                .description(description())
-                .syntax("查询域名 Whois 信息", UsageNode.arg("domain"))
-                .param("domain", "域名，例如 example.com")
-                .example(
-                        "whois example.com",
-                        "whois google.com"
-                )
-                .build();
+        return UsageNode.root(name()).description(description()).syntax("查询域名 Whois 信息", UsageNode.arg("domain")).param("domain", "域名，例如 example.com").example("whois example.com", "whois google.com").build();
     }
 
     @Override
@@ -72,7 +74,7 @@ public class WhoisCommand implements IBotCommand {
     }
 
     public String runQuery(String domain) {
-        WhoisClient wc = new WhoisClient();
+        var wc = new WhoisClient();
 
         try {
             wc.connect(chooseWhoisHost(domain));
@@ -84,14 +86,14 @@ public class WhoisCommand implements IBotCommand {
         } finally {
             try {
                 if (wc.isConnected()) wc.disconnect();
-            } catch (IOException ignored) {
+            } catch (IOException _) {
             }
         }
     }
 
     /**
-     * Remove useless boilerplate (status codes help / NOTICE / TERMS, etc.)
-     * from a raw WHOIS response, keeping the useful registration data.
+     * Remove useless boilerplate (status codes help / NOTICE / TERMS, etc.) from a raw WHOIS response, keeping the
+     * useful registration data.
      *
      * @param raw raw whois text
      * @return cleaned whois text
@@ -135,8 +137,7 @@ public class WhoisCommand implements IBotCommand {
     }
 
     /**
-     * Compress duplicate "<key>: <value>" lines by moving later values
-     * to the first occurrence, joined by ", ".
+     * Compress duplicate "<key>: <value>" lines by moving later values to the first occurrence, joined by ", ".
      */
     private String compressDuplicateKeyLines(String text) {
         if (text == null || text.isEmpty()) return "";
@@ -180,7 +181,7 @@ public class WhoisCommand implements IBotCommand {
         }
 
         // Rebuild text in original order, but with compressed duplicates
-        StringBuilder out = new StringBuilder();
+        var out = new StringBuilder();
         for (int i = 0; i < order.size(); i++) {
             Object item = order.get(i);
             if (item instanceof String key && valuesByKey.containsKey(key)) {
@@ -211,13 +212,11 @@ public class WhoisCommand implements IBotCommand {
 
         // 2) fallback: ask IANA for the TLD whois server
         String ianaServer = lookupWhoisFromIana(tld);
-        return (ianaServer != null && !ianaServer.isEmpty())
-                ? ianaServer
-                : WhoisClient.DEFAULT_HOST;
+        return (ianaServer != null && !ianaServer.isEmpty()) ? ianaServer : WhoisClient.DEFAULT_HOST;
     }
 
     private String lookupWhoisFromIana(String tld) {
-        WhoisClient wc = new WhoisClient();
+        var wc = new WhoisClient();
         try {
             wc.connect("whois.iana.org");
             String res = wc.query(tld);
@@ -227,12 +226,12 @@ public class WhoisCommand implements IBotCommand {
                 return m.group(1).trim();
             }
             return null;
-        } catch (IOException ignored) {
+        } catch (IOException _) {
             return null;
         } finally {
             try {
                 if (wc.isConnected()) wc.disconnect();
-            } catch (IOException ignored) {
+            } catch (IOException _) {
             }
         }
     }
@@ -243,13 +242,4 @@ public class WhoisCommand implements IBotCommand {
         return domain.substring(lastDot + 1);
     }
 
-    @PostConstruct
-    private void initWhoisServers() {
-        whoisServerMap.put("com", WhoisClient.DEFAULT_HOST);
-        whoisServerMap.put("net", WhoisClient.DEFAULT_HOST);
-        whoisServerMap.put("edu", WhoisClient.DEFAULT_HOST);
-
-        whoisServerMap.put("cn", "whois.cnnic.cn");
-        whoisServerMap.put("中国", "whois.cnnic.cn");
-    }
 }

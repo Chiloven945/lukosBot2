@@ -10,6 +10,7 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.CommandLAB.literal;
 
 @Service
 public class StartCommand implements IBotCommand {
+
     @Override
     public String name() {
         return "start";
@@ -43,4 +44,5 @@ public class StartCommand implements IBotCommand {
     public boolean isVisible() {
         return false;
     }
+
 }

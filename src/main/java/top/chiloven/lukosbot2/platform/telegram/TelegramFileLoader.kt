@@ -34,9 +34,9 @@ class TelegramFileLoader(
 
         val remote = HttpBytes.get("https://api.telegram.org/file/bot$token/$filePath")
         return LoadedPlatformMedia(
-            bytes = remote.bytes,
-            name = remote.fileName ?: filePath.substringAfterLast('/').ifBlank { null },
-            mime = remote.mime
+            remote.bytes,
+            remote.fileName ?: filePath.substringAfterLast('/').ifBlank { null },
+            remote.mime
         )
     }
 

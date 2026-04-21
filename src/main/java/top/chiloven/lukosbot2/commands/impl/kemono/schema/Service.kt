@@ -17,7 +17,6 @@ enum class Service(
 
     PATREON("patreon", "Patreon", "p"),
     FANBOX("fanbox", "Pixiv Fanbox", "f"),
-
     //DISCORD("discord", "Discord", "d")
     FANTIA("fantia", "Fantia", "fa"),
     AFDIAN("afdian", "Afdian", "afd"),

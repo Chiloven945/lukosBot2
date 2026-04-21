@@ -23,6 +23,7 @@ import static top.chiloven.lukosbot2.util.brigadier.builder.CommandRAB.argument;
         matchIfMissing = true
 )
 public class DiceCommand implements IBotCommand {
+
     @Override
     public String name() {
         return "dice";
@@ -105,4 +106,5 @@ public class DiceCommand implements IBotCommand {
             );
         }
     }
+
 }

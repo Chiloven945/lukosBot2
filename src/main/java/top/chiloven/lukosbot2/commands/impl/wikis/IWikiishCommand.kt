@@ -47,6 +47,7 @@ import java.util.*
  * @author Chiloven945
  */
 interface IWikiishCommand : IBotCommand {
+
     // TODO: change to the language in the application.yml
 
     /**
@@ -231,6 +232,9 @@ interface IWikiishCommand : IBotCommand {
     data class LangTitle(val lang: String, val title: String)
 
     companion object {
+
         private val LANG_TAG_RE = Regex("""[A-Za-z-]{2,6}""")
+
     }
+
 }
