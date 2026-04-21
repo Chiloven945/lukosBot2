@@ -67,6 +67,7 @@ object StringUtils {
     fun formatNum(n: Long, pattern: String = "#0.0"): String {
         val df = DecimalFormat(pattern)
         return when {
+            n >= 1_000_000_000_000L -> "${df.format(n / 1_000_000_000_000.0)}T"
             n >= 1_000_000_000L -> "${df.format(n / 1_000_000_000.0)}B"
             n >= 1_000_000L -> "${df.format(n / 1_000_000.0)}M"
             n >= 1_000L -> "${df.format(n / 1_000.0)}k"
