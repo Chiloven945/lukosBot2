@@ -1,6 +1,6 @@
 [versions]
 java = "25"
-kotlin = "2.3.20"
+kotlin = "2.3.21"
 
 kotlinx-coroutines = "1.10.2"
 spring-boot = "4.0.5"
