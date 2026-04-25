@@ -27,14 +27,14 @@ class MusicCommand(ccp: CommandConfigProp) : IBotCommand {
     private val log = LogManager.getLogger(MusicCommand::class.java)
 
     private val spotify: IMusicProvider? = ccp.music.spotify.let { sp ->
-        val ok = sp.isEnabled &&
-                !sp.clientId.isNullOrBlank() &&
-                !sp.clientSecret.isNullOrBlank()
+        val ok = sp.enabled &&
+                sp.clientId.isNotBlank() &&
+                sp.clientSecret.isNotBlank()
         if (ok) SpotifyMusicProvider(sp.clientId, sp.clientSecret) else null
     }
 
     private val soundCloud: IMusicProvider? = ccp.music.soundcloud.let { sc ->
-        val ok = sc.isEnabled && !sc.clientId.isNullOrBlank()
+        val ok = sc.enabled && sc.clientId.isNotBlank()
         if (ok) SoundCloudMusicProvider(sc.clientId) else null
     }
 

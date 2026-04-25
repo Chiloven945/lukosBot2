@@ -28,7 +28,7 @@ class TelegramFileLoader(
             URI("https://api.telegram.org/bot$token/getFile"),
             mapOf("file_id" to ref.fileId())
         )
-        val filePath = root.path("result").path("file_path").asText(null)
+        val filePath = root.path("result").path("file_path").asString(null)
             ?.takeIf { it.isNotBlank() }
             ?: throw IOException("Telegram getFile 未返回 file_path")
 

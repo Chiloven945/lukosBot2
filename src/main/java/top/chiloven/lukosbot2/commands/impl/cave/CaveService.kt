@@ -42,7 +42,7 @@ class CaveService(
 
     private val log = LogManager.getLogger(CaveService::class.java)
 
-    private val prefix: String = appProperties.prefix?.ifBlank { "/" } ?: "/"
+    private val prefix: String = appProperties.prefix.ifBlank { "/" }
     private val lock = ReentrantLock()
 
     fun get(no: Int): CaveEntry? = readEntry(no)

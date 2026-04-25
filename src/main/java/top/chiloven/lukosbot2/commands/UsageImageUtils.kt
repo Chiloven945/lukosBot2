@@ -97,7 +97,7 @@ object UsageImageUtils {
         var currentSection: SectionModel? = null
 
         for (line in lines) {
-            val text = line.plain()?.trim().orEmpty()
+            val text = line.plain().trim()
             if (line.kind() == UsageTextRenderer.LineKind.BLANK || text.isBlank()) continue
 
             when (line.kind()) {

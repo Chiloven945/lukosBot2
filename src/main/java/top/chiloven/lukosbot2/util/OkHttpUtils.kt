@@ -45,7 +45,7 @@ object OkHttpUtils {
             }
             followRedirects(followRedirects)
             followSslRedirects(followSslRedirects)
-            if (proxy?.isEnabled == true) {
+            if (proxy?.enabled == true) {
                 proxy.applyTo(this)
             }
         }
@@ -69,9 +69,9 @@ object OkHttpUtils {
      */
     @JvmStatic
     fun proxyKey(proxy: ProxyConfigProp?): String {
-        if (proxy == null || !proxy.isEnabled) return NO_PROXY_CACHE_KEY
+        if (proxy == null || !proxy.enabled) return NO_PROXY_CACHE_KEY
         return listOf(
-            proxy.isEnabled,
+            proxy.enabled,
             proxy.type,
             proxy.host,
             proxy.port,

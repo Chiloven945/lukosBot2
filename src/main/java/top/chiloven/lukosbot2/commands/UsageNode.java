@@ -523,7 +523,6 @@ public final class UsageNode {
      *
      * @param token       the parameter token item (non-null)
      * @param description parameter description (trimmed; may be empty)
-     * @throws NullPointerException if {@code token} is {@code null}
      */
     public record Parameter(Item token, String description) {
 
@@ -542,7 +541,6 @@ public final class UsageNode {
      *
      * @param token       the option token item (non-null)
      * @param description option description (trimmed; may be empty)
-     * @throws NullPointerException if {@code token} is {@code null}
      */
     public record Option(Item token, String description) {
 

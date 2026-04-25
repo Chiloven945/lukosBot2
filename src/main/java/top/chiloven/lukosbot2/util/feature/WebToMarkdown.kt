@@ -34,7 +34,7 @@ object WebToMarkdown {
             .timeout(TIMEOUT_MS)
 
         val javaProxy: Proxy = proxy.toJavaProxy()
-        if (proxy.isEnabled && javaProxy != Proxy.NO_PROXY) {
+        if (proxy.enabled && javaProxy != Proxy.NO_PROXY) {
             conn.proxy(javaProxy)
         }
 

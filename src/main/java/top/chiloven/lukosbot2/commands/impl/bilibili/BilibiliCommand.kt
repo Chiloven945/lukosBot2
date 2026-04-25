@@ -70,7 +70,7 @@ class BilibiliCommand(
             return 0
         }
 
-        log.info("BilibiliCommand invoked by {} with input='{}', detailed={}", src.addr(), parsed.target, parsed.detailed,)
+        log.info("BilibiliCommand invoked by {} with input='{}', detailed={}", src.addr(), parsed.target, parsed.detailed)
 
         return runCatching {
             execute(src, parsed)

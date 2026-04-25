@@ -178,7 +178,7 @@ object ModernImageDraw {
     private fun configuredThemeRaw(): String? {
         return runCatching {
             val props = SpringBeans.getBean(AppProperties::class.java)
-            props.image?.theme?.takeIf { it.isNotBlank() }
+            props.image.theme.takeIf { it.isNotBlank() }
         }.getOrNull()
     }
 
