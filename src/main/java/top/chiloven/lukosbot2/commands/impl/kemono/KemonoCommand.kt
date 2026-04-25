@@ -129,7 +129,7 @@ class KemonoCommand(
                         "kemono post patreon 123456 654321 -t",
                         "kemono post fanbox 9876543 -a",
                         "kemono post 15be29bad5f6010cc16af84731f60a2812fdda0f861fd623f4539a0c61b97d48",
-                        "kemono post -a  # 发送命令时同时上传文件或图片"
+                        "kemono post -a"
                     )
             }
             .subcommand("creator", "查询 creator 信息或打包其全部附件") { b ->
