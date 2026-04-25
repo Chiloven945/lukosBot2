@@ -37,6 +37,11 @@ lukos:
     control:
       democommand: false
 
+  image:
+    # Applies to ModernImageDraw-based generated images.
+    # Supported values: light | dark
+    theme: "light"
+
   telegram:
     enabled: false
     bot-token: "${TELEGRAM_BOT_TOKEN:}"

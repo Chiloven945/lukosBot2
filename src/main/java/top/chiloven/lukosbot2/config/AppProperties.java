@@ -26,6 +26,7 @@ public class AppProperties {
     private OneBot onebot = new OneBot();
     private Discord discord = new Discord();
     private Cli cli = new Cli();
+    private Image image = new Image();
     private Security security = new Security();
     private Policy policy = new Policy();
 
@@ -74,6 +75,13 @@ public class AppProperties {
 
     }
 
+    @Data
+    public static class Image {
+
+        /// Theme for ModernImageDraw-based generated images.
+        private String theme = "light";
+
+    }
 
     @Data
     public static class Policy {
