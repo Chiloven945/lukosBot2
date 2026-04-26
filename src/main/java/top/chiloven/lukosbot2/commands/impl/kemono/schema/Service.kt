@@ -17,7 +17,7 @@ enum class Service(
 
     PATREON("patreon", "Patreon", "p"),
     FANBOX("fanbox", "Pixiv Fanbox", "f"),
-    //DISCORD("discord", "Discord", "d")
+    DISCORD("discord", "Discord", "d"),
     FANTIA("fantia", "Fantia", "fa"),
     AFDIAN("afdian", "Afdian", "afd"),
     BOOSTY("boosty", "Boosty", "b"),
@@ -42,7 +42,7 @@ enum class Service(
         fun getService(code: String): Service {
             val normalized = code.trim().lowercase(Locale.ROOT)
             return byAbbr[normalized] ?: byId[normalized]
-            ?: throw IllegalArgumentException("Unknown service: $code")
+            ?: throw IllegalArgumentException("未知平台：$code")
         }
 
         @JvmStatic
@@ -66,47 +66,51 @@ enum class Service(
                 "patreon.com" in host -> requireId(
                     PATREON,
                     Regex("(?:/posts/[^/?#]*-|/posts/)(\\d+)(?:[/?#].*)?$"),
-                    "Patreon post id"
+                    "Patreon 帖子 ID"
                 )
 
                 "fanbox.cc" in host -> requireId(
                     FANBOX,
                     Regex("/posts/(\\d+)(?:[/?#].*)?$"),
-                    "Fanbox post id"
+                    "Fanbox 帖子 ID"
+                )
+
+                "discord.com" in host -> throw IllegalArgumentException(
+                    "暂不支持 Discord 内容。"
                 )
 
                 "fantia.jp" in host -> requireId(
                     FANTIA,
                     Regex("/posts/(\\d+)(?:[/?#].*)?$"),
-                    "Fantia post id"
+                    "Fantia 帖子 ID"
                 )
 
                 "afdian.net" in host -> requireId(
                     AFDIAN,
                     Regex("/p/([A-Za-z0-9]+)(?:[/?#].*)?$"),
-                    "Afdian post id"
+                    "Afdian 帖子 ID"
                 )
 
                 "boosty.to" in host -> requireId(
                     BOOSTY,
                     Regex("/posts/([A-Za-z0-9-]+)(?:[/?#].*)?$"),
-                    "Boosty post id"
+                    "Boosty 帖子 ID"
                 )
 
                 "subscribestar.com" in host -> requireId(
                     SUBSCRIBE_STAR,
                     Regex("/posts/(\\d+)(?:[/?#].*)?$"),
-                    "SubscribeStar post id"
+                    "SubscribeStar 帖子 ID"
                 )
 
                 "dlsite.com" in host -> requireId(
                     DL_SITE,
                     Regex("/product_id/([A-Za-z0-9_]+)\\.html(?:[?#].*)?$"),
-                    "DLsite product id"
+                    "DLsite 商品 ID"
                 )
 
                 "gumroad.com" in host -> throw IllegalArgumentException(
-                    "暂不支持从 Gumroad 原站链接解析 post，请改用 kemono 链接或 `service + creator_id + post_id`。"
+                    "暂不支持从 Gumroad 原站链接解析帖子，请改用 kemono 链接，或提供平台、创作者 ID 和帖子 ID。"
                 )
 
                 else -> throw IllegalArgumentException("不支持的平台链接：$uri")

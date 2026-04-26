@@ -56,7 +56,7 @@ class MotdQueryService(
             queryByApi(address)
         } catch (apiError: Exception) {
             log.warn("MOTD API query failed for {}: {}", address.normalized(), apiError.message)
-            queryByDirectPing(address, listOf("API: ${apiError.message ?: apiError::class.java.simpleName}"))
+            queryByDirectPing(address, listOf("mcsrvstat.us：${apiError.message ?: "查询失败"}"))
         }
     }
 
@@ -77,14 +77,14 @@ class MotdQueryService(
             val body = response.body.string().trim()
             if (!response.isSuccessful) {
                 val detail = body.ifBlank { response.message.ifBlank { "HTTP ${response.code}" } }
-                throw IOException("MOTD API get failed: HTTP ${response.code} $detail")
+                throw IOException("mcsrvstat.us 查询失败（HTTP ${response.code}）：$detail")
             }
             if (body.isBlank()) {
-                throw IOException("MOTD API returned empty body")
+                throw IOException("mcsrvstat.us 没有返回可用内容")
             }
 
             val root = JsonUtils.MAPPER.readTree(body).asObjectOpt().orElseThrow {
-                IOException("MOTD API returned a non-JSON object")
+                IOException("mcsrvstat.us 返回的数据格式无法识别")
             }
             return McSrvStatusResponse.fromJsonObject(root).toQueryResult(address)
         }
@@ -126,7 +126,7 @@ class MotdQueryService(
             }
         }
 
-        throw IOException("Failed to get MOTD: ${failures.joinToString(" | ")}")
+        throw IOException("无法获取服务器状态：${failures.joinToString("；")}")
     }
 
     private fun McSrvStatusResponse.toQueryResult(address: MinecraftServerAddress): MotdQueryResult {
@@ -140,7 +140,7 @@ class MotdQueryService(
             online = online,
             versionName = protocol?.name?.takeIf { it.isNotBlank() }
                 ?: version?.takeIf { it.isNotBlank() }
-                ?: if (online) "Unknown" else null,
+                ?: if (online) "未知" else null,
             protocolVersion = protocol?.version,
             onlinePlayers = players?.online ?: 0,
             maxPlayers = players?.max ?: 0,
@@ -245,7 +245,7 @@ class MotdQueryService(
                 lines += "SRV：已解析"
             }
             if (eulaBlocked == true) {
-                lines += "EULA 屏蔽：是"
+                lines += "EULA 限制：是"
             }
             if (source == DataSource.MCSRVSTAT) {
                 lines += "数据来源：mcsrvstat.us"

@@ -23,15 +23,15 @@ public class WeatherCommand implements IBotCommand {
 
     @Override
     public String description() {
-        return "查询天气";
+        return "查询天气（暂未开放）";
     }
 
     @Override
     public UsageNode usage() {
         return UsageNode.root(name())
                 .description(description())
-                .syntax("（该命令尚未实现）")
-                .note("提示：此命令目前没有注册任何参数解析逻辑。")
+                .syntax("该命令暂未开放")
+                .note("天气查询功能尚未接入，暂时无法使用。")
                 .build();
     }
 

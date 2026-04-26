@@ -29,7 +29,7 @@ class MotdCommand(
 
     override fun name(): String = "motd"
 
-    override fun description(): String = "获取 Minecraft Java 版服务器 MOTD 信息"
+    override fun description(): String = "查询 Minecraft Java 版服务器状态"
 
     override fun usage(): UsageNode =
         UsageNode.root(name())
@@ -40,7 +40,7 @@ class MotdCommand(
                     .param("address[:port]", "服务器地址（支持 SRV 域名、IPv4 / IPv6，可选端口，默认 25565）")
                     .example("motd api play.example.com")
             }
-            .subcommand("direct", "强制使用机器人自身的 Java 协议解析") { b ->
+            .subcommand("direct", "强制使用直连协议查询") { b ->
                 b.syntax("强制使用直连协议查询", UsageNode.arg("address[:port]"))
                     .param("address[:port]", "服务器地址（支持 SRV 域名、IPv4 / IPv6，可选端口，默认 25565）")
                     .example("motd direct play.example.com", "motd self play.example.com")
@@ -52,7 +52,7 @@ class MotdCommand(
                 "motd direct [2001:db8::1]:25565"
             )
             .note(
-                "不指定方式时默认自动：先尝试 mcsrvstat.us，失败后自动回退到机器人自身的 Java 状态请求。",
+                "不指定方式时会自动查询：优先使用 mcsrvstat.us，失败后回退到直连协议。",
                 "可显式指定 api / direct / self / auto。",
                 "未显式指定端口时，直连链路会额外尝试解析 _minecraft._tcp SRV 记录。"
             )
@@ -170,7 +170,7 @@ class MotdCommand(
             0
         } catch (e: Exception) {
             log.warn("Unable to get MOTD for address: {}, mode: {}", address, mode, e)
-            src.reply("获取 MOTD 失败：${e.message ?: "未知错误"}")
+            src.reply("查询服务器状态失败：${e.message ?: "请稍后再试。"}")
             0
         }
     }

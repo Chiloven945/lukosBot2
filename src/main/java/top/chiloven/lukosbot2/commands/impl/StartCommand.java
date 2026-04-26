@@ -18,14 +18,14 @@ public class StartCommand implements IBotCommand {
 
     @Override
     public String description() {
-        return "";
+        return "开始使用 LukosBot2";
     }
 
     @Override
     public UsageNode usage() {
         return UsageNode.root(name())
                 .description(description())
-                .syntax("（内部命令/隐藏命令）")
+                .syntax("开始使用机器人")
                 .build();
     }
 
@@ -34,7 +34,7 @@ public class StartCommand implements IBotCommand {
         dispatcher.register(
                 literal(name())
                         .executes(ctx -> {
-                            ctx.getSource().reply("欢迎使用 LukosBot2！这是由 @chiloven945 制作的聊天机器人，你可以在 Discord 和 Telegram 上找到他！请输入 /help 以查看可用命令。");
+                            ctx.getSource().reply("欢迎使用 LukosBot2！这是由 @chiloven945 制作的聊天机器人，你可以在 Discord 和 Telegram 上找到他！发送 /help 查看可用命令。");
                             return 1;
                         })
         );

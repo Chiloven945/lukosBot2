@@ -78,20 +78,20 @@ class KemonoCommand(
 
     override fun name(): String = "kemono"
 
-    override fun description(): String = "从 kemono.cr 获取 post / creator 信息并支持打包下载"
+    override fun description(): String = "从 kemono.cr 查询帖子/创作者信息，并支持打包下载附件"
 
     override fun usage(): UsageNode {
         return UsageNode.root(name())
             .description(description())
-            .subcommand("post", "查询 post 信息，支持 sha256 与上传文件反查") { b ->
+            .subcommand("post", "查询帖子信息，支持 SHA-256 与上传文件反查") { b ->
                 b.syntax(
-                    "通过 post URL 查询",
+                    "通过帖子链接查询",
                     UsageNode.arg("post_url"),
                     UsageNode.opt(UsageNode.lit("-t")),
                     UsageNode.opt(UsageNode.lit("-a")),
                 )
                     .syntax(
-                        "通过 kemono 上的 service / creator_id / post_id 查询",
+                        "通过 kemono 平台、创作者 ID 和帖子 ID 查询",
                         UsageNode.arg("service"),
                         UsageNode.arg("creator_id"),
                         UsageNode.arg("post_id"),
@@ -99,28 +99,28 @@ class KemonoCommand(
                         UsageNode.opt(UsageNode.lit("-a")),
                     )
                     .syntax(
-                        "通过原站 post id 解析到 kemono post",
+                        "通过原站帖子 ID 解析到 kemono 帖子",
                         UsageNode.arg("service"),
                         UsageNode.arg("platform_post_id"),
                         UsageNode.opt(UsageNode.lit("-t")),
                         UsageNode.opt(UsageNode.lit("-a")),
                     )
                     .syntax(
-                        "通过文件 sha256 查询帖子",
+                        "通过文件 SHA-256 查询帖子",
                         UsageNode.arg("sha_256"),
                         UsageNode.opt(UsageNode.lit("-t")),
                         UsageNode.opt(UsageNode.lit("-a")),
                     )
                     .syntax(
-                        "发送命令时直接附带文件 / 图片，自动计算 sha256 后查询",
+                        "发送命令时直接附带文件/图片，自动计算 SHA-256 后查询",
                         UsageNode.opt(UsageNode.lit("-t")),
                         UsageNode.opt(UsageNode.lit("-a")),
                     )
-                    .param("post_url", "kemono post 链接，或原站 post 链接")
+                    .param("post_url", "kemono 帖子链接，或原站帖子链接")
                     .param("service", "平台名，如 patreon / fanbox / fantia / afdian / boosty")
-                    .param("creator_id", "kemono creator id")
-                    .param("post_id", "kemono post id")
-                    .param("platform_post_id", "原站 post id")
+                    .param("creator_id", "kemono 创作者 ID")
+                    .param("post_id", "kemono 帖子 ID")
+                    .param("platform_post_id", "原站帖子 ID")
                     .param("sha_256", "文件的 SHA-256 十六进制值")
                     .option("-t", "展示全部附件")
                     .option("-a", "直接打包下载附件")
@@ -132,30 +132,30 @@ class KemonoCommand(
                         "kemono post -a"
                     )
             }
-            .subcommand("creator", "查询 creator 信息或打包其全部附件") { b ->
+            .subcommand("creator", "查询创作者信息，或打包下载其全部附件") { b ->
                 b.syntax(
-                    "通过 creator URL 查询",
+                    "通过创作者链接查询",
                     UsageNode.arg("creator_url"),
                     UsageNode.opt(UsageNode.lit("-a")),
                 )
                     .syntax(
-                        "通过 kemono 上的 service / creator_id 查询",
+                        "通过 kemono 平台和创作者 ID 查询",
                         UsageNode.arg("service"),
                         UsageNode.arg("creator_id"),
                         UsageNode.opt(UsageNode.lit("-a")),
                     )
-                    .param("creator_url", "kemono creator 链接")
+                    .param("creator_url", "kemono 创作者链接")
                     .param("service", "平台名，如 patreon / fanbox / fantia / afdian / boosty")
-                    .param("creator_id", "kemono creator id")
-                    .option("-a", "打包下载该 creator 下所有帖子附件")
+                    .param("creator_id", "kemono 创作者 ID")
+                    .option("-a", "打包下载该创作者下所有帖子的附件")
                     .example(
                         "kemono creator https://kemono.cr/patreon/user/123456",
                         "kemono creator patreon 123456 -a"
                     )
             }
             .note(
-                "`post` 子命令支持直接附带文件 / 图片；若当前平台能读取上传内容，将自动计算 SHA-256 后反查。",
-                "`-t` 仅对 `post` 子命令生效，用于展开全部附件；`-a` 会直接开始下载并发送 zip。"
+                "`post` 子命令支持直接附带文件/图片；若当前平台能读取上传内容，将自动计算 SHA-256 后反查。",
+                "`-t` 仅对 `post` 子命令生效，用于展开全部附件；`-a` 会直接开始下载并发送 ZIP 文件。"
             )
             .build()
     }
@@ -216,8 +216,8 @@ class KemonoCommand(
         val msg = e.message?.trim() ?: ""
         return when {
             msg.startsWith("HTTP 404") -> "资源未找到，请检查链接、ID、SHA-256 或平台参数是否正确。"
-            msg.isNotEmpty() -> "发生错误：$msg"
-            else -> "发生未知错误。"
+            msg.isNotEmpty() -> "处理失败：$msg"
+            else -> "处理失败，请稍后再试。"
         }
     }
 
@@ -306,7 +306,7 @@ class KemonoCommand(
     private fun parsePostTarget(positionals: List<String>, src: CommandSource): PostTarget {
         if (positionals.isEmpty()) {
             val upload = resolveUploadedHash(src)
-                ?: throw IllegalArgumentException("参数为空。请提供 post 链接 / ID / SHA-256，或在发送命令时附带一个文件。")
+                ?: throw IllegalArgumentException("参数为空。请提供帖子链接、ID、SHA-256，或在发送命令时附带一个文件。")
             return PostTarget.ByHash(upload.sha256, upload.name, fromUpload = true)
         }
 
@@ -317,7 +317,7 @@ class KemonoCommand(
                     isSha256(only) -> PostTarget.ByHash(only.lowercase(Locale.ROOT))
                     only.isUrl() -> parsePostUrl(only)
                     else -> throw IllegalArgumentException(
-                        "参数格式错误：post <post_url> [-t] [-a] | post <service> <creator_id> <post_id> [-t] [-a] | post <service> <platform_post_id> [-t] [-a] | post <sha_256> [-t] [-a]"
+                        "参数格式错误。请发送 `kemono post <帖子链接>`、`kemono post <平台> <创作者 ID> <帖子 ID>`、`kemono post <平台> <原站帖子 ID>` 或 `kemono post <SHA-256>`。"
                     )
                 }
             }
@@ -325,23 +325,23 @@ class KemonoCommand(
             2 -> PostTarget.ByServicePost(parseService(positionals[0]), positionals[1])
             3 -> PostTarget.Direct(parseService(positionals[0]), positionals[1], positionals[2])
             else -> throw IllegalArgumentException(
-                "参数格式错误：post <post_url> [-t] [-a] | post <service> <creator_id> <post_id> [-t] [-a] | post <service> <platform_post_id> [-t] [-a] | post <sha_256> [-t] [-a]"
+                "参数格式错误。请发送 `kemono post <帖子链接>`、`kemono post <平台> <创作者 ID> <帖子 ID>`、`kemono post <平台> <原站帖子 ID>` 或 `kemono post <SHA-256>`。"
             )
         }
     }
 
     private fun parseCreatorTarget(positionals: List<String>): CreatorTarget {
-        require(positionals.isNotEmpty()) { "参数为空。格式：creator <creator_url> [-a] | creator <service> <creator_id> [-a]" }
+        require(positionals.isNotEmpty()) { "参数为空。请发送 `kemono creator <创作者链接>` 或 `kemono creator <平台> <创作者 ID>`。" }
 
         return when (positionals.size) {
             1 -> {
                 val only = positionals[0]
-                require(only.isUrl()) { "参数格式错误：creator <creator_url> [-a] | creator <service> <creator_id> [-a]" }
+                require(only.isUrl()) { "参数格式错误。请发送 `kemono creator <创作者链接>` 或 `kemono creator <平台> <创作者 ID>`。" }
                 parseCreatorUrl(only)
             }
 
             2 -> CreatorTarget(parseService(positionals[0]), positionals[1])
-            else -> throw IllegalArgumentException("参数格式错误：creator <creator_url> [-a] | creator <service> <creator_id> [-a]")
+            else -> throw IllegalArgumentException("参数格式错误。请发送 `kemono creator <创作者链接>` 或 `kemono creator <平台> <创作者 ID>`。")
         }
     }
 
@@ -354,7 +354,7 @@ class KemonoCommand(
             if (segments.size >= 5 && segments[1] == "user" && segments[3] == "post") {
                 return PostTarget.Direct(parseService(segments[0]), segments[2], segments[4])
             }
-            throw IllegalArgumentException("无法识别的 kemono post 链接：$url")
+            throw IllegalArgumentException("无法识别的 kemono 帖子链接：$url")
         }
 
         val parsed = Service.parseServicePostUrl(uri)
@@ -364,19 +364,19 @@ class KemonoCommand(
     private fun parseCreatorUrl(url: String): CreatorTarget {
         val uri = URI.create(url)
         val host = (uri.host ?: "").lowercase(Locale.ROOT)
-        require(host.endsWith("kemono.cr")) { "无法识别的 creator 链接：$url" }
+        require(host.endsWith("kemono.cr")) { "无法识别的创作者链接：$url" }
 
         val segments = PathUtils.splitPathSegments(uri.path)
         if (segments.size >= 3 && segments[1] == "user") {
             return CreatorTarget(parseService(segments[0]), segments[2])
         }
 
-        throw IllegalArgumentException("无法识别的 creator 链接：$url")
+        throw IllegalArgumentException("无法识别的创作者链接：$url")
     }
 
     private fun parseService(raw: String): Service {
         return runCatching { Service.getService(raw) }
-            .getOrElse { throw IllegalArgumentException("未知的 service：$raw") }
+            .getOrElse { throw IllegalArgumentException("未知平台：$raw") }
     }
 
     private fun resolvePostTarget(target: PostTarget): ResolvedPost {
@@ -455,7 +455,7 @@ class KemonoCommand(
 
     private fun resolveTelegramFileUrl(fileId: String): String {
         val token = appProperties.telegram.botToken.trim()
-        require(token.isNotEmpty()) { "Telegram 未配置 bot token，无法读取上传文件。" }
+        require(token.isNotEmpty()) { "当前无法读取 Telegram 上传文件，请直接提供 SHA-256。" }
 
         val root = HttpJson.getObject(
             URI.create("https://api.telegram.org/bot$token/getFile"),
@@ -463,7 +463,7 @@ class KemonoCommand(
             null
         )
         val filePath = root.obj("result")?.str("file_path")
-            ?: throw IOException("Telegram getFile 未返回 file_path")
+            ?: throw IOException("无法读取 Telegram 上传文件路径")
         return "https://api.telegram.org/file/bot$token/$filePath"
     }
 
@@ -476,7 +476,7 @@ class KemonoCommand(
 
         okHttp.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
-                throw IOException("HTTP ${response.code} while downloading uploaded file")
+                throw IOException("下载上传文件失败，HTTP 状态码：${response.code}")
             }
             response.body.byteStream().use { input ->
                 return ShaUtils.hashSha256ToHex(input.readAllBytes())
@@ -486,7 +486,7 @@ class KemonoCommand(
 
     private fun archivePost(resolved: ResolvedPost, src: CommandSource): String {
         val items = resolved.toArchiveItems()
-        require(items.isNotEmpty()) { "这个 post 没有可下载的附件。" }
+        require(items.isNotEmpty()) { "这个帖子没有可下载的附件。" }
 
         return createArchiveAndSend(
             archiveNameHint = "post_${resolved.service.id}_${resolved.creatorId}_${resolved.postId}",
@@ -497,7 +497,7 @@ class KemonoCommand(
 
     private fun archiveCreator(creator: Creator, src: CommandSource): String {
         val items = creator.toArchiveItems()
-        require(items.isNotEmpty()) { "这个 creator 没有可下载的附件。" }
+        require(items.isNotEmpty()) { "这位创作者没有可下载的附件。" }
 
         return createArchiveAndSend(
             archiveNameHint = "creator_${creator.service.id}_${creator.id}",

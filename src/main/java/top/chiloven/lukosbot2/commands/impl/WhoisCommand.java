@@ -82,7 +82,7 @@ public class WhoisCommand implements IBotCommand {
             return cleanWhois(raw);
         } catch (IOException e) {
             log.warn("Failed to fetch Whois information.", e);
-            return e.getMessage();
+            return "查询 Whois 信息失败：" + e.getMessage();
         } finally {
             try {
                 if (wc.isConnected()) wc.disconnect();

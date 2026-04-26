@@ -28,7 +28,7 @@ class CaveCommand(
 
     override fun aliases(): List<String> = listOf("c")
 
-    override fun description(): String = "回声洞：保存并重新发送文本或图片条目"
+    override fun description(): String = "回声洞：保存并随机发送文本或图片"
 
     override fun usage(): UsageNode =
         UsageNode.root(name())
@@ -41,7 +41,7 @@ class CaveCommand(
             .syntax("删除指定编号条目", UsageNode.arg("delete"), UsageNode.arg("number"))
             .param("number", "正整数编号")
             .param("message", "要直接保存的文本内容")
-            .note("add/delete 仅 bot admin 可用。编号单调递增，删除后不会回收。")
+            .note("add/delete 仅机器人管理员可用。编号会持续递增，删除后不会回收。")
             .example(
                 "cave",
                 "cave 12",
@@ -95,7 +95,7 @@ class CaveCommand(
     private fun recallRandom(src: CommandSource) {
         val entry = caveService.random()
         if (entry == null) {
-            src.reply("还没有回声洞条目。")
+            src.reply("还没有任何回声洞条目。")
             return
         }
         src.reply(caveService.toOutbound(src, entry, includeMeta = true))
@@ -111,19 +111,19 @@ class CaveCommand(
     }
 
     private fun add(src: CommandSource) {
-        if (!authz.ensureBotAdmin(src, "添加 cave 条目")) {
+        if (!authz.ensureBotAdmin(src, "添加回声洞条目")) {
             return
         }
         try {
             val entry = caveService.add(src)
-            src.reply("已添加回声洞条目 #${entry.no}")
+            src.reply("已添加回声洞条目 #${entry.no}。")
         } catch (e: Exception) {
-            src.reply("添加失败：${e.message ?: e::class.java.simpleName}")
+            src.reply("添加失败：${e.message ?: "请稍后再试。"}")
         }
     }
 
     private fun delete(src: CommandSource, no: Int) {
-        if (!authz.ensureBotAdmin(src, "删除 cave 条目")) {
+        if (!authz.ensureBotAdmin(src, "删除回声洞条目")) {
             return
         }
         val deleted = caveService.delete(no)
@@ -131,7 +131,7 @@ class CaveCommand(
             src.reply("编号 #$no 不存在或已被删除。")
             return
         }
-        src.reply("已删除回声洞条目 #$no")
+        src.reply("已删除回声洞条目 #$no。")
     }
 
 }

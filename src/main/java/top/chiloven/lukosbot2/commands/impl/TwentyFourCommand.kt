@@ -58,7 +58,7 @@ class TwentyFourCommand(
             .syntax("开始一场新游戏")
             .syntax("提交答案表达式", UsageNode.arg("expression"))
             .syntax("放弃作答并公布答案", UsageNode.lit("giveup"))
-            .param("expression", "表达式（可使用 + - * / ()，并使用全部给出的 4 个数字）")
+            .param("expression", "表达式（可使用 + - * / ()，且必须使用给出的 4 个数字）")
             .example(
                 "24",
                 "24 (2+1)*7+3",
@@ -91,7 +91,7 @@ class TwentyFourCommand(
         if (existing != null && !existing.isExpired(now)) {
             src.reply(
                 """
-                你已经有一局 24 点游戏在进行了：
+                你已经有一局 24 点游戏正在进行：
                 数字：${existing.nums.formatNums()}
                 
                 如果想放弃这一局，可以发送：/24 giveup
@@ -121,7 +121,7 @@ class TwentyFourCommand(
         src.reply(
             """
             新的一局 24 点开始了（限时 ${timeLimit / 1000} 秒）！
-            使用下面 4 个数字，通过 + - * / 和括号算出 24：
+            请使用下面 4 个数字，通过 + - * / 和括号算出 24：
             数字：${puzzle.nums.formatNums()}
             
             提交答案：/24 <表达式>
@@ -195,7 +195,7 @@ class TwentyFourCommand(
             evalExpression(normalizedExpr)
         } catch (e: IllegalArgumentException) {
             log.warn("Unable to parse expression: {}", normalizedExpr, e)
-            src.reply("无法解析你的表达式，请只使用数字、+ - * / 和括号。\n错误信息：${e.message}")
+            src.reply("无法解析表达式，请只使用数字、+ - * / 和括号。\n原因：${e.message}")
             return
         }
 
@@ -313,7 +313,7 @@ class TwentyFourCommand(
                         applyOp(values, ops.pop())
                     }
                     if (ops.isEmpty() || ops.pop() != '(') {
-                        throw IllegalArgumentException("mismatched parentheses")
+                        throw IllegalArgumentException("括号不匹配")
                     }
                 }
 
@@ -324,20 +324,20 @@ class TwentyFourCommand(
                     ops.push(c)
                 }
 
-                else -> throw IllegalArgumentException("unexpected token: $token")
+                else -> throw IllegalArgumentException("无法识别的内容：$token")
             }
         }
 
         while (ops.isNotEmpty()) {
             val op = ops.pop()
             if (op == '(' || op == ')') {
-                throw IllegalArgumentException("mismatched parentheses")
+                throw IllegalArgumentException("括号不匹配")
             }
             applyOp(values, op)
         }
 
         if (values.size != 1) {
-            throw IllegalArgumentException("invalid expression")
+            throw IllegalArgumentException("表达式不完整")
         }
 
         return EvalResult(values.pop(), numbers)
@@ -345,7 +345,7 @@ class TwentyFourCommand(
 
     private fun tokenize(expr: String): List<String> {
         val s = expr.replace(Regex("\\s+"), "")
-        require(s.isNotEmpty()) { "empty expression" }
+        require(s.isNotEmpty()) { "表达式不能为空" }
 
         val tokens = mutableListOf<String>()
         var i = 0
@@ -365,7 +365,7 @@ class TwentyFourCommand(
                     i++
                 }
 
-                else -> throw IllegalArgumentException("illegal character: $c")
+                else -> throw IllegalArgumentException("包含不支持的字符：$c")
             }
         }
 
@@ -374,7 +374,7 @@ class TwentyFourCommand(
 
     private fun applyOp(values: ArrayDeque<Double>, op: Char) {
         if (values.size < 2) {
-            throw IllegalArgumentException("not enough operands for $op")
+            throw IllegalArgumentException("运算符 $op 缺少数字")
         }
 
         val b = values.pop()
@@ -385,11 +385,11 @@ class TwentyFourCommand(
             '-' -> values.push(a - b)
             '*' -> values.push(a * b)
             '/' -> {
-                if (abs(b) < EPS) throw IllegalArgumentException("division by zero")
+                if (abs(b) < EPS) throw IllegalArgumentException("不能除以 0")
                 values.push(a / b)
             }
 
-            else -> throw IllegalArgumentException("unknown operator: $op")
+            else -> throw IllegalArgumentException("不支持的运算符：$op")
         }
     }
 
@@ -399,7 +399,7 @@ class TwentyFourCommand(
         '(' -> 0
         '+', '-' -> 1
         '*', '/' -> 2
-        else -> throw IllegalArgumentException("unknown operator: $this")
+        else -> throw IllegalArgumentException("不支持的运算符：$this")
     }
 
     private fun String.stripBackslashes(): String = replace("\\", "")

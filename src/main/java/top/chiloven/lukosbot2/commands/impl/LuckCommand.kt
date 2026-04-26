@@ -27,7 +27,7 @@ class LuckCommand : IBotCommand {
 
     override fun aliases(): List<String> = listOf("l", "jrrp")
 
-    override fun description(): String = "获取当日的幸运值。"
+    override fun description(): String = "获取今日幸运值"
 
     override fun usage(): UsageNode = UsageNode.root(name())
         .description(description())
@@ -55,7 +55,7 @@ class LuckCommand : IBotCommand {
                     1
                 } catch (e: Exception) {
                     log.error("Error executing luck command", e)
-                    ctx.source.reply("出现未知错误，请联系开发者")
+                    ctx.source.reply("获取幸运值失败，请稍后再试。")
                     0
                 }
             }

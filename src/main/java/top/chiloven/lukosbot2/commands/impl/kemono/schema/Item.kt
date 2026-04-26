@@ -32,6 +32,6 @@ data class Item(
             return if (raw.startsWith('/')) KEMONO_BASE + raw else "$KEMONO_BASE/$raw"
         }
 
-    fun getString(): String = "  - $name: $resolvedUrl"
+    fun getString(): String = "  - $name：$resolvedUrl"
 
 }

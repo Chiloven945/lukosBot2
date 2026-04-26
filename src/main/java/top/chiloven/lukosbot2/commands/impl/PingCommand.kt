@@ -60,10 +60,10 @@ class PingCommand : IBotCommand {
         return """
             Pong！$time
             ${Constants.APP_NAME} ${Constants.VERSION}
-            运行时间: $uptimeFmt
-            系统: ${osBean.name} ${osBean.version}
-            内存: $usedMem / $totalMem (最大 $maxMem)
-            Java: ${Constants.javaVersion} | Kotlin: ${Constants.kotlinVersion} | SpringBoot: ${Constants.springBootVersion}
+            运行时间：$uptimeFmt
+            系统：${osBean.name} ${osBean.version}
+            内存：$usedMem / $totalMem（最大 $maxMem）
+            Java：${Constants.javaVersion} | Kotlin：${Constants.kotlinVersion} | Spring Boot：${Constants.springBootVersion}
             TelegramBots: ${Constants.tgVersion} | JDA: ${Constants.jdaVersion} | Shiro: ${Constants.shiroVersion}
         """.trimIndent()
     }

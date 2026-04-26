@@ -102,7 +102,7 @@ data class Post(
 
         fun getString(duration: Float?): String = buildString {
             appendLine("文件：$md5.$ext")
-            appendLine("分辨率：$width * $height")
+            appendLine("分辨率：$width × $height")
             appendLine("大小：${fmtBytes(size)}")
             if (duration != null) appendLine("时长：${fmtTimeSec(duration)}")
             if (url != null) appendLine("链接：$url")

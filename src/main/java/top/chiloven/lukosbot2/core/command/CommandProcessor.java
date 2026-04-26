@@ -39,7 +39,7 @@ public class CommandProcessor implements IProcessor {
     ) {
         String p = props == null ? "/" : props.getPrefix();
 
-        this.prefix = (p == null || p.isBlank()) ? "/" : p;
+        this.prefix = p.isBlank() ? "/" : p;
         this.registry = registry;
         this.policyService = policyService;
 
@@ -47,7 +47,9 @@ public class CommandProcessor implements IProcessor {
             try {
                 cmd.register(dispatcher);
                 BrigadierUtils.registerAliases(dispatcher, cmd.name(), cmd.aliases());
-                log.info("[Cmd] Registered command: {}", cmd.name() + (cmd.aliases().isEmpty() ? "" : " aliases: " + cmd.aliases()));
+                log.info("[Cmd] Registered command: {}", cmd.name() + (cmd.aliases().isEmpty()
+                        ? ""
+                        : " aliases: " + cmd.aliases()));
             } catch (Exception e) {
                 log.warn("[Cmd] Failed to register command {}: {}", cmd.name(), e.getMessage(), e);
             }
@@ -83,10 +85,10 @@ public class CommandProcessor implements IProcessor {
             String input = e.getInput() == null ? cmdLine : e.getInput();
             int cursor = Math.max(0, e.getCursor());
             String pointer = " ".repeat(Math.min(cursor, input.length())) + "^";
-            src.reply("命令语法错误：\n" + input + "\n" + pointer + "\n" + e.getMessage());
+            src.reply("命令语法错误：\n" + input + "\n" + pointer + "\n" + e.getMessage() + "\n请检查参数是否完整，或发送 /help 查看用法。");
         } catch (Exception e) {
             log.warn("[Cmd] Command execution error: {}", e.getMessage(), e);
-            src.reply("命令执行失败：" + e.getClass().getSimpleName());
+            src.reply("命令执行失败，请稍后再试。");
         }
 
         return outs;

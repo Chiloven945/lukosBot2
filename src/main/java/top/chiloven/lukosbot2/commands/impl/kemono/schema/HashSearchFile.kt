@@ -38,9 +38,9 @@ data class HashSearchFile(
             appendLine("添加时间：${added.fmt()}")
             appendLine("大小：${StringUtils.fmtBytes(size)}")
             if (posts.isEmpty()) {
-                appendLine("来自：无关联帖子")
+                appendLine("关联帖子：无")
             } else {
-                appendLine("来自：")
+                appendLine("关联帖子：")
                 posts.forEach { post -> appendLine("  - ${post.getBrief()}") }
             }
         }.trim()

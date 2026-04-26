@@ -23,7 +23,7 @@ public class AuthorizationService {
     public boolean ensureBotAdmin(CommandSource src, String action) {
         AuthContext ctx = inspect(src);
         if (!ctx.canManageGlobal()) {
-            src.reply("无权限：只有 bot admin 可以" + action + "。`/admin me` 可以查看你当前的身份。");
+            src.reply("权限不足：只有机器人管理员可以" + action + "。发送 `/admin me` 可查看当前身份。");
             return false;
         }
         return true;
@@ -55,7 +55,7 @@ public class AuthorizationService {
     public boolean ensureChatManager(CommandSource src, String action) {
         AuthContext ctx = inspect(src);
         if (!ctx.canManageChat()) {
-            src.reply("无权限：只有当前聊天管理员或 bot admin 可以" + action + "。`/admin me` 可以查看你当前的身份。");
+            src.reply("权限不足：只有当前聊天管理员或机器人管理员可以" + action + "。发送 `/admin me` 可查看当前身份。");
             return false;
         }
         return true;

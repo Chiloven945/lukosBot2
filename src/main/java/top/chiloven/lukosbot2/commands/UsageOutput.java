@@ -98,7 +98,7 @@ public final class UsageOutput {
             src.reply(out);
         } catch (Exception e) {
             log.warn("Failed to render usage image: {}", e.getMessage(), e);
-            src.reply(rendered.markdownText() + "\n\n（图片渲染失败，已回退到文字版：" + e.getMessage() + "）");
+            src.reply(rendered.markdownText() + "\n\n（图片版帮助生成失败，已改用文字版。）");
         }
     }
 

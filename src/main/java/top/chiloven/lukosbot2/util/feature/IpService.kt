@@ -45,7 +45,7 @@ object IpService {
     ) {
 
         override fun toString(): String = buildString {
-            append("IP 地址 - ").append(ip ?: "未知").append('\n')
+            append("IP 地址：").append(ip ?: "未知").append('\n')
 
             appendLineIfPresent(
                 label = "国家/地区：",

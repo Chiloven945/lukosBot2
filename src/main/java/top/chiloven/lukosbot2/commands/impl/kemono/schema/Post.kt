@@ -72,7 +72,7 @@ data class Post(
                 val display = if (showAllAttachments) attachments else attachments.take(10)
                 display.forEach { item -> appendLine(item.getString()) }
                 if (!showAllAttachments && attachments.size > 10) {
-                    appendLine("当前已展示 10 个附件。追加 `-t` 可展示全部附件，追加 `-a` 可直接打包下载。")
+                    appendLine("已展示前 10 个附件。添加 `-t` 可展示全部附件，添加 `-a` 可直接打包下载。")
                 }
             }
 

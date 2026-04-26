@@ -51,7 +51,7 @@ public class HelpCommand implements IBotCommand {
                                             .append("\n")
                                     );
 
-                            sb.append("\n使用 `").append(p).append(name()).append(" <command>` 查看具体命令的用法。");
+                            sb.append("\n发送 `").append(p).append(name()).append(" <command>` 查看某个命令的详细用法。");
                             ctx.getSource().reply(sb.toString().trim());
                             return 1;
                         })
@@ -78,7 +78,7 @@ public class HelpCommand implements IBotCommand {
         IBotCommand cmd = registry().get(cmdName);
 
         if (cmd == null || !cmd.isVisible()) {
-            src.reply("未知的命令: %s\n使用 `%s%s` 查看可用命令列表。".formatted(cmdName, p, name()));
+            src.reply("未知的命令：%s\n发送 `%s%s` 查看可用命令列表。".formatted(cmdName, p, name()));
             return 0;
         }
 

@@ -74,17 +74,11 @@ class CaveService(
     }
 
     fun add(src: CommandSource): CaveEntry {
-        log.debug(
-            "cave add start platform={} userId={} messageId={} quotedMessageId={}",
-            src.platform().name,
-            src.userIdOrNull(),
-            src.meta().messageId(),
-            src.quoted()?.messageId()
-        )
+        log.debug("cave add start platform={} userId={} messageId={} quotedMessageId={}", src.platform().name, src.userIdOrNull(), src.meta().messageId(), src.quoted()?.messageId())
 
         val payload = extractPayload(src) ?: run {
             log.debug("cave add rejected messageId={} reason=no_payload", src.meta().messageId())
-            throw IllegalArgumentException("未检测到可保存的文本或图片。请直接发送内容、使用 /cave add <message>，或回复一条带文本/图片的消息后使用 /cave add。")
+            throw IllegalArgumentException("未检测到可保存的文本或图片。请直接发送内容，使用 /cave add <message>，或回复一条带文本/图片的消息后发送 /cave add。")
         }
 
         return lock.withLock {
@@ -152,7 +146,7 @@ class CaveService(
         }
 
         listOfNotNull(metaLine, textLine).forEach { parts += OutText(it) }
-        if (parts.isEmpty()) parts += OutText("该条目为空。")
+        if (parts.isEmpty()) parts += OutText("这个条目没有内容。")
         log.debug("cave outbound text no={} parts={}", entry.no, parts.size)
         return OutboundMessage(src.addr(), parts)
     }
@@ -260,7 +254,7 @@ class CaveService(
 
     @Throws(IOException::class)
     private fun normalizeImage(image: InImage): CaveImageBlob {
-        val source = image.ref() ?: throw IOException("图片引用为空")
+        val source = image.ref() ?: throw IOException("未找到图片内容，无法保存。")
         val loaded = mediaRefLoader.load(source)
         val name = image.name()?.takeIf { it.isNotBlank() } ?: loaded.name()
         val mime = image.mime()?.takeIf { it.isNotBlank() } ?: loaded.mime()

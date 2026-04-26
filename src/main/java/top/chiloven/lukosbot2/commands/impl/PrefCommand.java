@@ -54,23 +54,23 @@ public class PrefCommand implements IBotCommand {
 
     @Override
     public String description() {
-        return "查看和管理状态/偏好设置";
+        return "查看和管理偏好设置";
     }
 
     @Override
     public UsageNode usage() {
         return UsageNode.root(name())
                 .description(description())
-                .syntax("列出所有可用 state")
-                .syntax("查看解析后的值", UsageNode.arg("get"), UsageNode.arg("state"))
-                .syntax("查看指定 scope 的值", UsageNode.arg("get"), UsageNode.arg("scope"), UsageNode.arg("state"))
-                .syntax("设置指定 scope 的值", UsageNode.arg("set"), UsageNode.arg("scope"), UsageNode.arg("state"), UsageNode.arg("value"))
-                .syntax("清除指定 scope 的值", UsageNode.arg("clear"), UsageNode.arg("scope"), UsageNode.arg("state"))
-                .subcommand("list", "列出状态定义", b -> b.syntax("列出状态定义"))
-                .param("scope", "user | chat | global")
-                .param("state", "状态名（见 /pref list）")
-                .param("value", "要写入的值")
-                .note("user scope 允许本人修改；chat scope 允许当前聊天管理员或 bot admin 修改；global scope 仅允许 bot admin 修改。")
+                .syntax("列出所有可用配置项")
+                .syntax("查看当前生效的配置值", UsageNode.arg("get"), UsageNode.arg("state"))
+                .syntax("查看指定范围内的配置值", UsageNode.arg("get"), UsageNode.arg("scope"), UsageNode.arg("state"))
+                .syntax("设置指定范围内的配置值", UsageNode.arg("set"), UsageNode.arg("scope"), UsageNode.arg("state"), UsageNode.arg("value"))
+                .syntax("清除指定范围内的配置值", UsageNode.arg("clear"), UsageNode.arg("scope"), UsageNode.arg("state"))
+                .subcommand("list", "列出配置项", b -> b.syntax("列出配置项"))
+                .param("scope", "配置范围：user（本人）/ chat（当前聊天）/ global（全局）")
+                .param("state", "配置项名称（见 /pref list）")
+                .param("value", "要设置的值")
+                .note("user 代表本人配置；chat 代表当前聊天配置，需要当前聊天管理员或机器人管理员权限；global 代表全局配置，仅机器人管理员可修改。")
                 .example(
                         "pref list",
                         "pref get lang",
@@ -138,49 +138,57 @@ public class PrefCommand implements IBotCommand {
         );
     }
 
+    private static String displayScope(ScopeType type) {
+        return switch (type) {
+            case USER -> "本人";
+            case CHAT -> "当前聊天";
+            case GLOBAL -> "全局";
+        };
+    }
+
     private String renderList() {
         String defs = registry.all().stream()
                 .sorted(Comparator.comparing(IStateDefinition::name))
                 .map(d -> {
-                    String line = "- %s (%s) scopes=%s resolve=%s".formatted(
+                    String line = "- %s：%s；可用范围：%s；生效优先级：%s".formatted(
                             d.name(),
                             d.description(),
                             d.allowedScopes().stream()
-                                    .map(Enum::name)
+                                    .map(PrefCommand::displayScope)
                                     .sorted()
                                     .collect(Collectors.joining("/")),
                             d.resolveOrder().stream()
-                                    .map(Enum::name)
-                                    .collect(Collectors.joining(" -> "))
+                                    .map(PrefCommand::displayScope)
+                                    .collect(Collectors.joining(" → "))
                     );
                     List<String> sv = d.suggestValues();
                     if (sv != null && !sv.isEmpty()) {
-                        line += "  可选值: " + String.join(", ", sv);
+                        line += "；可选值：" + String.join("、", sv);
                     }
                     return line;
                 })
                 .collect(Collectors.joining("\n"));
 
-        return "可用的配置：\n" + (defs.isBlank() ? "(none)" : defs);
+        return "可用的配置项：\n" + (defs.isBlank() ? "暂无可用配置项。" : defs);
     }
 
     private void getResolved(CommandSource src, String stateName) {
         var opt = registry.find(stateName);
         if (opt.isEmpty()) {
-            src.reply("未知的 state：" + stateName + "\n\n" + renderList());
+            src.reply("未找到配置项：" + stateName + "\n\n" + renderList());
             return;
         }
 
         @SuppressWarnings("unchecked")
         IStateDefinition<Object> def = (IStateDefinition<Object>) opt.get();
         Object v = states.resolve(def, src.addr(), src.userIdOrNull());
-        src.reply("%s = %s （resolved）".formatted(def.name(), def.format(v)));
+        src.reply("%s 当前生效值：%s".formatted(def.name(), def.format(v)));
     }
 
     private void getExplicit(CommandSource src, String scopeRaw, String stateName) {
         var opt = registry.find(stateName);
         if (opt.isEmpty()) {
-            src.reply("未知的 state：" + stateName + "\n\n" + renderList());
+            src.reply("未找到配置项：" + stateName + "\n\n" + renderList());
             return;
         }
 
@@ -191,8 +199,8 @@ public class PrefCommand implements IBotCommand {
             Scope scope = parseScope(scopeRaw, src, def);
             Object v = states.getAtScope(def, scope);
             src.reply(v == null
-                    ? "%s @ %s = (unset)".formatted(def.name(), scope.type().name())
-                    : "%s @ %s = %s".formatted(def.name(), scope.type().name(), def.format(v)));
+                    ? "%s 在%s范围内未单独设置。".formatted(def.name(), displayScope(scope.type()))
+                    : "%s 在%s范围内的值：%s".formatted(def.name(), displayScope(scope.type()), def.format(v)));
         } catch (IllegalArgumentException e) {
             src.reply("读取失败：" + e.getMessage());
         }
@@ -203,7 +211,7 @@ public class PrefCommand implements IBotCommand {
 
         var opt = registry.find(stateName);
         if (opt.isEmpty()) {
-            src.reply("未知的 state：" + stateName + "\n\n" + renderList());
+            src.reply("未找到配置项：" + stateName + "\n\n" + renderList());
             return;
         }
 
@@ -218,18 +226,18 @@ public class PrefCommand implements IBotCommand {
 
             states.setAtScope(def, scope, rawValue);
             Object v = states.getAtScope(def, scope);
-            src.reply("已设置 %s @ %s = %s".formatted(def.name(), scope.type().name(), def.format(v)));
+            src.reply("已将 %s 在%s范围内设置为：%s".formatted(def.name(), displayScope(scope.type()), def.format(v)));
         } catch (IllegalArgumentException e) {
             src.reply("设置失败：" + e.getMessage());
         } catch (Exception e) {
-            src.reply("设置失败：" + e.getClass().getSimpleName());
+            src.reply("设置失败：请检查输入值是否符合此配置项要求。");
         }
     }
 
     private void clearExplicit(CommandSource src, String scopeRaw, String stateName) {
         var opt = registry.find(stateName);
         if (opt.isEmpty()) {
-            src.reply("未知的 state：" + stateName + "\n\n" + renderList());
+            src.reply("未找到配置项：" + stateName + "\n\n" + renderList());
             return;
         }
 
@@ -243,7 +251,7 @@ public class PrefCommand implements IBotCommand {
             }
 
             states.clearAtScope(def, scope);
-            src.reply("已清除 %s @ %s".formatted(def.name(), scope.type().name()));
+            src.reply("已清除 %s 在%s范围内的设置。".formatted(def.name(), displayScope(scope.type())));
         } catch (IllegalArgumentException e) {
             src.reply("清除失败：" + e.getMessage());
         }
@@ -251,25 +259,24 @@ public class PrefCommand implements IBotCommand {
 
     private Scope parseScope(String raw, CommandSource src, IStateDefinition<?> def) {
         if (raw == null || raw.isBlank()) {
-            throw new IllegalArgumentException("scope 不能为空，可选值：user/chat/global");
+            throw new IllegalArgumentException("配置范围不能为空，可选值：user、chat、global。");
         }
 
         ScopeType type = switch (raw.trim().toLowerCase()) {
             case "user" -> ScopeType.USER;
             case "chat" -> ScopeType.CHAT;
             case "global" -> ScopeType.GLOBAL;
-            default -> throw new IllegalArgumentException("未知 scope：" + raw + "，可选值：user/chat/global");
+            default -> throw new IllegalArgumentException("未知配置范围：" + raw + "。可选值：user、chat、global。");
         };
 
         if (!def.allowedScopes().contains(type)) {
-            throw new IllegalArgumentException("state " + def.name() + " 不支持 scope=" + type.name());
+            throw new IllegalArgumentException("配置项“" + def.name() + "”不支持“" + displayScope(type) + "”范围。");
         }
 
         return switch (type) {
             case USER -> {
-                // If the userId is missing but preferred scope is USER, make it obvious.
                 Long userId = src.userIdOrNull();
-                if (userId == null) throw new IllegalArgumentException("当前来源没有 userId，无法使用 user scope");
+                if (userId == null) throw new IllegalArgumentException("当前平台没有提供用户 ID，无法使用 user 范围。");
                 yield Scope.user(src.platform(), userId);
             }
             case CHAT -> Scope.chat(src.addr());
@@ -280,8 +287,8 @@ public class PrefCommand implements IBotCommand {
     private boolean ensureWriteAllowed(CommandSource src, ScopeType type, String stateName) {
         return switch (type) {
             case USER -> true;
-            case CHAT -> authz.ensureChatManager(src, "修改当前聊天的 state（" + stateName + "）");
-            case GLOBAL -> authz.ensureBotAdmin(src, "修改全局 state（" + stateName + "）");
+            case CHAT -> authz.ensureChatManager(src, "修改当前聊天配置（" + stateName + "）");
+            case GLOBAL -> authz.ensureBotAdmin(src, "修改全局配置（" + stateName + "）");
         };
     }
 

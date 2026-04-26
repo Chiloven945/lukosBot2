@@ -46,7 +46,7 @@ data class BilibiliVideo(
         UP 主：${ownerName.orUnknown()}
         日期：${pubDateMs.fmtTime()}
 
-        追加 -i 以查看更多信息。
+        添加 `-i` 可查看更多信息。
         """.trimIndent()
 
     fun toDetailedText(): String = buildString(512) {
@@ -55,7 +55,7 @@ data class BilibiliVideo(
         if (pageCount > 1) append("（").append(pageCount).append("P）")
         append(" | 类型：").append(tname.orUnknown()).append('\n')
 
-        append("UP主：").append(ownerName.orUnknown())
+        append("UP 主：").append(ownerName.orUnknown())
             .append(" | 粉丝：").append(fans.fmtNum()).append('\n')
 
         desc?.takeIf { it.isNotBlank() }?.let {

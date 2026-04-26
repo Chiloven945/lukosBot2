@@ -14,11 +14,11 @@ data class GitHubUser(
 
     fun toReadableText(): String {
         val displayName = name?.takeIf { it.isNotBlank() } ?: login
-        val url = htmlUrl ?: "(无)"
+        val url = htmlUrl ?: "无"
         return """
-            用户: $displayName ($login)
-            主页: $url
-            公开仓库: $publicRepos | 粉丝: $followers | 关注: $following
+            用户：$displayName（$login）
+            主页：$url
+            公开仓库：$publicRepos | 粉丝：$followers | 关注：$following
         """.trimIndent()
     }
 

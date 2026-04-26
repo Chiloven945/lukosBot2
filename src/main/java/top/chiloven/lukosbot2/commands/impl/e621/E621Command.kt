@@ -32,12 +32,12 @@ class E621Command(
 
     override fun name(): String = "e621"
 
-    override fun description(): String = "从 E621 获取信息"
+    override fun description(): String = "查询 E621 上的作品和作者信息"
 
     override fun usage(): UsageNode = UsageNode.root(name())
         .description(description())
         .syntax(
-            "获取信息",
+            "查询详情",
             UsageNode.lit("get"),
             UsageNode.oneOf(
                 UsageNode.lit("artist"),
@@ -49,7 +49,7 @@ class E621Command(
             )
         )
         .syntax(
-            "搜索信息",
+            "搜索",
             UsageNode.lit("search"),
             UsageNode.oneOf(
                 UsageNode.lit("artist"),
@@ -59,15 +59,15 @@ class E621Command(
             UsageNode.opt(UsageNode.arg("page"))
         )
         .syntax(
-            "通过 MD5 搜索 post 信息",
+            "通过 MD5 搜索帖子",
             UsageNode.lit("search"),
             UsageNode.lit("md5"),
             UsageNode.arg("md5")
         )
-        .param("id", "E621 上 artist 或 post 的 ID")
+        .param("id", "E621 上作者或作品的 ID")
         .param("link", "E621 的链接")
-        .param("text", "需要被搜索的文本")
-        .param("page", "搜索结果页数（从 1 开始，默认 1）")
+        .param("text", "搜索关键词")
+        .param("page", "搜索结果页码（从 1 开始，默认 1）")
         .param("md5", "图片的 MD5")
         .example(
             "e621 get artist 123456",
@@ -214,7 +214,7 @@ class E621Command(
     private fun CommandSource.extractIdOrReply(input: String): String? {
         if (!input.isUrl()) return input
         return Regex("/(?:artists|posts)/(\\d+)").find(input)?.groupValues?.get(1).also {
-            if (it == null) reply("输入的 URL 有误，请检查你的 URL。")
+            if (it == null) reply("无法从该链接中识别 ID，请检查 URL。")
         }
     }
 
@@ -223,7 +223,7 @@ class E621Command(
         if (post.rating.normalizedRating() in allowedRatings) {
             return true
         }
-        reply("该内容的分级为 ${post.rating.uppercase()}，因当前聊天策略不可见。")
+        reply("该内容分级为 ${post.rating.uppercase()}，当前聊天因策略限制不可查看。")
         return false
     }
 
@@ -292,9 +292,9 @@ class E621Command(
         if (result.briefs.isEmpty()) {
             reply(
                 if (result.filteredOnly) {
-                    "搜索结果已被当前策略全部过滤。"
+                    "搜索结果已被当前聊天策略全部过滤。"
                 } else {
-                    "未搜索到匹配 $search 的结果，或指定的页数过大。"
+                    "未找到与“$search”匹配的结果，或页码超出范围。"
                 }
             )
             return null
@@ -304,13 +304,13 @@ class E621Command(
         val end = start + result.briefs.size - 1
 
         return buildString {
-            appendLine("“$search” 的搜索结果：")
+            appendLine("“$search”的搜索结果：")
             appendLine()
             result.briefs.forEach { appendLine(it) }
             appendLine()
-            appendLine("正在显示第 $start 至 $end 条搜索结果。")
+            appendLine("当前显示第 $start 至 $end 条结果。")
             if (page == 1) {
-                append("在命令后加入页码以查看指定页数。")
+                append("在命令后加入页码可查看其他结果。")
             }
         }
     }

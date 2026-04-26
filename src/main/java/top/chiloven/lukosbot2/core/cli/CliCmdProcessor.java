@@ -62,7 +62,7 @@ public class CliCmdProcessor {
             ctx.printlnErr(errorMsg.toString());
         } catch (Exception e) {
             log.warn("[Cli] Cli command execution error: {}", e.getMessage(), e);
-            ctx.printlnErr("Failed to execute cli command: " + e.getMessage() + ". More information can be viewed above.");
+            ctx.printlnErr("Failed to execute CLI command: " + e.getMessage() + ". More information can be viewed above.");
         }
     }
 

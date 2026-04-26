@@ -112,7 +112,7 @@ class MusicCommand(ccp: CommandConfigProp) : IBotCommand {
         return try {
             val provider = pickProvider(platformToken)
             if (provider == null) {
-                src.reply("未配置可用的音乐平台（Spotify / SoundCloud），请在 config/application.yml 中设置 lukos.music.*")
+                src.reply("音乐平台暂未配置或不可用，请稍后再试。")
                 return 0
             }
 
@@ -125,7 +125,7 @@ class MusicCommand(ccp: CommandConfigProp) : IBotCommand {
             src.reply(info.formatted())
             1
         } catch (e: Exception) {
-            src.reply("查询失败：${e.message ?: "unknown error"}")
+            src.reply("查询失败：${e.message ?: "未知错误"}")
             log.warn("Music search failed: query='{}', platform='{}'", query, platformToken, e)
             0
         }
@@ -148,7 +148,7 @@ class MusicCommand(ccp: CommandConfigProp) : IBotCommand {
             src.reply(info.formatted())
             1
         } catch (e: Exception) {
-            src.reply("解析链接失败：${e.message ?: "unknown error"}")
+            src.reply("解析链接失败：${e.message ?: "未知错误"}")
             log.warn("Music link failed: link='{}'", link, e)
             0
         }

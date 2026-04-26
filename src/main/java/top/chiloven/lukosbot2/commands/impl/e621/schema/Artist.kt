@@ -5,7 +5,6 @@ import tools.jackson.databind.node.ArrayNode
 import tools.jackson.databind.node.ObjectNode
 import top.chiloven.lukosbot2.util.JsonUtils
 import top.chiloven.lukosbot2.util.JsonUtils.JsonLdt
-import top.chiloven.lukosbot2.util.StringUtils.toText
 import top.chiloven.lukosbot2.util.TimeUtils
 import java.time.LocalDateTime
 
@@ -41,7 +40,7 @@ data class Artist(
             appendLine("$name（$id）")
             appendLine("创建于：${createdAt.format(TimeUtils.dtf())}")
             appendLine("更新于：${updatedAt.format(TimeUtils.dtf())}")
-            appendLine("是否活跃：${isActive.toText()}")
+            appendLine("状态：${if (isActive) "活跃" else "未活跃"}")
 
             otherNames
                 ?.takeIf { it.isNotEmpty() }

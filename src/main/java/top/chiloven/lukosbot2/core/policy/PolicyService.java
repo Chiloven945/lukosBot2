@@ -37,7 +37,7 @@ public class PolicyService {
     private Set<String> resolveDisabledCommands(CommandSource src) {
         LinkedHashSet<String> disabled = new LinkedHashSet<>();
         for (AppProperties.Policy.Rule rule : matchedRules(src)) {
-            if (rule.getDisableCommands() == null) continue;
+            rule.getDisableCommands();
             disabled.addAll(normalizedSet(rule.getDisableCommands()));
         }
         return disabled;
@@ -45,14 +45,13 @@ public class PolicyService {
 
     private List<AppProperties.Policy.Rule> matchedRules(CommandSource src) {
         AppProperties.Policy policy = props == null ? null : props.getPolicy();
-        if (policy == null || policy.getRules() == null || policy.getRules().isEmpty()) {
+        if (policy == null || policy.getRules().isEmpty()) {
             return List.of();
         }
 
         PolicyContext ctx = PolicyContext.from(src);
 
         return policy.getRules().stream()
-                .filter(Objects::nonNull)
                 .filter(rule -> matches(rule.getWhen(), ctx))
                 .sorted(Comparator
                         .comparingInt(AppProperties.Policy.Rule::getPriority)
@@ -99,7 +98,7 @@ public class PolicyService {
 
         for (AppProperties.Policy.Rule rule : matchedRules(src)) {
             Map<String, List<String>> allowValues = rule.getAllowValues();
-            if (allowValues == null || allowValues.isEmpty()) continue;
+            if (allowValues.isEmpty()) continue;
 
             List<String> allowed = findAllowValues(allowValues, normalizedKey);
             if (allowed == null) continue;
@@ -130,7 +129,7 @@ public class PolicyService {
 
     public String commandDeniedMessage(String commandName) {
         String display = commandName == null || commandName.isBlank() ? "该命令" : commandName;
-        return "当前上下文不允许使用命令：" + display;
+        return "当前聊天不允许使用此命令：" + display;
     }
 
     private record PolicyContext(

@@ -124,13 +124,13 @@ class GitHubCommand(ccp: CommandConfigProp) : IBotCommand {
             GitHubUser.from(obj).toReadableText()
         }.getOrElse { e ->
             log.warn("github user 查询失败: {}", username, e)
-            "找不到用户或请求失败：$username"
+            "未找到用户，或请求失败：$username"
         }
     }
 
     private fun handleRepo(repoArg: String): String {
         val (owner, repo) = repoArg.split("/", limit = 2).let { parts ->
-            if (parts.size != 2) return "仓库格式应为 owner/repo"
+            if (parts.size != 2) return "仓库格式应为：owner/repo"
             parts[0] to parts[1]
         }
 
@@ -139,7 +139,7 @@ class GitHubCommand(ccp: CommandConfigProp) : IBotCommand {
             GitHubRepo.from(obj).toReadableText()
         }.getOrElse { e ->
             log.warn("github repo 查询失败: {}", repoArg, e)
-            "找不到仓库或请求失败：$repoArg"
+            "未找到仓库，或请求失败：$repoArg"
         }
     }
 
@@ -150,7 +150,7 @@ class GitHubCommand(ccp: CommandConfigProp) : IBotCommand {
             GitHubSearchResult.from(json, top = p.top).toReadableText()
         }.getOrElse { e ->
             log.warn("github search 失败: {}", input, e)
-            "搜索失败：${e.message ?: "unknown error"}"
+            "搜索失败：${e.message ?: "未知错误"}"
         }
     }
 

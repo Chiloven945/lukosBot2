@@ -42,7 +42,7 @@ public class CoinCommand implements IBotCommand {
     public UsageNode usage() {
         return UsageNode.root(name())
                 .description(description())
-                .syntax("抛 count 个硬币", UsageNode.opt(UsageNode.arg("count")))
+                .syntax("抛硬币（默认 1 个）", UsageNode.opt(UsageNode.arg("count")))
                 .param("count", "硬币数量（正整数）")
                 .example("coin 10")
                 .build();
@@ -63,7 +63,7 @@ public class CoinCommand implements IBotCommand {
                                 );
                                 return 1;
                             } catch (NumberFormatException e) {
-                                ctx.getSource().reply("请输入一个有效的整数作为抛硬币的数量。\n" + usage());
+                                ctx.getSource().reply("请输入有效的硬币数量（正整数）。\n" + usage());
                                 log.warn("Received an invalid count, expected to be a long.", e);
                                 return 0;
                             }
@@ -74,7 +74,7 @@ public class CoinCommand implements IBotCommand {
 
     private String runCoin(long times) {
         if (times <= 0) {
-            return "硬币数量必须是一个正整数。\n" + usage();
+            return "硬币数量必须是正整数。\n" + usage();
         }
 
         try {
@@ -84,11 +84,11 @@ public class CoinCommand implements IBotCommand {
                     ? "你抛了 1 个硬币。\n" + (r[0] == 1 ? "是正面。" : r[1] == 1 ? "是反面。" : "它立起来了！")
                     : """
                     你抛了 %d 个硬币。
-                    在这些硬币中，有 %d 个是正面，%d 个是反面……
+                    其中 %d 个是正面，%d 个是反面……
                     还有 %d 个立起来了！
                     """.formatted(times, r[0], r[1], r[2]);
         } catch (IllegalArgumentException e) {
-            return "出现错误：" + e.getMessage();
+            return "抛硬币失败：" + e.getMessage();
         }
     }
 

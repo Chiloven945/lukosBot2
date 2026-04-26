@@ -37,13 +37,13 @@ class McWikiCommand : IWikiishCommand {
     override fun domainRoot(): String = "minecraft.wiki"
 
     override fun name(): String = "mcwiki"
-    override fun description(): String = "Minecraft Wiki 工具：返回标题+简介，或整页 Markdown / 截图"
+    override fun description(): String = "查询 Minecraft Wiki，支持简介、截图和导出 Markdown"
 
     override fun usage(): UsageNode {
         val target = UsageNode.oneOf(UsageNode.arg("link"), UsageNode.arg("article"))
         return UsageNode.root(name())
             .description(description())
-            .syntax("返回标题+简介", target)
+            .syntax("返回标题和简介", target)
             .subcommand("md", "抓取整页并转为 Markdown 文件") { b ->
                 b.syntax("抓取整页并转为 Markdown 文件", target)
             }
@@ -109,13 +109,13 @@ class McWikiCommand : IWikiishCommand {
         try {
             val url = normalize(linkOrTitle)
             if (isNot(url)) {
-                src.reply("仅支持 Minecraft Wiki 链接或条目名。示例：/mcwiki https://zh.minecraft.wiki/w/下界合金 或 /mcwiki 下界合金")
+                src.reply("仅支持 Minecraft Wiki 链接或条目名。示例：/mcwiki https://zh.minecraft.wiki/w/下界合金 或 /mcwiki 下界合金。")
                 return
             }
 
             val summary = fetchTitleAndLead(url)
             if (summary.title.isBlank()) {
-                src.reply("未抓到有效内容。请检查条目是否存在。")
+                src.reply("未获取到有效内容，请检查条目是否存在。")
                 return
             }
 
@@ -137,7 +137,7 @@ class McWikiCommand : IWikiishCommand {
         try {
             val url = normalize(linkOrTitle)
             if (isNot(url)) {
-                src.reply("仅支持 Minecraft Wiki 链接或条目名。示例：/mcwiki md https://zh.minecraft.wiki/w/下界合金 或 /mcwiki md 下界合金")
+                src.reply("仅支持 Minecraft Wiki 链接或条目名。示例：/mcwiki md https://zh.minecraft.wiki/w/下界合金 或 /mcwiki md 下界合金。")
                 return
             }
 
@@ -151,7 +151,7 @@ class McWikiCommand : IWikiishCommand {
             val ref = BytesRef(md.filename(), md.bytes(), md.mime())
             val out = OutboundMessage(
                 src.addr(),
-                listOf(OutFile(ref, "已转换为 Markdown", md.filename(), md.mime()))
+                listOf(OutFile(ref, "已转换为 Markdown。", md.filename(), md.mime()))
             )
             src.reply(out)
         } catch (e: Exception) {
@@ -164,7 +164,7 @@ class McWikiCommand : IWikiishCommand {
         try {
             val url = normalize(linkOrTitle)
             if (isNot(url)) {
-                src.reply("仅支持 Minecraft Wiki 链接或条目名。示例：/mcwiki ss https://zh.minecraft.wiki/w/下界合金 或 /mcwiki ss 下界合金")
+                src.reply("仅支持 Minecraft Wiki 链接或条目名。示例：/mcwiki ss https://zh.minecraft.wiki/w/下界合金 或 /mcwiki ss 下界合金。")
                 return
             }
 
@@ -172,7 +172,7 @@ class McWikiCommand : IWikiishCommand {
             val ref = BytesRef(cd.filename(), cd.bytes(), cd.mime())
             val out = OutboundMessage(
                 src.addr(),
-                listOf(OutImage(ref, "截图如下：", cd.filename(), cd.mime()))
+                listOf(OutImage(ref, "截图如下。", cd.filename(), cd.mime()))
             )
             src.reply(out)
         } catch (e: Exception) {

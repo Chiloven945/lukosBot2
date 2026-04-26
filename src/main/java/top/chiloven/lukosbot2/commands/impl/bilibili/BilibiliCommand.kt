@@ -36,9 +36,9 @@ class BilibiliCommand(
             .description(description())
             .alias(aliases())
             .syntax("查询 Bilibili 视频信息", target, UsageNode.opt(UsageNode.lit("-i")))
-            .param("code", "视频编号（AV/BV）")
-            .param("link", "视频链接或 b23 短链")
-            .option("-i", "输出更多信息")
+            .param("code", "视频编号（AV / BV）")
+            .param("link", "视频链接或 b23.tv 短链")
+            .option("-i", "展示更完整的视频信息")
             .example(
                 "bilibili BV1GJ411x7h7",
                 "bilibili av170001",
@@ -84,7 +84,7 @@ class BilibiliCommand(
     private fun execute(src: CommandSource, parsed: ParsedInput): Int {
         val video = bilibiliQueryService.query(parsed.target)
         if (video == null) {
-            src.reply("未找到该视频，或输入不是有效的 AV/BV 编号、B站链接、b23 短链。")
+            src.reply("未找到该视频。请检查输入的 AV/BV 编号、B 站链接或 b23.tv 短链是否正确。")
             return 0
         }
 

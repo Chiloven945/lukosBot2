@@ -77,7 +77,7 @@ public class PlayerCommand implements IBotCommand {
                                         return 1;
                                     } catch (IOException e) {
                                         log.warn("Failed to fetch player info: {}", e.getMessage(), e);
-                                        src.reply("获取失败玩家信息失败，请检查你的输入或重试。");
+                                        src.reply("获取玩家信息失败，请检查输入后重试。");
                                         return 0;
                                     }
                                 })
@@ -92,12 +92,12 @@ public class PlayerCommand implements IBotCommand {
                                                 src.reply(switch (param) {
                                                     case "-u" -> MojangApi.getUuidFromName(data);
                                                     case "-n" -> MojangApi.getNameFromUuid(data);
-                                                    default -> "不正确的参数：" + param;
+                                                    default -> "不支持的参数：" + param + "。可用参数：-u / -n。";
                                                 });
                                                 return 1;
                                             } catch (IOException e) {
                                                 log.warn("Failed to fetch player info: {}", e.getMessage(), e);
-                                                src.reply("获取失败玩家信息失败，请检查你的输入或重试。");
+                                                src.reply("获取玩家信息失败，请检查输入后重试。");
                                                 return 0;
                                             }
                                         })

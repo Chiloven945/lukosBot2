@@ -10,7 +10,7 @@ data class GitHubRepoBrief(
 ) {
 
     fun toReadableLine(): String {
-        val name = fullName ?: "(unknown)"
+        val name = fullName ?: "未知仓库"
         return "$name - ${stargazersCount}★"
     }
 

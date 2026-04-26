@@ -238,7 +238,7 @@ object SearchGridRenderer {
 
         val author = post.tags.getStringArtist()
             .ifBlank { post.uploaderName }
-            .ifBlank { "(unknown artist)" }
+            .ifBlank { "未知作者" }
         val authorFit = ImageTextUtils.ellipsizeRunAware(
             g = g,
             text = author,
@@ -309,7 +309,7 @@ object SearchGridRenderer {
         g.fillRoundRect(x, y, width, height, radius, radius)
         ModernImageDraw.roundedBorder(g, x, y, width, height, radius, palette.border)
 
-        val text = "no preview"
+        val text = "无预览图"
         val textW = ImageTextUtils.measureTextRunAware(g, text, primary, fallback, cache)
         val fontH = ImageTextUtils.height(g, primary)
         val baseline = y + (height - fontH) / 2 + ImageTextUtils.ascent(g, primary)

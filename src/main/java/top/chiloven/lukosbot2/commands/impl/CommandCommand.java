@@ -21,7 +21,7 @@ public class CommandCommand implements IBotCommand {
     public UsageNode usage() {
         return UsageNode.root(name())
                 .description(description())
-                .syntax("WIP")
+                .syntax("命令管理功能尚未开放")
                 .build();
     }
 

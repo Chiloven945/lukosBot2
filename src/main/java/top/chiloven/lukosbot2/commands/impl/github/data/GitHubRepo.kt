@@ -13,15 +13,15 @@ data class GitHubRepo(
 ) {
 
     fun toReadableText(): String {
-        val name = fullName ?: "(未知仓库)"
-        val url = htmlUrl ?: "(无)"
+        val name = fullName ?: "未知仓库"
+        val url = htmlUrl ?: "无"
         val lang = language?.takeIf { it.isNotBlank() } ?: "未知"
         val desc = description?.takeIf { it.isNotBlank() } ?: "无"
         return """
-            仓库: $name
-            主页: $url
-            语言: $lang | Star: $stargazersCount | Fork: $forksCount
-            描述: $desc
+            仓库：$name
+            主页：$url
+            语言：$lang | 收藏：$stargazersCount | 分叉：$forksCount
+            描述：$desc
         """.trimIndent()
     }
 

@@ -33,7 +33,7 @@ class WikiCommand : IWikiishCommand {
     override fun domainRoot(): String = "wikipedia.org"
 
     override fun name(): String = "wiki"
-    override fun description(): String = "维基百科工具，支持截图和转 Markdown"
+    override fun description(): String = "查询维基百科，支持截图和导出 Markdown"
 
     override fun usage(): UsageNode {
         val target = UsageNode.oneOf(UsageNode.arg("link"), UsageNode.arg("article"))
@@ -87,7 +87,7 @@ class WikiCommand : IWikiishCommand {
         try {
             val url = normalize(linkOrTitle)
             if (isNot(url)) {
-                src.reply("仅支持 Wikipedia 链接或词条名。示例：/wiki https://en.wikipedia.org/wiki/Java 或 /wiki en:Java")
+                src.reply("仅支持 Wikipedia 链接或词条名。示例：/wiki https://en.wikipedia.org/wiki/Java 或 /wiki en:Java。")
                 return
             }
             val img = WebScreenshot.screenshotWikipedia(url)
@@ -107,14 +107,14 @@ class WikiCommand : IWikiishCommand {
         try {
             val url = normalize(linkOrTitle)
             if (isNot(url)) {
-                src.reply("仅支持 Wikipedia 链接或词条名。示例：/wiki md https://zh.wikipedia.org/wiki/Java 或 /wiki md Java")
+                src.reply("仅支持 Wikipedia 链接或词条名。示例：/wiki md https://zh.wikipedia.org/wiki/Java 或 /wiki md Java。")
                 return
             }
             val md = WebToMarkdown.fetchWikipediaMarkdown(url)
             val ref = BytesRef(md.filename(), md.bytes(), md.mime())
             val out = OutboundMessage(
                 src.addr(),
-                listOf(OutFile(ref, md.filename(), md.mime(), "已转换为 Markdown"))
+                listOf(OutFile(ref, "已转换为 Markdown。", md.filename(), md.mime()))
             )
             src.reply(out)
         } catch (e: Exception) {

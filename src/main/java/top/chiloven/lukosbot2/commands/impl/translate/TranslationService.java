@@ -82,7 +82,7 @@ public class TranslationService {
             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
 
             if (resp.statusCode() != 200) {
-                return "[翻译失败 " + resp.statusCode() + "] " + resp.body();
+                return "翻译失败（HTTP " + resp.statusCode() + "）：" + resp.body();
             }
 
             return extractTranslatedText(resp.body());
@@ -98,9 +98,9 @@ public class TranslationService {
             if (obj.has("translatedText") && !obj.get("translatedText").isNull()) {
                 return obj.get("translatedText").asString();
             }
-            return "[翻译结果缺失] " + body;
+            return "翻译结果缺失：" + body;
         } catch (Exception e) {
-            return "[解析翻译结果失败] " + body;
+            return "解析翻译结果失败：" + body;
         }
     }
 

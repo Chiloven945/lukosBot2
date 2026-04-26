@@ -31,14 +31,14 @@ public class MediaRefLoader {
         if (ref instanceof PlatformFileRef platformFileRef) {
             return loadPlatform(platformFileRef);
         }
-        throw new IOException("不支持的媒体引用类型：" + ref.getClass().getSimpleName());
+        throw new IOException("不支持的媒体类型，无法读取。");
     }
 
     private LoadedPlatformMedia loadPlatform(PlatformFileRef ref) throws IOException {
         return platformFileLoaders.stream()
                 .filter(it -> it.supports(ref.platform()))
                 .findFirst()
-                .orElseThrow(() -> new IOException("不支持的平台媒体引用：" + ref.platform() + ":" + ref.fileId()))
+                .orElseThrow(() -> new IOException("当前平台不支持读取该媒体。"))
                 .load(ref);
     }
 

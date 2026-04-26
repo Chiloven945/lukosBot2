@@ -21,7 +21,7 @@ class TelegramFileLoader(
     override fun load(ref: PlatformFileRef): LoadedPlatformMedia {
         val token = appProperties.telegram.botToken.trim()
         if (token.isBlank()) {
-            throw IOException("Telegram bot token 未配置，无法读取 Telegram 图片")
+            throw IOException("Telegram 配置不完整，无法读取图片。")
         }
 
         val root = HttpJson.getObject(
@@ -30,7 +30,7 @@ class TelegramFileLoader(
         )
         val filePath = root.path("result").path("file_path").asString(null)
             ?.takeIf { it.isNotBlank() }
-            ?: throw IOException("Telegram getFile 未返回 file_path")
+            ?: throw IOException("Telegram 未返回文件路径。")
 
         val remote = HttpBytes.get("https://api.telegram.org/file/bot$token/$filePath")
         return LoadedPlatformMedia(

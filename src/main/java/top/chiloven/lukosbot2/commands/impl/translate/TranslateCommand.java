@@ -47,7 +47,7 @@ public class TranslateCommand implements IBotCommand {
 
     @Override
     public String description() {
-        return "";
+        return "翻译文本";
     }
 
     @Override
@@ -110,7 +110,7 @@ public class TranslateCommand implements IBotCommand {
                                                         .trim()));
                                         return 0;
                                     } catch (Exception e) {
-                                        ctx.getSource().reply("不正确的格式。");
+                                        ctx.getSource().reply("命令格式不正确，请检查参数。");
                                         return 1;
                                     }
                                 })

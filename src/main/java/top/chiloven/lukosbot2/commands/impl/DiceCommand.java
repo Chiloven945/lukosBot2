@@ -31,7 +31,7 @@ public class DiceCommand implements IBotCommand {
 
     @Override
     public String description() {
-        return "掷骰子，可以指定骰子数量";
+        return "掷骰子，可指定骰子数量";
     }
 
     @Override
@@ -61,7 +61,7 @@ public class DiceCommand implements IBotCommand {
                                     try {
                                         count = Long.parseLong(StringArgumentType.getString(ctx, "count"));
                                     } catch (NumberFormatException e) {
-                                        ctx.getSource().reply("骰子数量必须是一个正整数。");
+                                        ctx.getSource().reply("骰子数量必须是正整数。");
                                         return 0;
                                     }
                                     ctx.getSource().reply(runDice(count));
@@ -73,7 +73,7 @@ public class DiceCommand implements IBotCommand {
 
     private String runDice(long count) {
         if (count <= 0) {
-            return "骰子数量必须是一个正整数。";
+            return "骰子数量必须是正整数。";
         }
 
         long[] faces = MathUtils.approximateMultinomial(count,
@@ -97,8 +97,8 @@ public class DiceCommand implements IBotCommand {
 
             return """
                     你掷了 %d 个骰子。
-                    其中，1朝上的一面有 %d 个、2有 %d 个、3有 %d 个、4有 %d 个、5有 %d 个、6有 %d 个。
-                    他们合计起来是 %s！
+                    其中，点数为 1 的有 %d 个，2 的有 %d 个，3 的有 %d 个，4 的有 %d 个，5 的有 %d 个，6 的有 %d 个。
+                    它们的点数合计为 %s！
                     """.formatted(
                     count,
                     faces[0], faces[1], faces[2], faces[3], faces[4], faces[5],

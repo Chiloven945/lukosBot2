@@ -47,20 +47,20 @@ public class AdminCommand implements IBotCommand {
 
     @Override
     public String description() {
-        return "管理 bot admin 与查看当前身份";
+        return "管理机器人管理员并查看当前身份";
     }
 
     @Override
     public UsageNode usage() {
         return UsageNode.root(name())
                 .description(description())
-                .syntax("查看当前身份", UsageNode.arg("me"))
-                .syntax("列出 bot admins", UsageNode.arg("list"))
-                .syntax("新增动态 bot admin", UsageNode.arg("add"), UsageNode.arg("platform"), UsageNode.arg("userId"))
-                .syntax("移除动态 bot admin", UsageNode.arg("remove"), UsageNode.arg("platform"), UsageNode.arg("userId"))
-                .param("platform", "telegram | discord | onebot")
-                .param("userId", "平台稳定 user id")
-                .note("list/add/remove 仅允许 bot admin 执行。bootstrap admins 由配置文件控制，remove 不会删掉配置中的管理员。")
+                .syntax("查看你的当前身份", UsageNode.arg("me"))
+                .syntax("查看机器人管理员列表", UsageNode.arg("list"))
+                .syntax("添加机器人管理员", UsageNode.arg("add"), UsageNode.arg("platform"), UsageNode.arg("userId"))
+                .syntax("移除机器人管理员", UsageNode.arg("remove"), UsageNode.arg("platform"), UsageNode.arg("userId"))
+                .param("platform", "平台：telegram / discord / onebot")
+                .param("userId", "平台用户 ID")
+                .note("list/add/remove 仅机器人管理员可用。配置文件中的管理员不会被 remove 移除。")
                 .example(
                         "admin me",
                         "admin list",
@@ -116,24 +116,24 @@ public class AdminCommand implements IBotCommand {
     private void me(CommandSource src) {
         AuthContext auth = authz.inspect(src);
         src.reply("""
-                platform = %s
-                userId = %s
-                chatId = %s
-                group = %s
-                botAdmin = %s
-                chatAdmin = %s
+                平台：%s
+                用户 ID：%s
+                聊天 ID：%s
+                群聊：%s
+                机器人管理员：%s
+                聊天管理员：%s
                 """.formatted(
                 src.platform().name(),
-                src.userIdOrNull(),
+                src.userIdOrNull() == null ? "未知" : src.userIdOrNull(),
                 src.chatId(),
-                src.isGroup(),
-                auth.botAdmin(),
-                auth.chatAdmin()
+                src.isGroup() ? "是" : "否",
+                auth.botAdmin() ? "是" : "否",
+                auth.chatAdmin() ? "是" : "否"
         ).trim());
     }
 
     private void list(CommandSource src) {
-        if (!authz.ensureBotAdmin(src, "查看 bot admin 列表")) {
+        if (!authz.ensureBotAdmin(src, "查看机器人管理员列表")) {
             return;
         }
 
@@ -142,14 +142,14 @@ public class AdminCommand implements IBotCommand {
                 .sorted(Map.Entry.comparingByKey(Comparator.comparing(Enum::name)))
                 .map(e -> "- %s: %s".formatted(
                         e.getKey().name(),
-                        e.getValue().isEmpty() ? "(none)" : e.getValue().stream().sorted().map(String::valueOf).collect(Collectors.joining(", "))
+                        e.getValue().isEmpty() ? "无" : e.getValue().stream().sorted().map(String::valueOf).collect(Collectors.joining(", "))
                 ))
-                .collect(Collectors.joining("\n", "有效 bot admins：\n", ""));
+                .collect(Collectors.joining("\n", "当前有效的机器人管理员：\n", ""));
         src.reply(text);
     }
 
     private void add(CommandSource src, String platformRaw, long userId) {
-        if (!authz.ensureBotAdmin(src, "新增 bot admin")) {
+        if (!authz.ensureBotAdmin(src, "添加机器人管理员")) {
             return;
         }
 
@@ -157,11 +157,11 @@ public class AdminCommand implements IBotCommand {
         if (platform == null) return;
 
         botAdmins.addDynamicAdmin(platform, userId);
-        src.reply("已新增动态 bot admin：%s:%d".formatted(platform.name(), userId));
+        src.reply("已添加机器人管理员：%s:%d".formatted(platform.name(), userId));
     }
 
     private void remove(CommandSource src, String platformRaw, long userId) {
-        if (!authz.ensureBotAdmin(src, "移除 bot admin")) {
+        if (!authz.ensureBotAdmin(src, "移除机器人管理员")) {
             return;
         }
 
@@ -169,14 +169,14 @@ public class AdminCommand implements IBotCommand {
         if (platform == null) return;
 
         botAdmins.removeDynamicAdmin(platform, userId);
-        src.reply("已移除动态 bot admin：%s:%d（若该用户仍在 bootstrap 配置中，仍会保留权限）".formatted(platform.name(), userId));
+        src.reply("已移除机器人管理员：%s:%d（如果该用户仍在配置文件的管理员列表中，权限会继续保留）".formatted(platform.name(), userId));
     }
 
     private ChatPlatform parsePlatform(String raw, CommandSource src) {
         try {
             return ChatPlatform.fromString(raw);
         } catch (IllegalArgumentException e) {
-            src.reply("未知平台：" + raw + "，可选值：telegram/discord/onebot");
+            src.reply("不支持的平台：" + raw + "。可选：telegram / discord / onebot。");
             return null;
         }
     }

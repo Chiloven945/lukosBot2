@@ -11,7 +11,7 @@ data class GitHubSearchResult(
     fun toReadableText(): String {
         if (items.isEmpty()) return "未搜索到任何仓库。"
         val lines = buildString {
-            append("【仓库搜索结果】(共 $totalCount)\n")
+            append("仓库搜索结果（共 $totalCount 个）：\n")
             for (r in items) {
                 append(r.toReadableLine()).append('\n')
                 r.htmlUrl?.let { append(it).append('\n') }
