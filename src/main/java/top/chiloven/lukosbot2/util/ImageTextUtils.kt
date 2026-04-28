@@ -171,7 +171,6 @@ object ImageTextUtils {
             val target = family.trim()
             if (isLogicalFamily(target)) return true
             val exists = availableFamilies.contains(target.lowercase(Locale.ROOT))
-            if (!exists) log.debug("Font family '{}' not found in available system fonts.", target)
             return exists
         }
 
