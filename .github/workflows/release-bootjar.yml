@@ -41,7 +41,10 @@ jobs:
           fi
 
           ASSET_PATH="build/libs/lukosBot2-${{ github.event.release.tag_name }}.jar"
-          cp "$JAR_PATH" "$ASSET_PATH"
+          
+          if [ "$JAR_PATH" != "$ASSET_PATH" ]; then
+            cp "$JAR_PATH" "$ASSET_PATH"
+          fi
 
           echo "path=$ASSET_PATH" >> "$GITHUB_OUTPUT"
 
