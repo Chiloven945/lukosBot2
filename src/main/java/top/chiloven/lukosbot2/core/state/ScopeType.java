@@ -1,9 +1,12 @@
 package top.chiloven.lukosbot2.core.state;
 
+import java.util.EnumSet;
+
 /**
  * Scope type for persisted states.
  */
 public enum ScopeType {
+
     /**
      * Global scope (applies to all users/chats unless overridden).
      */
@@ -15,5 +18,10 @@ public enum ScopeType {
     /**
      * Chat scope (per-platform chat).
      */
-    CHAT
+    CHAT;
+
+    public static EnumSet<ScopeType> all() {
+        return EnumSet.allOf(ScopeType.class);
+    }
+
 }
