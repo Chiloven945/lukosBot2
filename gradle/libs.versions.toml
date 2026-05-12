@@ -3,6 +3,7 @@ java = "25"
 kotlin = "2.3.21"
 
 kotlinx-coroutines = "1.11.0"
+junit-jupiter = "6.0.3"
 spring-boot = "4.0.6"
 spring-dependency-management = "1.1.7"
 
@@ -65,6 +66,9 @@ webdrivermanager = { module = "io.github.bonigarcia:webdrivermanager", version.r
 
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
+kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

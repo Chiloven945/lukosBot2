@@ -67,6 +67,9 @@ dependencies {
 
     implementation(libs.kotlin.reflect)
     implementation(libs.kotlinx.coroutines.core)
+
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.kotlin.test.junit)
 }
 
 tasks.withType<JavaCompile>().configureEach {
