@@ -1,0 +1,14 @@
+package top.chiloven.lukosbot2.commands.spec
+
+data class CommandNodeSpec(
+    val name: String,
+    val description: String = "",
+    val aliases: List<String> = emptyList(),
+    val syntaxes: List<CommandSyntaxSpec> = emptyList(),
+    val params: List<CommandParamDoc> = emptyList(),
+    val options: List<CommandOptionDoc> = emptyList(),
+    val examples: List<String> = emptyList(),
+    val notes: List<String> = emptyList(),
+    val children: List<CommandNodeSpec> = emptyList(),
+    val leaf: CommandLeafSpec? = null
+)
