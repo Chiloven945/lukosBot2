@@ -6,7 +6,7 @@ kotlinx-coroutines = "1.11.0"
 spring-boot = "4.0.6"
 spring-dependency-management = "1.1.7"
 
-telegrambots = "9.5.0"
+telegrambots = "9.6.0"
 jda = "6.4.1"
 shiro = "2.5.4"
 
