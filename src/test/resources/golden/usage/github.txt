@@ -1,0 +1,7 @@
+GitHub search tools
+Aliases: gh
+Subcommands:
+  user - query user info
+    user <username>
+  search - search repos
+    search <keyword> [--top=<top>]

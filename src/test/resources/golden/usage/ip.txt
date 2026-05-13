@@ -1,0 +1,8 @@
+ip <ip> [--provider=<providers>]
+Parameters:
+  <ip> - IP address
+Options:
+  --provider=<providers> - specify data sources
+Examples:
+  ip 1.1.1.1
+  ip --provider=ipsb 1.1.1.1
