@@ -1,9 +1,9 @@
-package top.chiloven.lukosbot2.commands.spec.bridge
+package top.chiloven.lukosbot2.commands.definition.bridge
 
 import top.chiloven.lukosbot2.commands.UsageNode
-import top.chiloven.lukosbot2.commands.spec.*
+import top.chiloven.lukosbot2.commands.definition.*
 
-object SpecUsageMapper {
+object CommandUsageMapper {
 
     fun toUsageNode(spec: BotCommandSpec): UsageNode {
         return mapNode(spec.root, spec.name, spec.description, spec.aliases)

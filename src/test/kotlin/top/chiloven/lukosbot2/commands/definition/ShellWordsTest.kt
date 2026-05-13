@@ -1,9 +1,9 @@
-package top.chiloven.lukosbot2.commands.spec
+package top.chiloven.lukosbot2.commands.definition
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import top.chiloven.lukosbot2.commands.spec.parser.ShellWords
+import top.chiloven.lukosbot2.commands.definition.parser.ShellWords
 
 class ShellWordsTest {
 

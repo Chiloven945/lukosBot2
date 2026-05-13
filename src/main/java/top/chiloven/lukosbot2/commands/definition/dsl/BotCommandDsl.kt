@@ -1,8 +1,8 @@
-package top.chiloven.lukosbot2.commands.spec.dsl
+package top.chiloven.lukosbot2.commands.definition.dsl
 
-import top.chiloven.lukosbot2.commands.spec.*
-import top.chiloven.lukosbot2.commands.spec.parser.ArgvParseResult
-import top.chiloven.lukosbot2.commands.spec.SyntaxItem as SpecSyntaxItem
+import top.chiloven.lukosbot2.commands.definition.*
+import top.chiloven.lukosbot2.commands.definition.parser.ArgvParseResult
+import top.chiloven.lukosbot2.commands.definition.SyntaxItem as SpecSyntaxItem
 
 @DslMarker
 annotation class CommandSpecDsl

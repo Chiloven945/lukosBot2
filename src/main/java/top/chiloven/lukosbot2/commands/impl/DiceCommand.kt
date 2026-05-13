@@ -2,10 +2,10 @@ package top.chiloven.lukosbot2.commands.impl
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
-import top.chiloven.lukosbot2.commands.spec.ArgType
-import top.chiloven.lukosbot2.commands.spec.ValueValidator
-import top.chiloven.lukosbot2.commands.spec.bridge.SpecBotCommand
-import top.chiloven.lukosbot2.commands.spec.dsl.botCommand
+import top.chiloven.lukosbot2.commands.definition.ArgType
+import top.chiloven.lukosbot2.commands.definition.ValueValidator
+import top.chiloven.lukosbot2.commands.definition.bridge.SpecBotCommand
+import top.chiloven.lukosbot2.commands.definition.dsl.botCommand
 import top.chiloven.lukosbot2.util.MathUtils
 import java.math.BigInteger
 import java.util.stream.IntStream

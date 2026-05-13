@@ -3,14 +3,14 @@ package top.chiloven.lukosbot2.commands.impl.github
 import org.apache.logging.log4j.LogManager
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
+import top.chiloven.lukosbot2.commands.definition.ArgType
+import top.chiloven.lukosbot2.commands.definition.bridge.SpecBotCommand
+import top.chiloven.lukosbot2.commands.definition.dsl.botCommand
+import top.chiloven.lukosbot2.commands.definition.parser.ArgvParseResult
 import top.chiloven.lukosbot2.commands.impl.github.data.GitHubRepo
 import top.chiloven.lukosbot2.commands.impl.github.data.GitHubSearchResult
 import top.chiloven.lukosbot2.commands.impl.github.data.GitHubUser
 import top.chiloven.lukosbot2.commands.impl.github.data.SearchParams
-import top.chiloven.lukosbot2.commands.spec.ArgType
-import top.chiloven.lukosbot2.commands.spec.bridge.SpecBotCommand
-import top.chiloven.lukosbot2.commands.spec.dsl.botCommand
-import top.chiloven.lukosbot2.commands.spec.parser.ArgvParseResult
 import top.chiloven.lukosbot2.config.CommandConfigProp
 
 @Service

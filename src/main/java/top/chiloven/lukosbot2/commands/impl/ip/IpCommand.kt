@@ -3,12 +3,12 @@ package top.chiloven.lukosbot2.commands.impl.ip
 import org.apache.logging.log4j.LogManager
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
+import top.chiloven.lukosbot2.commands.definition.ArgType
+import top.chiloven.lukosbot2.commands.definition.CommandInvocation
+import top.chiloven.lukosbot2.commands.definition.bridge.SpecBotCommand
+import top.chiloven.lukosbot2.commands.definition.dsl.arg
+import top.chiloven.lukosbot2.commands.definition.dsl.botCommand
 import top.chiloven.lukosbot2.commands.impl.ip.IpQueryResult.IpQueryException
-import top.chiloven.lukosbot2.commands.spec.ArgType
-import top.chiloven.lukosbot2.commands.spec.CommandInvocation
-import top.chiloven.lukosbot2.commands.spec.bridge.SpecBotCommand
-import top.chiloven.lukosbot2.commands.spec.dsl.arg
-import top.chiloven.lukosbot2.commands.spec.dsl.botCommand
 
 @Service
 @ConditionalOnProperty(

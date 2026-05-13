@@ -1,6 +1,6 @@
-package top.chiloven.lukosbot2.commands.spec
+package top.chiloven.lukosbot2.commands.definition
 
-import top.chiloven.lukosbot2.commands.spec.parser.ArgvParseResult
+import top.chiloven.lukosbot2.commands.definition.parser.ArgvParseResult
 import top.chiloven.lukosbot2.core.command.CommandSource
 
 class CommandInvocation(

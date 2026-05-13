@@ -1,11 +1,11 @@
-package top.chiloven.lukosbot2.commands.spec.bridge
+package top.chiloven.lukosbot2.commands.definition.bridge
 
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.context.CommandContext
-import top.chiloven.lukosbot2.commands.spec.*
-import top.chiloven.lukosbot2.commands.spec.parser.ArgvParser
-import top.chiloven.lukosbot2.commands.spec.parser.ShellWords
+import top.chiloven.lukosbot2.commands.definition.*
+import top.chiloven.lukosbot2.commands.definition.parser.ArgvParser
+import top.chiloven.lukosbot2.commands.definition.parser.ShellWords
 import top.chiloven.lukosbot2.core.command.CommandSource
 
 object SpecExecutionBridge {

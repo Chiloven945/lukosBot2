@@ -1,12 +1,12 @@
-package top.chiloven.lukosbot2.commands.spec.bridge
+package top.chiloven.lukosbot2.commands.definition.bridge
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import top.chiloven.lukosbot2.commands.UsageNode
-import top.chiloven.lukosbot2.commands.spec.*
+import top.chiloven.lukosbot2.commands.definition.*
 
-class SpecUsageMapperTest {
+class CommandUsageMapperTest {
 
     private val noop = CommandExecutor { 1 }
 
@@ -28,7 +28,7 @@ class SpecUsageMapperTest {
             )
         )
 
-        val node = SpecUsageMapper.toUsageNode(spec)
+        val node = CommandUsageMapper.toUsageNode(spec)
 
         assertEquals("ping", node.name)
         assertEquals("return bot status and version info", node.description)
@@ -62,7 +62,7 @@ class SpecUsageMapperTest {
             )
         )
 
-        val node = SpecUsageMapper.toUsageNode(spec)
+        val node = CommandUsageMapper.toUsageNode(spec)
 
         assertEquals("dice", node.name)
         assertEquals(2, node.examples.size)
@@ -104,7 +104,7 @@ class SpecUsageMapperTest {
             )
         )
 
-        val node = SpecUsageMapper.toUsageNode(spec)
+        val node = CommandUsageMapper.toUsageNode(spec)
 
         assertEquals("ip", node.name)
         assertEquals(2, node.examples.size)
@@ -168,7 +168,7 @@ class SpecUsageMapperTest {
             )
         )
 
-        val node = SpecUsageMapper.toUsageNode(spec)
+        val node = CommandUsageMapper.toUsageNode(spec)
 
         assertEquals("github", node.name)
         assertEquals(listOf("gh"), node.aliases)
@@ -215,7 +215,7 @@ class SpecUsageMapperTest {
             )
         )
 
-        val node = SpecUsageMapper.toUsageNode(spec)
+        val node = CommandUsageMapper.toUsageNode(spec)
 
         val syntaxText = node.syntaxes.first().tailText()
         assertTrue(syntaxText.contains("input"))
@@ -243,7 +243,7 @@ class SpecUsageMapperTest {
             )
         )
 
-        val node = SpecUsageMapper.toUsageNode(spec)
+        val node = CommandUsageMapper.toUsageNode(spec)
 
         assertEquals("github", node.name)
         assertEquals(2, node.aliases.size)
@@ -269,7 +269,7 @@ class SpecUsageMapperTest {
             )
         )
 
-        val node = SpecUsageMapper.toUsageNode(spec)
+        val node = CommandUsageMapper.toUsageNode(spec)
 
         val syntaxText = node.syntaxes.first().tailText()
         assertTrue(syntaxText.contains("<a>"))
@@ -289,7 +289,7 @@ class SpecUsageMapperTest {
             )
         )
 
-        val node = SpecUsageMapper.toUsageNode(spec)
+        val node = CommandUsageMapper.toUsageNode(spec)
 
         assertEquals(1, node.syntaxes.size)
         assertTrue(node.syntaxes.first().tailText().isEmpty())

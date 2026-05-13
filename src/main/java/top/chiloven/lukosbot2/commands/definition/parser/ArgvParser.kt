@@ -1,6 +1,6 @@
-package top.chiloven.lukosbot2.commands.spec.parser
+package top.chiloven.lukosbot2.commands.definition.parser
 
-import top.chiloven.lukosbot2.commands.spec.*
+import top.chiloven.lukosbot2.commands.definition.*
 
 object ArgvParser {
 

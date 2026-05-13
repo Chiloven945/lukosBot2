@@ -2,9 +2,9 @@ package top.chiloven.lukosbot2.commands.impl
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
-import top.chiloven.lukosbot2.commands.spec.bridge.SpecBotCommand
-import top.chiloven.lukosbot2.commands.spec.dsl.arg
-import top.chiloven.lukosbot2.commands.spec.dsl.botCommand
+import top.chiloven.lukosbot2.commands.definition.bridge.SpecBotCommand
+import top.chiloven.lukosbot2.commands.definition.dsl.arg
+import top.chiloven.lukosbot2.commands.definition.dsl.botCommand
 
 @Service
 @ConditionalOnProperty(

@@ -1,4 +1,4 @@
-package top.chiloven.lukosbot2.commands.spec
+package top.chiloven.lukosbot2.commands.definition
 
 data class CommandParamDoc(
     val name: String,

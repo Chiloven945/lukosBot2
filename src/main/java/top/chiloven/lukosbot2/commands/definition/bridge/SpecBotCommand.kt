@@ -1,9 +1,9 @@
-package top.chiloven.lukosbot2.commands.spec.bridge
+package top.chiloven.lukosbot2.commands.definition.bridge
 
 import com.mojang.brigadier.CommandDispatcher
 import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.commands.UsageNode
-import top.chiloven.lukosbot2.commands.spec.BotCommandSpec
+import top.chiloven.lukosbot2.commands.definition.BotCommandSpec
 import top.chiloven.lukosbot2.core.command.CommandSource
 
 abstract class SpecBotCommand : IBotCommand {
@@ -21,7 +21,7 @@ abstract class SpecBotCommand : IBotCommand {
     final override fun isVisible(): Boolean = lazySpec.visible
 
     final override fun usage(): UsageNode =
-        SpecUsageMapper.toUsageNode(lazySpec)
+        CommandUsageMapper.toUsageNode(lazySpec)
 
     final override fun register(dispatcher: CommandDispatcher<CommandSource>) {
         SpecBrigadierRegistrar.register(dispatcher, lazySpec)

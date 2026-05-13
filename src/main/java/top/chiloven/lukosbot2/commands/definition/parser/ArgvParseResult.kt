@@ -1,4 +1,4 @@
-package top.chiloven.lukosbot2.commands.spec.parser
+package top.chiloven.lukosbot2.commands.definition.parser
 
 data class ArgvParseResult(
     val values: Map<String, Any?>,

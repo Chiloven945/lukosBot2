@@ -4,13 +4,13 @@ import okhttp3.Request
 import org.apache.logging.log4j.LogManager
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import top.chiloven.lukosbot2.Constants
+import top.chiloven.lukosbot2.commands.definition.ArgType
+import top.chiloven.lukosbot2.commands.definition.bridge.SpecBotCommand
+import top.chiloven.lukosbot2.commands.definition.dsl.botCommand
 import top.chiloven.lukosbot2.commands.impl.kemono.schema.Creator
 import top.chiloven.lukosbot2.commands.impl.kemono.schema.HashSearchFile
 import top.chiloven.lukosbot2.commands.impl.kemono.schema.Post
 import top.chiloven.lukosbot2.commands.impl.kemono.schema.Service
-import top.chiloven.lukosbot2.commands.spec.ArgType
-import top.chiloven.lukosbot2.commands.spec.bridge.SpecBotCommand
-import top.chiloven.lukosbot2.commands.spec.dsl.botCommand
 import top.chiloven.lukosbot2.config.AppProperties
 import top.chiloven.lukosbot2.config.ProxyConfigProp
 import top.chiloven.lukosbot2.core.command.CommandSource
