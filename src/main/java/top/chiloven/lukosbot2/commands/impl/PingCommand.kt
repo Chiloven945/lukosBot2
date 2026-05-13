@@ -1,15 +1,12 @@
 package top.chiloven.lukosbot2.commands.impl
 
-import com.mojang.brigadier.CommandDispatcher
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.Constants
-import top.chiloven.lukosbot2.commands.IBotCommand
-import top.chiloven.lukosbot2.commands.UsageNode
-import top.chiloven.lukosbot2.core.command.CommandSource
+import top.chiloven.lukosbot2.commands.spec.bridge.SpecBotCommand
+import top.chiloven.lukosbot2.commands.spec.dsl.botCommand
 import top.chiloven.lukosbot2.util.StringUtils
 import top.chiloven.lukosbot2.util.TimeUtils
-import top.chiloven.lukosbot2.util.brigadier.builder.CommandLAB.literal
 import java.lang.management.ManagementFactory
 import java.time.Instant
 import java.time.ZoneId
@@ -21,27 +18,17 @@ import java.time.ZoneId
     havingValue = "true",
     matchIfMissing = true
 )
-class PingCommand : IBotCommand {
+class PingCommand : SpecBotCommand() {
 
-    override fun name(): String = "ping"
+    override fun spec() = botCommand("ping") {
+        description = "返回机器人的运行状态与版本信息"
 
-    override fun usage(): UsageNode =
-        UsageNode.root(name())
-            .description(description())
-            .syntax("检测机器人在线状态")
-            .example("ping")
-            .build()
+        execute {
+            reply(buildStatus())
+        }
 
-    override fun description(): String = "返回机器人的运行状态与版本信息"
-
-    override fun register(dispatcher: CommandDispatcher<CommandSource>) {
-        dispatcher.register(
-            literal(name())
-                .executes { ctx ->
-                    ctx.source.reply(buildStatus())
-                    1
-                }
-        )
+        syntax("检测机器人在线状态")
+        example("ping")
     }
 
     private fun buildStatus(): String {

@@ -9,4 +9,7 @@ data class ArgvParseResult(
     @Suppress("UNCHECKED_CAST")
     fun <T> get(name: String): T = values[name] as T
 
+    @Suppress("UNCHECKED_CAST")
+    fun <T> getOrNull(name: String): T? = values[name] as? T
+
 }

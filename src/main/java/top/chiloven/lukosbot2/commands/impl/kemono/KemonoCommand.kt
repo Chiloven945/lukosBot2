@@ -1,17 +1,16 @@
 package top.chiloven.lukosbot2.commands.impl.kemono
 
-import com.mojang.brigadier.CommandDispatcher
-import com.mojang.brigadier.arguments.StringArgumentType
 import okhttp3.Request
 import org.apache.logging.log4j.LogManager
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import top.chiloven.lukosbot2.Constants
-import top.chiloven.lukosbot2.commands.IBotCommand
-import top.chiloven.lukosbot2.commands.UsageNode
 import top.chiloven.lukosbot2.commands.impl.kemono.schema.Creator
 import top.chiloven.lukosbot2.commands.impl.kemono.schema.HashSearchFile
 import top.chiloven.lukosbot2.commands.impl.kemono.schema.Post
 import top.chiloven.lukosbot2.commands.impl.kemono.schema.Service
+import top.chiloven.lukosbot2.commands.spec.ArgType
+import top.chiloven.lukosbot2.commands.spec.bridge.SpecBotCommand
+import top.chiloven.lukosbot2.commands.spec.dsl.botCommand
 import top.chiloven.lukosbot2.config.AppProperties
 import top.chiloven.lukosbot2.config.ProxyConfigProp
 import top.chiloven.lukosbot2.core.command.CommandSource
@@ -28,8 +27,6 @@ import top.chiloven.lukosbot2.util.PathUtils.sanitizeFileName
 import top.chiloven.lukosbot2.util.PathUtils.sanitizePathSegment
 import top.chiloven.lukosbot2.util.PathUtils.withTempDirectory
 import top.chiloven.lukosbot2.util.StringUtils.isUrl
-import top.chiloven.lukosbot2.util.brigadier.builder.CommandLAB.literal
-import top.chiloven.lukosbot2.util.brigadier.builder.CommandRAB.argument
 import java.io.IOException
 import java.net.URI
 import java.nio.file.Files
@@ -54,7 +51,7 @@ import java.util.concurrent.TimeUnit
 class KemonoCommand(
     private val appProperties: AppProperties,
     private val proxyConfigProp: ProxyConfigProp,
-) : IBotCommand {
+) : SpecBotCommand() {
 
     private companion object {
 
@@ -76,140 +73,106 @@ class KemonoCommand(
     private val okHttp
         get() = clientCache.client
 
-    override fun name(): String = "kemono"
+    override fun spec() = botCommand("kemono") {
+        description = "从 kemono.cr 查询帖子/创作者信息，并支持打包下载附件"
+        visible = false
 
-    override fun description(): String = "从 kemono.cr 查询帖子/创作者信息，并支持打包下载附件"
+        literal("post") {
+            description = "查询帖子信息，支持 SHA-256 与上传文件反查"
 
-    override fun usage(): UsageNode {
-        return UsageNode.root(name())
-            .description(description())
-            .subcommand("post", "查询帖子信息，支持 SHA-256 与上传文件反查") { b ->
-                b.syntax(
-                    "通过帖子链接查询",
-                    UsageNode.arg("post_url"),
-                    UsageNode.opt(UsageNode.lit("-t")),
-                    UsageNode.opt(UsageNode.lit("-a")),
-                )
-                    .syntax(
-                        "通过 kemono 平台、创作者 ID 和帖子 ID 查询",
-                        UsageNode.arg("service"),
-                        UsageNode.arg("creator_id"),
-                        UsageNode.arg("post_id"),
-                        UsageNode.opt(UsageNode.lit("-t")),
-                        UsageNode.opt(UsageNode.lit("-a")),
-                    )
-                    .syntax(
-                        "通过原站帖子 ID 解析到 kemono 帖子",
-                        UsageNode.arg("service"),
-                        UsageNode.arg("platform_post_id"),
-                        UsageNode.opt(UsageNode.lit("-t")),
-                        UsageNode.opt(UsageNode.lit("-a")),
-                    )
-                    .syntax(
-                        "通过文件 SHA-256 查询帖子",
-                        UsageNode.arg("sha_256"),
-                        UsageNode.opt(UsageNode.lit("-t")),
-                        UsageNode.opt(UsageNode.lit("-a")),
-                    )
-                    .syntax(
-                        "发送命令时直接附带文件/图片，自动计算 SHA-256 后查询",
-                        UsageNode.opt(UsageNode.lit("-t")),
-                        UsageNode.opt(UsageNode.lit("-a")),
-                    )
-                    .param("post_url", "kemono 帖子链接，或原站帖子链接")
-                    .param("service", "平台名，如 patreon / fanbox / fantia / afdian / boosty")
-                    .param("creator_id", "kemono 创作者 ID")
-                    .param("post_id", "kemono 帖子 ID")
-                    .param("platform_post_id", "原站帖子 ID")
-                    .param("sha_256", "文件的 SHA-256 十六进制值")
-                    .option("-t", "展示全部附件")
-                    .option("-a", "直接打包下载附件")
-                    .example(
-                        "kemono post https://kemono.cr/patreon/user/123456/post/654321",
-                        "kemono post patreon 123456 654321 -t",
-                        "kemono post fanbox 9876543 -a",
-                        "kemono post 15be29bad5f6010cc16af84731f60a2812fdda0f861fd623f4539a0c61b97d48",
-                        "kemono post -a"
-                    )
-            }
-            .subcommand("creator", "查询创作者信息，或打包下载其全部附件") { b ->
-                b.syntax(
-                    "通过创作者链接查询",
-                    UsageNode.arg("creator_url"),
-                    UsageNode.opt(UsageNode.lit("-a")),
-                )
-                    .syntax(
-                        "通过 kemono 平台和创作者 ID 查询",
-                        UsageNode.arg("service"),
-                        UsageNode.arg("creator_id"),
-                        UsageNode.opt(UsageNode.lit("-a")),
-                    )
-                    .param("creator_url", "kemono 创作者链接")
-                    .param("service", "平台名，如 patreon / fanbox / fantia / afdian / boosty")
-                    .param("creator_id", "kemono 创作者 ID")
-                    .option("-a", "打包下载该创作者下所有帖子的附件")
-                    .example(
-                        "kemono creator https://kemono.cr/patreon/user/123456",
-                        "kemono creator patreon 123456 -a"
-                    )
-            }
-            .note(
-                "`post` 子命令支持直接附带文件/图片；若当前平台能读取上传内容，将自动计算 SHA-256 后反查。",
-                "`-t` 仅对 `post` 子命令生效，用于展开全部附件；`-a` 会直接开始下载并发送 ZIP 文件。"
-            )
-            .build()
-    }
-
-    override fun register(dispatcher: CommandDispatcher<CommandSource>) {
-        dispatcher.register(
-            literal(name())
-                .executes { ctx ->
-                    sendUsage(ctx.source)
-                    1
+            argv {
+                option("showAllAttachments") {
+                    names = listOf("-t")
+                    type = ArgType.BooleanType
+                    default = false
+                    description = "展示全部附件"
                 }
-                .then(
-                    literal("post")
-                        .executes { ctx ->
-                            executeSafely(ctx.source) { handlePost("", ctx.source) }
-                        }
-                        .then(
-                            argument("args", StringArgumentType.greedyString())
-                                .executes { ctx ->
-                                    executeSafely(ctx.source) {
-                                        handlePost(StringArgumentType.getString(ctx, "args"), ctx.source)
-                                    }
-                                }
-                        )
-                )
-                .then(
-                    literal("creator")
-                        .executes { ctx ->
-                            sendUsage(ctx.source)
-                            1
-                        }
-                        .then(
-                            argument("args", StringArgumentType.greedyString())
-                                .executes { ctx ->
-                                    executeSafely(ctx.source) {
-                                        handleCreator(StringArgumentType.getString(ctx, "args"), ctx.source)
-                                    }
-                                }
-                        )
-                )
+
+                option("archive") {
+                    names = listOf("-a")
+                    type = ArgType.BooleanType
+                    default = false
+                    description = "直接打包下载附件"
+                }
+
+                positional("positionals", ArgType.StringType) {
+                    required = false
+                    greedy = true
+                    description = "帖子链接、平台/ID、SHA-256 等"
+                }
+
+                execute { args ->
+                    executeSafely(source) {
+                        val posList = args.positionals
+                        handlePost(posList, args.get("showAllAttachments"), args.get("archive"), source)
+                    }
+                }
+            }
+
+            param("post_url", "kemono 帖子链接，或原站帖子链接")
+            param("service", "平台名，如 patreon / fanbox / fantia / afdian / boosty")
+            param("creator_id", "kemono 创作者 ID")
+            param("post_id", "kemono 帖子 ID")
+            param("platform_post_id", "原站帖子 ID")
+            param("sha_256", "文件的 SHA-256 十六进制值")
+            optionDoc("-t", "展示全部附件")
+            optionDoc("-a", "直接打包下载附件")
+            example(
+                "kemono post https://kemono.cr/patreon/user/123456/post/654321",
+                "kemono post patreon 123456 654321 -t",
+                "kemono post fanbox 9876543 -a",
+                "kemono post 15be29bad5f6010cc16af84731f60a2812fdda0f861fd623f4539a0c61b97d48",
+                "kemono post -a"
+            )
+        }
+
+        literal("creator") {
+            description = "查询创作者信息，或打包下载其全部附件"
+
+            argv {
+                option("archive") {
+                    names = listOf("-a")
+                    type = ArgType.BooleanType
+                    default = false
+                    description = "打包下载该创作者下所有帖子的附件"
+                }
+
+                positional("positionals", ArgType.StringType) {
+                    required = false
+                    greedy = true
+                    description = "创作者链接或平台+ID"
+                }
+
+                execute { args ->
+                    executeSafely(source) {
+                        val posList = args.positionals
+                        handleCreator(posList, args.get("archive"), source)
+                    }
+                }
+            }
+
+            param("creator_url", "kemono 创作者链接")
+            param("service", "平台名，如 patreon / fanbox / fantia / afdian / boosty")
+            param("creator_id", "kemono 创作者 ID")
+            optionDoc("-a", "打包下载该创作者下所有帖子的附件")
+            example(
+                "kemono creator https://kemono.cr/patreon/user/123456",
+                "kemono creator patreon 123456 -a"
+            )
+        }
+
+        note(
+            "`post` 子命令支持直接附带文件/图片；若当前平台能读取上传内容，将自动计算 SHA-256 后反查。",
+            "`-t` 仅对 `post` 子命令生效，用于展开全部附件；`-a` 会直接开始下载并发送 ZIP 文件。"
         )
     }
 
-    override fun isVisible(): Boolean = false
-
-    private inline fun executeSafely(src: CommandSource, block: () -> Unit): Int {
-        return runCatching {
-            block()
-            1
-        }.getOrElse { e ->
-            log.warn("Kemono command failed: {}", e.message, e)
-            src.reply(friendlyError(e))
-            0
-        }
+    private fun executeSafely(src: CommandSource, block: () -> Unit) {
+        runCatching { block() }
+            .onFailure { e ->
+                log.warn("Kemono command failed: {}", e.message, e)
+                src.reply(friendlyError(e))
+            }
     }
 
     private fun friendlyError(e: Throwable): String {
@@ -221,9 +184,13 @@ class KemonoCommand(
         }
     }
 
-    private fun handlePost(rawArgs: String, src: CommandSource) {
-        val opts = parseOptions(rawArgs)
-        val target = parsePostTarget(opts.positionals, src)
+    private fun handlePost(
+        positionals: List<String>,
+        showAllAttachments: Boolean,
+        archive: Boolean,
+        src: CommandSource
+    ) {
+        val target = parsePostTarget(positionals, src)
 
         if (target is PostTarget.ByHash) {
             val hit = HashSearchFile.fromJsonObject(KemonoAPI.getFileFromHash(target.sha256))
@@ -242,6 +209,12 @@ class KemonoCommand(
         }
 
         val resolved = resolvePostTarget(target)
+
+        if (archive) {
+            src.reply(archivePost(resolved, src))
+            return
+        }
+
         val text = buildString {
             resolved.hashHit?.let {
                 appendLine(it.getString())
@@ -253,7 +226,7 @@ class KemonoCommand(
                 appendLine()
             }
             append(resolved.post.getSpecific())
-            if (opts.showAllAttachments) {
+            if (showAllAttachments) {
                 appendLine()
                 appendLine()
                 append(resolved.post.getAttachments())
@@ -263,44 +236,23 @@ class KemonoCommand(
         src.reply(text)
     }
 
-    private fun handleCreator(rawArgs: String, src: CommandSource) {
-        val opts = parseOptions(rawArgs)
-        require(!opts.showAllAttachments) { "`-t` 仅支持 `post` 子命令。" }
-
-        val parsed = parseCreatorTarget(opts.positionals)
+    private fun handleCreator(
+        positionals: List<String>,
+        archive: Boolean,
+        src: CommandSource
+    ) {
+        val parsed = parseCreatorTarget(positionals)
         val creator = Creator.fromProfileAndPosts(
             KemonoAPI.getCreatorProfile(parsed.service, parsed.creatorId),
             KemonoAPI.getCreatorPosts(parsed.service, parsed.creatorId)
         )
 
-        if (opts.archive) {
+        if (archive) {
             src.reply(archiveCreator(creator, src))
             return
         }
 
         src.reply(creator.getString())
-    }
-
-    private fun parseOptions(rawArgs: String): ParsedOptions {
-        val trimmed = rawArgs.trim()
-        val tokens = if (trimmed.isEmpty()) emptyList() else trimmed.split(Regex("\\s+"))
-
-        var showAll = false
-        var archive = false
-        val positionals = mutableListOf<String>()
-
-        for (token in tokens) {
-            when (token) {
-                "-t" -> showAll = true
-                "-a" -> archive = true
-                else -> {
-                    require(!token.startsWith("-")) { "未知参数：$token" }
-                    positionals += token
-                }
-            }
-        }
-
-        return ParsedOptions(positionals, showAll, archive)
     }
 
     private fun parsePostTarget(positionals: List<String>, src: CommandSource): PostTarget {
@@ -593,12 +545,6 @@ class KemonoCommand(
     private fun isSha256(value: String): Boolean {
         return value.matches(Regex("^[0-9a-fA-F]{64}$"))
     }
-
-    private data class ParsedOptions(
-        val positionals: List<String>,
-        val showAllAttachments: Boolean,
-        val archive: Boolean,
-    )
 
     private data class CreatorTarget(
         val service: Service,

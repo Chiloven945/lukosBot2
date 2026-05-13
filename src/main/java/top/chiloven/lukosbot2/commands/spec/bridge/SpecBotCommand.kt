@@ -26,4 +26,5 @@ abstract class SpecBotCommand : IBotCommand {
     final override fun register(dispatcher: CommandDispatcher<CommandSource>) {
         SpecBrigadierRegistrar.register(dispatcher, lazySpec)
     }
+
 }
