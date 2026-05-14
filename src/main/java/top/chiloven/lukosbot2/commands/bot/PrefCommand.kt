@@ -78,8 +78,12 @@ class PrefCommand(
 
         literal("clear") {
             argv {
-                positional("scope", ArgType.StringType) { required = true }
-                positional("state", ArgType.StringType) { required = true }
+                positional("scope", ArgType.StringType) {
+                    required = true
+                }
+                positional("state", ArgType.StringType) {
+                    required = true
+                }
                 execute { args ->
                     clearExplicit(
                         source,
@@ -102,15 +106,19 @@ class PrefCommand(
     }
 
     private fun displayScope(type: ScopeType) = when (type) {
-        ScopeType.USER -> "本人"; ScopeType.CHAT -> "当前聊天"; ScopeType.GLOBAL -> "全局"
+        ScopeType.USER -> "本人"
+        ScopeType.CHAT -> "当前聊天"
+        ScopeType.GLOBAL -> "全局"
     }
 
     private fun renderList(): String {
         val sb = StringBuilder("可用的配置项：\n")
         val defs = registry.all().sortedBy { it.name() }
         if (defs.isEmpty()) {
-            sb.append("暂无可用配置项。"); return sb.toString()
+            sb.append("暂无可用配置项。")
+            return sb.toString()
         }
+
         for (d in defs) {
             val dName = d.name()
             val dDesc = d.description()
@@ -128,41 +136,57 @@ class PrefCommand(
     private fun getResolved(src: CommandSource, stateName: String) {
         val opt = registry.find(stateName)
         if (opt.isEmpty) {
-            src.reply("未找到配置项：$stateName"); return
+            src.reply("未找到配置项：$stateName")
+            return
         }
+
         val def = opt.get() as IStateDefinition<Any>
         val v = states.resolve(def, src.addr(), src.userIdOrNull())
         src.reply("${def.name()} 当前生效值：${def.format(v)}")
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun getExplicit(src: CommandSource, scopeRaw: String, stateName: String) {
+    private fun getExplicit(
+        src: CommandSource,
+        scopeRaw: String,
+        stateName: String
+    ) {
         val opt = registry.find(stateName)
         if (opt.isEmpty) {
-            src.reply("未找到配置项：$stateName"); return
+            src.reply("未找到配置项：$stateName")
+            return
         }
+
         val def = opt.get() as IStateDefinition<Any>
         try {
             val scope = parseScope(scopeRaw, src, def)
             val v = states.getAtScope(def, scope)
-            src.reply(
-                if (v == null) "${def.name()} 在${displayScope(scope.type())}范围内未单独设置。" else "${def.name()} 在${
-                    displayScope(
-                        scope.type()
-                    )
-                }范围内的值：${def.format(v)}"
-            )
+            val scopeName = displayScope(scope.type())
+            val message = if (v == null) {
+                "${def.name()} 在${scopeName}范围内未单独设置。"
+            } else {
+                "${def.name()} 在${scopeName}范围内的值：${def.format(v)}"
+            }
+
+            src.reply(message)
         } catch (e: IllegalArgumentException) {
             src.reply("读取失败：${e.message}")
         }
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun setExplicit(src: CommandSource, scopeRaw: String, stateName: String, rawValue: String) {
+    private fun setExplicit(
+        src: CommandSource,
+        scopeRaw: String,
+        stateName: String,
+        rawValue: String
+    ) {
         val opt = registry.find(stateName)
         if (opt.isEmpty) {
-            src.reply("未找到配置项：$stateName"); return
+            src.reply("未找到配置项：$stateName")
+            return
         }
+
         val def = opt.get() as IStateDefinition<Any>
         try {
             val scope = parseScope(scopeRaw, src, def)
@@ -178,11 +202,17 @@ class PrefCommand(
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun clearExplicit(src: CommandSource, scopeRaw: String, stateName: String) {
+    private fun clearExplicit(
+        src: CommandSource,
+        scopeRaw: String,
+        stateName: String
+    ) {
         val opt = registry.find(stateName)
         if (opt.isEmpty) {
-            src.reply("未找到配置项：$stateName"); return
+            src.reply("未找到配置项：$stateName")
+            return
         }
+
         val def = opt.get() as IStateDefinition<Any>
         try {
             val scope = parseScope(scopeRaw, src, def)
@@ -194,13 +224,23 @@ class PrefCommand(
         }
     }
 
-    private fun parseScope(raw: String?, src: CommandSource, def: IStateDefinition<*>): Scope {
+    private fun parseScope(
+        raw: String?,
+        src: CommandSource,
+        def: IStateDefinition<*>
+    ): Scope {
         if (raw.isNullOrBlank()) throw IllegalArgumentException("配置范围不能为空")
         val type = when (raw.trim().lowercase(Locale.getDefault())) {
-            "user" -> ScopeType.USER; "chat" -> ScopeType.CHAT; "global" -> ScopeType.GLOBAL
+            "user" -> ScopeType.USER
+            "chat" -> ScopeType.CHAT
+            "global" -> ScopeType.GLOBAL
             else -> throw IllegalArgumentException("未知配置范围：$raw")
         }
-        if (type !in def.allowedScopes()) throw IllegalArgumentException("配置项不支持\"${displayScope(type)}\"范围。")
+
+        if (type !in def.allowedScopes()) {
+            throw IllegalArgumentException("配置项不支持\"${displayScope(type)}\"范围。")
+        }
+
         return when (type) {
             ScopeType.USER -> Scope.user(
                 src.platform(),
@@ -212,7 +252,11 @@ class PrefCommand(
         }
     }
 
-    private fun ensureWriteAllowed(src: CommandSource, type: ScopeType, stateName: String) = when (type) {
+    private fun ensureWriteAllowed(
+        src: CommandSource,
+        type: ScopeType,
+        stateName: String
+    ) = when (type) {
         ScopeType.USER -> true
         ScopeType.CHAT -> authz.ensureChatManager(src, "修改当前聊天配置（$stateName）")
         ScopeType.GLOBAL -> authz.ensureBotAdmin(src, "修改全局配置（$stateName）")

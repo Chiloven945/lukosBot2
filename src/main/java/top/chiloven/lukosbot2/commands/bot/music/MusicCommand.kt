@@ -43,8 +43,10 @@ class MusicCommand(ccp: CommandConfigProp) : IBotCommand {
 
         raw("query", required = false) { query ->
             if (query.isBlank()) {
-                sendUsage(source); return@raw
+                sendUsage(source)
+                return@raw
             }
+
             val tokens = query.split(" ", limit = 2)
             if (isPlatformToken(tokens[0])) {
                 runSearch(source, tokens.getOrElse(1) { "" }, tokens[0])
@@ -54,6 +56,7 @@ class MusicCommand(ccp: CommandConfigProp) : IBotCommand {
         }
 
         param("query", "搜索关键字（支持空格）")
+
         example(
             "music Never Gonna Give You Up",
             "music spotify Never Gonna Give You Up",
@@ -63,8 +66,15 @@ class MusicCommand(ccp: CommandConfigProp) : IBotCommand {
 
     private fun runSearch(src: CommandSource, query: String, platformToken: String?): Int {
         return try {
-            val provider = pickProvider(platformToken) ?: run { src.reply("音乐平台暂未配置或不可用。"); return 0 }
-            val info = provider.searchTrack(query) ?: run { src.reply("没有找到匹配的歌曲。"); return 0 }
+            val provider = pickProvider(platformToken) ?: run {
+                src.reply("音乐平台暂未配置或不可用。")
+                return 0
+            }
+            val info = provider.searchTrack(query) ?: run {
+                src.reply("没有找到匹配的歌曲。")
+                return 0
+            }
+
             src.reply(info.formatted())
             1
         } catch (e: Exception) {
@@ -76,8 +86,15 @@ class MusicCommand(ccp: CommandConfigProp) : IBotCommand {
 
     private fun runLink(src: CommandSource, link: String): Int {
         return try {
-            val provider = detectProviderByLink(link) ?: run { src.reply("无法识别链接所属平台。"); return 0 }
-            val info = provider.resolveLink(link) ?: run { src.reply("无法从链接解析到歌曲信息。"); return 0 }
+            val provider = detectProviderByLink(link) ?: run {
+                src.reply("无法识别链接所属平台。")
+                return 0
+            }
+            val info = provider.resolveLink(link) ?: run {
+                src.reply("无法从链接解析到歌曲信息。")
+                return 0
+            }
+
             src.reply(info.formatted())
             1
         } catch (e: Exception) {

@@ -25,6 +25,7 @@ class EchoCommand : IBotCommand {
 
         syntax("回显输入的文本", arg("text"))
         param("text", "要回显的文本（支持空格）")
+
         example("echo hello")
     }
 

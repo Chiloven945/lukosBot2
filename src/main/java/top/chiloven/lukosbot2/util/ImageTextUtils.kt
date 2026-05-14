@@ -11,7 +11,10 @@ object ImageTextUtils {
 
     private val log = LogManager.getLogger(ImageTextUtils::class.java)
 
-    data class Run(val text: String, val font: Font)
+    data class Run(
+        val text: String,
+        val font: Font
+    )
 
     class GlyphRunCache {
 

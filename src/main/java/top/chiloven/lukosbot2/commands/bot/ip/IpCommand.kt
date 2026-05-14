@@ -26,6 +26,7 @@ class IpCommand(
 
     override fun definition() = botCommand("ip") {
         description = "查询 IP 信息"
+
         argv {
             positional("ip", ArgType.StringType) {
                 required = true
@@ -44,8 +45,10 @@ class IpCommand(
                 )
             }
         }
+
         syntax("按默认数据源优先级查询", arg("ip_address"))
         param("ip_address", "IP 地址（IPv4 / IPv6）")
+
         example(
             "ip 1.1.1.1",
             "ip 2606:4700:4700::1111",

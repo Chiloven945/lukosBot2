@@ -160,24 +160,6 @@ public interface IBotCommand {
      * @param prefix command prefix, e.g. {@code "/"}.
      */
     default void sendUsage(CommandSource src, String prefix) {
-        /**
-         * Sends this command's usage/help output to the given source using the
-         * specified command prefix and output mode.
-         *
-         * <p>Delegates to {@link UsageOutput#sendUsage} which automatically decides
-         * between text and image rendering based on output size constraints. The
-         * mode parameter allows the caller to override this default:</p>
-         * <ul>
-         *   <li>{@code "img"} — force image rendering (better for long output)</li>
-         *   <li>{@code "text"} — force text rendering</li>
-         *   <li>{@code null} — auto-detect based on content length</li>
-         * </ul>
-         *
-         * @param src     message sink for replies.
-         * @param prefix  command prefix, e.g. {@code "/"}; {@code null} or blank
-         *                defaults to {@code "/"}.
-         * @param modeRaw raw mode string as described above, or {@code null} for auto.
-         */
         sendUsage(src, prefix, null);
     }
 
@@ -242,24 +224,6 @@ public interface IBotCommand {
      * @param src message sink for replies.
      */
     default void sendUsage(CommandSource src) {
-        /**
-         * Sends this command's usage/help output to the given source using the
-         * specified command prefix and output mode.
-         *
-         * <p>Delegates to {@link UsageOutput#sendUsage} which automatically decides
-         * between text and image rendering based on output size constraints. The
-         * mode parameter allows the caller to override this default:</p>
-         * <ul>
-         *   <li>{@code "img"} — force image rendering (better for long output)</li>
-         *   <li>{@code "text"} — force text rendering</li>
-         *   <li>{@code null} — auto-detect based on content length</li>
-         * </ul>
-         *
-         * @param src     message sink for replies.
-         * @param prefix  command prefix, e.g. {@code "/"}; {@code null} or blank
-         *                defaults to {@code "/"}.
-         * @param modeRaw raw mode string as described above, or {@code null} for auto.
-         */
         sendUsage(src, "/", null);
     }
 

@@ -93,7 +93,9 @@ class ServiceCommand(
 
     private fun renderChatList(src: CommandSource): String {
         val st = services.snapshotStates(src.addr())
-        return services.registry.all().filter { services.isAllowed(it.name()) }.sortedBy { it.name() }
+        return services.registry.all()
+            .filter { services.isAllowed(it.name()) }
+            .sortedBy { it.name() }
             .joinToString("\n", "当前聊天的服务：\n") { s ->
                 val ss = st[s.name()]
                 val enabled = ss != null && ss.isEnabled
@@ -103,8 +105,11 @@ class ServiceCommand(
 
     private fun listGlobal(src: CommandSource) {
         if (!authz.ensureBotAdmin(src, "查看全局服务配置")) return
+
         val st = services.snapshotDefaultStates()
-        val text = services.registry.all().filter { services.isAllowed(it.name()) }.sortedBy { it.name() }
+        val text = services.registry.all()
+            .filter { services.isAllowed(it.name()) }
+            .sortedBy { it.name() }
             .joinToString("\n", "全局默认服务：\n") { s ->
                 val ss = st[s.name()]
                 val enabled = ss != null && ss.isEnabled
@@ -115,12 +120,16 @@ class ServiceCommand(
 
     private fun toggleChat(src: CommandSource, name: String) {
         if (!authz.ensureChatManager(src, "修改当前聊天服务开关")) return
+
         if (!services.isAllowed(name)) {
-            src.reply("当前不允许使用此服务：$name"); return
+            src.reply("当前不允许使用此服务：$name")
+            return
         }
         if (services.registry.find(name).isEmpty) {
-            src.reply("未找到服务：$name"); return
+            src.reply("未找到服务：$name")
+            return
         }
+
         val st = services.stateOf(src.addr(), name)
         val nowEnabled = st == null || !st.isEnabled
         services.setEnabled(src.addr(), name, nowEnabled)
@@ -129,38 +138,56 @@ class ServiceCommand(
 
     private fun getChat(src: CommandSource, svc: String, key: String) {
         if (!services.isAllowed(svc)) {
-            src.reply("当前不允许使用此服务：$svc"); return
+            src.reply("当前不允许使用此服务：$svc")
+            return
         }
         if (services.registry.find(svc).isEmpty) {
-            src.reply("未找到服务：$svc"); return
+            src.reply("未找到服务：$svc")
+            return
         }
+
         val st = services.stateOf(src.addr(), svc)
         if (st == null || st.config == null) {
-            src.reply("当前聊天没有为服务\"$svc\"设置配置。"); return
+            src.reply("当前聊天没有为服务\"$svc\"设置配置。")
+            return
         }
+
         src.reply(st.config?.get(key) ?: "未设置")
     }
 
-    private fun setChat(src: CommandSource, svc: String, key: String, value: String) {
+    private fun setChat(
+        src: CommandSource,
+        svc: String,
+        key: String,
+        value: String
+    ) {
         if (!authz.ensureChatManager(src, "修改当前聊天服务配置")) return
+
         if (!services.isAllowed(svc)) {
-            src.reply("当前不允许使用此服务：$svc"); return
+            src.reply("当前不允许使用此服务：$svc")
+            return
         }
         if (services.registry.find(svc).isEmpty) {
-            src.reply("未找到服务：$svc"); return
+            src.reply("未找到服务：$svc")
+            return
         }
+
         services.setConfigValue(src.addr(), svc, key, value)
         src.reply("已更新当前聊天的服务配置：$svc.$key = $value")
     }
 
     private fun toggleGlobal(src: CommandSource, name: String) {
         if (!authz.ensureBotAdmin(src, "修改全局服务开关")) return
+
         if (!services.isAllowed(name)) {
-            src.reply("当前不允许使用此服务：$name"); return
+            src.reply("当前不允许使用此服务：$name")
+            return
         }
         if (services.registry.find(name).isEmpty) {
-            src.reply("未找到服务：$name"); return
+            src.reply("未找到服务：$name")
+            return
         }
+
         val st = services.defaultStateOf(name)
         val nowEnabled = st == null || !st.isEnabled
         services.setDefaultEnabled(name, nowEnabled)
@@ -169,27 +196,42 @@ class ServiceCommand(
 
     private fun getGlobal(src: CommandSource, svc: String, key: String) {
         if (!authz.ensureBotAdmin(src, "查看全局服务配置")) return
+
         if (!services.isAllowed(svc)) {
-            src.reply("当前不允许使用此服务：$svc"); return
+            src.reply("当前不允许使用此服务：$svc")
+            return
         }
         if (services.registry.find(svc).isEmpty) {
-            src.reply("未找到服务：$svc"); return
+            src.reply("未找到服务：$svc")
+            return
         }
+
         val st = services.defaultStateOf(svc)
         if (st == null || st.config == null) {
-            src.reply("服务\"$svc\"没有全局默认配置。"); return
+            src.reply("服务\"$svc\"没有全局默认配置。")
+            return
         }
+
         src.reply(st.config?.get(key) ?: "未设置")
     }
 
-    private fun setGlobal(src: CommandSource, svc: String, key: String, value: String) {
+    private fun setGlobal(
+        src: CommandSource,
+        svc: String,
+        key: String,
+        value: String
+    ) {
         if (!authz.ensureBotAdmin(src, "修改全局服务配置")) return
+
         if (!services.isAllowed(svc)) {
-            src.reply("当前不允许使用此服务：$svc"); return
+            src.reply("当前不允许使用此服务：$svc")
+            return
         }
         if (services.registry.find(svc).isEmpty) {
-            src.reply("未找到服务：$svc"); return
+            src.reply("未找到服务：$svc")
+            return
         }
+
         services.setDefaultConfigValue(svc, key, value)
         src.reply("已更新全局默认服务配置：$svc.$key = $value")
     }

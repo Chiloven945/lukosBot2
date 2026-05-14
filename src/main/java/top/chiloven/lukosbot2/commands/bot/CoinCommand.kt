@@ -21,6 +21,7 @@ class CoinCommand : IBotCommand {
 
     override fun definition() = botCommand("coin") {
         description = "抛硬币"
+
         argv {
             positional("count", ArgType.LongType) {
                 required = false
@@ -31,17 +32,25 @@ class CoinCommand : IBotCommand {
                     if (n <= 0L) "硬币数量必须是正整数。" else null
                 }
             }
-            execute { args -> source.reply(runCoin(args.get<Long>("count"))) }
+            execute { args -> source.reply(runCoin(args.get("count"))) }
         }
+
         syntax("抛硬币（默认 1 个）", opt(arg("count")))
         param("count", "硬币数量（正整数）")
+
         example("coin 10")
     }
 
     private fun runCoin(times: Long): String {
         if (times <= 0) return "硬币数量必须是正整数。"
         return try {
-            val r = MathUtils.approximateMultinomial(times, 0.499999999999, 0.499999999999, 0.000000000002)
+            val r = MathUtils.approximateMultinomial(
+                times,
+                0.499999999999,
+                0.499999999999,
+                0.000000000002
+            )
+
             if (times == 1L) {
                 "你抛了 1 个硬币。\n" + when {
                     r[0] == 1L -> "是正面。"

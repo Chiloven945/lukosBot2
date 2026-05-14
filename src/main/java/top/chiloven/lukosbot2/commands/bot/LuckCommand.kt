@@ -20,15 +20,18 @@ class LuckCommand : IBotCommand {
 
     private val log = LogManager.getLogger(LuckCommand::class.java)
 
-    private val commandDefinition = botCommand("luck") {
+    override fun definition() = botCommand("luck") {
         alias("l", "jrrp")
         description = "获取今日幸运值"
-        execute { source.reply(getLuck()) }
+
+        execute {
+            source.reply(getLuck())
+        }
+
         syntax("获取今日幸运值")
+
         example("luck")
     }
-
-    override fun definition() = commandDefinition
 
     private fun getLuck(): String {
         val today = LocalDate.now()

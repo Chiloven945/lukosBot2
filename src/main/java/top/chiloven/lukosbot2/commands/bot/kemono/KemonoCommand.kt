@@ -122,6 +122,7 @@ class KemonoCommand(
             param("sha_256", "文件的 SHA-256 十六进制值")
             optionDoc("-t", "展示全部附件")
             optionDoc("-a", "直接打包下载附件")
+
             example(
                 "kemono post https://kemono.cr/patreon/user/123456/post/654321",
                 "kemono post patreon 123456 654321 -t",
@@ -160,6 +161,7 @@ class KemonoCommand(
             param("service", "平台名，如 patreon / fanbox / fantia / afdian / boosty")
             param("creator_id", "kemono 创作者 ID")
             optionDoc("-a", "打包下载该创作者下所有帖子的附件")
+
             example(
                 "kemono creator https://kemono.cr/patreon/user/123456",
                 "kemono creator patreon 123456 -a"

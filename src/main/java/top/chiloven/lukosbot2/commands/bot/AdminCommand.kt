@@ -41,26 +41,57 @@ class AdminCommand(
             description = "添加机器人管理员"
             argv {
                 positional("platform", ArgType.StringType) {
-                    required = true; description = "平台：telegram / discord / onebot"
+                    required = true
+                    description = "平台：telegram / discord / onebot"
                 }
-                positional("userId", ArgType.LongType) { required = true; description = "平台用户 ID" }
-                execute { args -> add(source, args.get("platform"), args.get<Long>("userId")) }
+                positional("userId", ArgType.LongType) {
+                    required = true
+                    description = "平台用户 ID"
+                }
+                execute { args ->
+                    add(
+                        source,
+                        args.get("platform"),
+                        args.get("userId")
+                    )
+                }
             }
         }
 
         literal("remove") {
             description = "移除机器人管理员"
             argv {
-                positional("platform", ArgType.StringType) { required = true }
-                positional("userId", ArgType.LongType) { required = true }
-                execute { args -> remove(source, args.get("platform"), args.get<Long>("userId")) }
+                positional("platform", ArgType.StringType) {
+                    required = true
+                }
+                positional("userId", ArgType.LongType) {
+                    required = true
+                }
+                execute { args ->
+                    remove(
+                        source,
+                        args.get("platform"),
+                        args.get("userId")
+                    )
+                }
             }
         }
 
         syntax("查看你的当前身份", arg("me"))
-        syntax("添加机器人管理员", arg("add"), arg("platform"), arg("userId"))
+        syntax(
+            "添加机器人管理员",
+            arg("add"),
+            arg("platform"),
+            arg("userId")
+        )
+
+        example(
+            "admin me",
+            "admin list",
+            "admin add telegram 123456789",
+            "admin remove discord 987654321"
+        )
         note("list/add/remove 仅机器人管理员可用。")
-        example("admin me", "admin list", "admin add telegram 123456789", "admin remove discord 987654321")
     }
 
     private fun me(src: CommandSource) {
@@ -119,7 +150,8 @@ class AdminCommand(
     private fun parsePlatform(raw: String, src: CommandSource): ChatPlatform? = try {
         ChatPlatform.fromString(raw)
     } catch (_: IllegalArgumentException) {
-        src.reply("不支持的平台：$raw"); null
+        src.reply("不支持的平台：$raw")
+        null
     }
 
 }

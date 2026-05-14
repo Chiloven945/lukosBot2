@@ -229,7 +229,10 @@ interface IWikiishCommand : IBotCommand {
      * @param lang  resolved language code
      * @param title resolved article title
      */
-    data class LangTitle(val lang: String, val title: String)
+    data class LangTitle(
+        val lang: String,
+        val title: String
+    )
 
     companion object {
 

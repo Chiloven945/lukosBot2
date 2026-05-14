@@ -35,7 +35,9 @@ class WikiCommand : IBotCommand, IWikiishCommand {
 
         literal("md") {
             description = "抓取整页并转为 Markdown 文件"
-            raw("link") { link -> runMarkdown(source, link.trim()) }
+            raw("link") { link ->
+                runMarkdown(source, link.trim())
+            }
             param("link", "维基百科链接")
             param("article", "词条名（可用 `en:` 前缀指定语言）")
         }
@@ -45,7 +47,14 @@ class WikiCommand : IBotCommand, IWikiishCommand {
             else runScreenshot(source, link.trim())
         }
 
-        syntax("生成页面截图", oneOf(arg("link"), arg("article")))
+        syntax(
+            "生成页面截图",
+            oneOf(
+                arg("link"),
+                arg("article")
+            )
+        )
+
         example(
             "wiki Java",
             "wiki en:Albert_Einstein",
@@ -58,8 +67,10 @@ class WikiCommand : IBotCommand, IWikiishCommand {
         try {
             val url = normalize(linkOrTitle)
             if (isNot(url)) {
-                src.reply("仅支持 Wikipedia 链接或词条名。"); return
+                src.reply("仅支持 Wikipedia 链接或词条名。")
+                return
             }
+
             val img = WebScreenshot.screenshotWikipedia(url)
             val ref = BytesRef(img.filename(), img.bytes(), img.mime())
             src.reply(OutboundMessage(src.addr(), listOf(OutImage(ref, null, img.filename(), img.mime()))))
@@ -73,8 +84,10 @@ class WikiCommand : IBotCommand, IWikiishCommand {
         try {
             val url = normalize(linkOrTitle)
             if (isNot(url)) {
-                src.reply("仅支持 Wikipedia 链接或词条名。"); return
+                src.reply("仅支持 Wikipedia 链接或词条名。")
+                return
             }
+
             val md = WebToMarkdown.fetchWikipediaMarkdown(url)
             val ref = BytesRef(md.filename(), md.bytes(), md.mime())
             src.reply(

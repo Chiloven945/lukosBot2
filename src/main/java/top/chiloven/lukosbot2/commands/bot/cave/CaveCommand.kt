@@ -27,7 +27,9 @@ class CaveCommand(
 
         literal("add") {
             description = "添加条目"
-            raw("message", required = false) { add(source) }
+            raw("message", required = false) {
+                add(source)
+            }
             example("cave add", "cave add message")
         }
 
@@ -60,8 +62,12 @@ class CaveCommand(
 
         syntax("随机发送一个条目")
         syntax("发送指定编号条目", arg("number"))
+
+        example(
+            "cave",
+            "cave 12"
+        )
         note("add/delete 仅机器人管理员可用。")
-        example("cave", "cave 12")
     }
 
     private fun recallRandom(src: CommandSource) {
@@ -91,9 +97,12 @@ class CaveCommand(
 
     private fun delete(src: CommandSource, no: Int) {
         if (!authz.ensureBotAdmin(src, "删除回声洞条目")) return
+
         if (!caveService.delete(no)) {
-            src.reply("编号 #$no 不存在。"); return
+            src.reply("编号 #$no 不存在。")
+            return
         }
+
         src.reply("已删除回声洞条目 #$no。")
     }
 

@@ -18,6 +18,7 @@ class ShutdownCliCommand : ICliCommand {
     override fun definition() = cliCommand("shutdown") {
         alias("stop", "close")
         description = "Shutdown the bot process"
+
         execute {
             Thread.ofVirtual()
                 .name("shutdown-trigger")

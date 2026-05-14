@@ -6,6 +6,6 @@ package top.chiloven.lukosbot2.commands.bot.music
 enum class MusicPlatform(val displayName: String) {
 
     SPOTIFY("Spotify"),
-    SOUNDCLOUD("SoundCloud");
+    SOUNDCLOUD("SoundCloud")
 
 }

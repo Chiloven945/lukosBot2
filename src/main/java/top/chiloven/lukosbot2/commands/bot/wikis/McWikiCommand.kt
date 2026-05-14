@@ -55,7 +55,14 @@ class McWikiCommand : IWikiishCommand {
             else runSummary(source, link.trim())
         }
 
-        syntax("返回标题和简介", oneOf(arg("link"), arg("article")))
+        syntax(
+            "返回标题和简介",
+            oneOf(
+                arg("link"),
+                arg("article")
+            )
+        )
+
         example(
             "mcwiki 僵尸猪灵",
             "mcwiki en:Zombie_Piglin",
@@ -71,13 +78,16 @@ class McWikiCommand : IWikiishCommand {
         try {
             val url = normalize(linkOrTitle)
             if (isNot(url)) {
-                src.reply("仅支持 Minecraft Wiki 链接或条目名。"); return
+                src.reply("仅支持 Minecraft Wiki 链接或条目名。")
+                return
             }
 
             val summary = fetchTitleAndLead(url)
             if (summary.title.isBlank()) {
-                src.reply("未获取到有效内容，请检查条目是否存在。"); return
+                src.reply("未获取到有效内容，请检查条目是否存在。")
+                return
             }
+
             src.reply(buildString {
                 append(summary.title)
                 if (summary.lead.isNotBlank()) append('\n').append(summary.lead)
@@ -92,7 +102,8 @@ class McWikiCommand : IWikiishCommand {
         try {
             val url = normalize(linkOrTitle)
             if (isNot(url)) {
-                src.reply("仅支持 Minecraft Wiki 链接或条目名。"); return
+                src.reply("仅支持 Minecraft Wiki 链接或条目名。")
+                return
             }
 
             val md = WebToMarkdown.fetchAndConvertWithSelectors(
@@ -114,7 +125,8 @@ class McWikiCommand : IWikiishCommand {
         try {
             val url = normalize(linkOrTitle)
             if (isNot(url)) {
-                src.reply("仅支持 Minecraft Wiki 链接或条目名。"); return
+                src.reply("仅支持 Minecraft Wiki 链接或条目名。")
+                return
             }
 
             val cd = WebScreenshot.screenshotMcWiki(url)
@@ -126,7 +138,10 @@ class McWikiCommand : IWikiishCommand {
         }
     }
 
-    private data class TitleLead(val title: String, val lead: String)
+    private data class TitleLead(
+        val title: String,
+        val lead: String
+    )
 
     private fun fetchTitleAndLead(url: String): TitleLead {
         val doc = Jsoup.connect(url)

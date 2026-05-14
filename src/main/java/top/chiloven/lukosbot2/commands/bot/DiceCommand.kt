@@ -19,7 +19,7 @@ import java.util.stream.IntStream
 )
 class DiceCommand : IBotCommand {
 
-    private val commandDefinition = botCommand("dice") {
+    override fun definition() = botCommand("dice") {
         description = "掷骰子，可指定骰子数量"
 
         argv {
@@ -39,10 +39,11 @@ class DiceCommand : IBotCommand {
             }
         }
 
-        example("dice", "dice 3")
+        example(
+            "dice",
+            "dice 3"
+        )
     }
-
-    override fun definition() = commandDefinition
 
     private fun runDice(count: Long): String {
         if (count <= 0) return "骰子数量必须是正整数。"

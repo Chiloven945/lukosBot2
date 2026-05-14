@@ -28,6 +28,7 @@ class PingCommand : IBotCommand {
         }
 
         syntax("检测机器人在线状态")
+
         example("ping")
     }
 

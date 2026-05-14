@@ -14,8 +14,15 @@ import top.chiloven.lukosbot2.core.policy.PolicyService
 import top.chiloven.lukosbot2.util.StringUtils.isUrl
 
 @Service
-@ConditionalOnProperty(prefix = "lukos.commands.control", name = ["e621"], havingValue = "true", matchIfMissing = true)
-class E621Command(private val policyService: PolicyService) : IBotCommand {
+@ConditionalOnProperty(
+    prefix = "lukos.commands.control",
+    name = ["e621"],
+    havingValue = "true",
+    matchIfMissing = true
+)
+class E621Command(
+    private val policyService: PolicyService
+) : IBotCommand {
 
     private val log = LogManager.getLogger(E621Command::class.java)
 
@@ -120,12 +127,14 @@ class E621Command(private val policyService: PolicyService) : IBotCommand {
         val md5 = md5Raw.trim().lowercase()
 
         if (!Regex("^[0-9a-fA-F]{32}$").matches(md5)) {
-            src.reply("MD5 格式不正确：$md5Raw"); return
+            src.reply("MD5 格式不正确：$md5Raw")
+            return
         }
 
         val posts = Post.fromJsonArray(E621Api.getPosts(limit = 1, page = 1, md5 = md5))
         if (posts.isEmpty()) {
-            src.reply("未找到 MD5 为 $md5 的帖子。"); return
+            src.reply("未找到 MD5 为 $md5 的帖子。")
+            return
         }
 
         val post = posts.first()

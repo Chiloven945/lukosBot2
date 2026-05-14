@@ -27,7 +27,10 @@ class PlayerCommand : IBotCommand {
         description = "查询 Java 版玩家信息"
 
         argv {
-            positional("data", ArgType.StringType) { required = true; description = "玩家用户名或 UUID" }
+            positional("data", ArgType.StringType) {
+                required = true
+                description = "玩家用户名或 UUID"
+            }
             positional("mode", ArgType.StringType) {
                 required = false
                 description = "-u 或 -n"
@@ -35,12 +38,14 @@ class PlayerCommand : IBotCommand {
             execute { args ->
                 val data = args.get<String>("data")
                 val mode = args.getOrNull<String>("mode") ?: ""
+
                 try {
                     val result: String = when (mode) {
                         "-u" -> MojangApi.getUuidFromName(data) ?: "未找到用户"
                         "-n" -> MojangApi.getNameFromUuid(data) ?: "未找到 UUID"
                         else -> MojangApi.getMcPlayerInfo(data).toString()
                     }
+
                     source.reply(result)
                 } catch (e: IOException) {
                     log.warn("Failed to fetch player info: {}", e.message, e)
@@ -49,14 +54,32 @@ class PlayerCommand : IBotCommand {
             }
         }
 
-        syntax("查询玩家信息", oneOf(arg("name"), arg("uuid")))
-        syntax("根据用户名获取 UUID", arg("name"), lit("-u"))
-        syntax("根据 UUID 获取用户名", arg("uuid"), lit("-n"))
+        syntax(
+            "查询玩家信息",
+            oneOf(
+                arg("name"),
+                arg("uuid")
+            )
+        )
+        syntax(
+            "根据用户名获取 UUID",
+            arg("name"),
+            lit("-u")
+        )
+        syntax(
+            "根据 UUID 获取用户名",
+            arg("uuid"),
+            lit("-n")
+        )
         param("name", "玩家用户名（Java 版）")
         param("uuid", "玩家 UUID（不带横线或带横线均可）")
         optionDoc("-u", "强制按\"用户名 -> UUID\"查询")
         optionDoc("-n", "强制按\"UUID -> 用户名\"查询")
-        example("player jeb_", "player Notch -u")
+
+        example(
+            "player jeb_",
+            "player Notch -u"
+        )
     }
 
 }

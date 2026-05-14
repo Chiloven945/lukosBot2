@@ -1,7 +1,7 @@
 target/
 bin/
 config/
-data/
+/data/
 logs/
 .idea/
 .gradle/

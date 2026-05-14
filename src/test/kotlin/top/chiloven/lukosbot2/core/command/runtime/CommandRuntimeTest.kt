@@ -60,7 +60,8 @@ class CommandRuntimeTest {
                 leaf = EmptyLeaf(CommandExecutor {
                     it.source.reply(
                         "pong!"
-                    ); 1
+                    )
+                    1
                 })
             )
         )
@@ -192,7 +193,9 @@ class CommandRuntimeTest {
                     executor = CommandExecutor<CommandSource> { inv ->
                         val a = inv.argv!!.get<Int>("a")
                         val b = inv.argv.get<Int>("b")
-                        inv.source.reply("sum = ${a + b}"); 1
+
+                        inv.source.reply("sum = ${a + b}")
+                        1
                     }
                 )
             )

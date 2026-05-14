@@ -43,15 +43,28 @@ class HelpCommand(
         }
 
         syntax("列出所有可用命令")
-        syntax("查看命令用法（可选强制输出方式）", arg("command"), optOneOf(lit("img"), lit("text")))
+        syntax(
+            "查看命令用法（可选强制输出方式）",
+            arg("command"),
+            optOneOf(
+                lit("img"),
+                lit("text")
+            )
+        )
         param("command", "命令名（不带前缀），例如：wiki / music / github")
-
-        note("输出方式：\n- `img`：强制输出图片版用法\n- `text`：强制输出文本版用法\n- 不指定时自动决定")
 
         example(
             "help",
             "help wiki",
             "help wiki img"
+        )
+        note(
+            """
+                输出方式：
+                - `img`：强制输出图片版用法
+                - `text`：强制输出文本版用法
+                - 不指定时自动决定
+                """.trimIndent()
         )
     }
 

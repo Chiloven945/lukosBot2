@@ -41,11 +41,25 @@ class BilibiliCommand(
             }
         }
 
-        syntax("查询 Bilibili 视频信息", oneOf(arg("code"), arg("link")), opt(lit("-i")))
+        syntax(
+            "查询 Bilibili 视频信息",
+            oneOf(
+                arg("code"),
+                arg("link")
+            ),
+            opt(
+                lit("-i")
+            )
+        )
         param("code", "视频编号（AV / BV）")
         param("link", "视频链接或 b23.tv 短链")
         optionDoc("-i", "展示更完整的视频信息")
-        example("bilibili BV1GJ411x7h7", "bilibili av170001", "bilibili https://b23.tv/BV1GJ411x7h7 -i")
+
+        example(
+            "bilibili BV1GJ411x7h7",
+            "bilibili av170001",
+            "bilibili https://b23.tv/BV1GJ411x7h7 -i"
+        )
     }
 
     override fun definition() = commandDefinition
@@ -59,8 +73,10 @@ class BilibiliCommand(
         return runCatching {
             val video = bilibiliQueryService.query(target)
             if (video == null) {
-                src.reply("未找到该视频。"); return 0
+                src.reply("未找到该视频。")
+                return 0
             }
+
             val text = video.toReplyText(detailed = detailed)
             val cover = video.cover?.takeIf { it.isNotBlank() }
             src.reply(cover?.let { "$text\n$it" } ?: text)

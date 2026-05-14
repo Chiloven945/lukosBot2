@@ -29,45 +29,67 @@ class MotdCommand(
 
         literal("api") {
             description = "强制使用 mcsrvstat.us API 查询"
-            raw("address") { address -> executeQuery(source, address, MotdQueryService.QueryMode.API) }
+            raw("address") { address ->
+                executeQuery(source, address, MotdQueryService.QueryMode.API)
+            }
             param("address[:port]", "服务器地址")
         }
 
         literal("direct") {
             description = "强制使用直连协议查询"
-            raw("address") { address -> executeQuery(source, address, MotdQueryService.QueryMode.DIRECT) }
+            raw("address") { address ->
+                executeQuery(source, address, MotdQueryService.QueryMode.DIRECT)
+            }
             param("address[:port]", "服务器地址")
         }
 
         literal("self") {
             description = "强制使用直连协议查询"
-            raw("address") { address -> executeQuery(source, address, MotdQueryService.QueryMode.DIRECT) }
+            raw("address") { address ->
+                executeQuery(source, address, MotdQueryService.QueryMode.DIRECT)
+            }
             param("address[:port]", "服务器地址")
         }
 
         literal("auto") {
             description = "自动选择查询方式"
-            raw("address") { address -> executeQuery(source, address, MotdQueryService.QueryMode.AUTO) }
+            raw("address") { address ->
+                executeQuery(source, address, MotdQueryService.QueryMode.AUTO)
+            }
             param("address[:port]", "服务器地址")
         }
 
         raw("address", required = false) { address ->
-            if (address.isBlank()) sendUsage(source)
-            else executeQuery(source, address, MotdQueryService.QueryMode.AUTO)
+            if (address.isBlank()) {
+                sendUsage(source)
+            } else {
+                executeQuery(source, address, MotdQueryService.QueryMode.AUTO)
+            }
         }
 
         syntax("自动选择查询方式", arg("address[:port]"))
         param("address[:port]", "服务器地址（支持 SRV 域名、IPv4 / IPv6，可选端口，默认 25565）")
-        example("motd play.example.com", "motd api play.example.com:25565", "motd direct [2001:db8::1]:25565")
+
         note("不指定方式时会自动查询：优先使用 mcsrvstat.us，失败后回退到直连协议。")
+        example(
+            "motd play.example.com",
+            "motd api play.example.com:25565",
+            "motd direct [2001:db8::1]:25565"
+        )
     }
 
-    private fun executeQuery(src: CommandSource, address: String, mode: MotdQueryService.QueryMode): Int {
+    private fun executeQuery(
+        src: CommandSource,
+        address: String,
+        mode: MotdQueryService.QueryMode
+    ): Int {
         return try {
             require(address.isNotBlank()) { "请提供服务器地址" }
+
             val data = motdQueryService.query(address, mode)
             val text = data.formatted()
             val faviconBytes = data.faviconBytes()
+
             if (faviconBytes != null && faviconBytes.isNotEmpty()) {
                 src.reply(
                     OutboundMessage(
@@ -82,12 +104,18 @@ class MotdCommand(
                         )
                     )
                 )
-            } else src.reply(text)
+            } else {
+                src.reply(text)
+            }
+
             1
         } catch (e: IllegalArgumentException) {
-            src.reply(e.message ?: "地址格式不正确"); 0
+            src.reply(e.message ?: "地址格式不正确")
+            0
         } catch (e: Exception) {
-            log.warn("MOTD failed: {}", address, e); src.reply("查询失败：${e.message}"); 0
+            log.warn("MOTD failed: {}", address, e)
+            src.reply("查询失败：${e.message}")
+            0
         }
     }
 

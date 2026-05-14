@@ -19,7 +19,10 @@ import kotlin.math.sqrt
 
 object SearchGridRenderer {
 
-    private data class BadgeColors(val fg: Color, val bg: Color)
+    private data class BadgeColors(
+        val fg: Color,
+        val bg: Color
+    )
 
     private val style: UsageImageUtils.ImageStyle
         get() = UsageImageUtils.ImageStyle.defaults().resolveFontFallbacks()
