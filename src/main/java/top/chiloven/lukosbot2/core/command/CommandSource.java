@@ -57,6 +57,7 @@ public final class CommandSource {
      *
      * @param in   inbound message.
      * @param sink outbound delivery sink.
+     *
      * @return source backed by the inbound message.
      */
     public static CommandSource forInbound(
@@ -75,6 +76,7 @@ public final class CommandSource {
      *
      * @param addr target address.
      * @param sink outbound delivery sink.
+     *
      * @return source with {@link #inbound()} equal to {@code null}.
      */
     public static CommandSource forAddress(
@@ -125,6 +127,7 @@ public final class CommandSource {
      * raw message payloads, or other adapter-provided data.</p>
      *
      * @param key metadata key.
+     *
      * @return the extra value, or {@code null} if absent.
      */
     public Object ext(String key) {

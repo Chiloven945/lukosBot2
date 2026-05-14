@@ -3,8 +3,8 @@ package top.chiloven.lukosbot2.commands.impl.github
 import org.apache.logging.log4j.LogManager
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
+import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.commands.definition.ArgType
-import top.chiloven.lukosbot2.commands.definition.bridge.SpecBotCommand
 import top.chiloven.lukosbot2.commands.definition.dsl.botCommand
 import top.chiloven.lukosbot2.commands.definition.parser.ArgvParseResult
 import top.chiloven.lukosbot2.commands.impl.github.data.GitHubRepo
@@ -22,12 +22,12 @@ import top.chiloven.lukosbot2.config.CommandConfigProp
 )
 class GitHubCommand(
     ccp: CommandConfigProp
-) : SpecBotCommand() {
+) : IBotCommand {
 
     private val log = LogManager.getLogger(GitHubCommand::class.java)
     private val api = GitHubApi(ccp.gitHub.token)
 
-    override fun spec() = botCommand("github") {
+    override fun definition() = botCommand("github") {
         alias("gh")
         description = "GitHub 查询工具"
 
@@ -35,7 +35,7 @@ class GitHubCommand(
             description = "查询用户信息"
 
             raw("username") { username ->
-                reply(handleUser(username))
+                source.reply(handleUser(username))
             }
 
             param("username", "GitHub 用户名")
@@ -46,7 +46,7 @@ class GitHubCommand(
             description = "查询仓库信息"
 
             raw("ownerRepo") { ownerRepo ->
-                reply(handleRepo(ownerRepo))
+                source.reply(handleRepo(ownerRepo))
             }
 
             param("owner/repo", "仓库名，格式 owner/repo")
@@ -91,7 +91,7 @@ class GitHubCommand(
                 }
 
                 execute { args ->
-                    reply(handleSearch(args.toSearchParams()))
+                    source.reply(handleSearch(args.toSearchParams()))
                 }
             }
 

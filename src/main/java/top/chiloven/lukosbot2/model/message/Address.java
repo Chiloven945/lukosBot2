@@ -20,6 +20,7 @@ public record Address(
      * Parse string to {@link Address} in {@code <platform>:<p|g>:<id>} format.
      *
      * @param str the string to be parsed
+     *
      * @return the Address result
      */
     public static Address parse(@NonNull String str) {

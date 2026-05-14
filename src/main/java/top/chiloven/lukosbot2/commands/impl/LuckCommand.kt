@@ -1,14 +1,11 @@
 package top.chiloven.lukosbot2.commands.impl
 
-import com.mojang.brigadier.CommandDispatcher
 import org.apache.logging.log4j.LogManager
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
-import top.chiloven.lukosbot2.commands.UsageNode
-import top.chiloven.lukosbot2.core.command.CommandSource
+import top.chiloven.lukosbot2.commands.definition.dsl.botCommand
 import top.chiloven.lukosbot2.util.MathUtils
-import top.chiloven.lukosbot2.util.brigadier.builder.CommandLAB.literal
 import java.time.LocalDate
 import java.time.MonthDay
 
@@ -23,43 +20,23 @@ class LuckCommand : IBotCommand {
 
     private val log = LogManager.getLogger(LuckCommand::class.java)
 
-    override fun name(): String = "luck"
+    private val commandDefinition = botCommand("luck") {
+        alias("l", "jrrp")
+        description = "获取今日幸运值"
+        execute { source.reply(getLuck()) }
+        syntax("获取今日幸运值")
+        example("luck")
+    }
 
-    override fun aliases(): List<String> = listOf("l", "jrrp")
+    override fun definition() = commandDefinition
 
-    override fun description(): String = "获取今日幸运值"
+    private fun getLuck(): String {
+        val today = LocalDate.now()
+        val monthDay = MonthDay.from(today)
+        val userId = 0L
 
-    override fun usage(): UsageNode = UsageNode.root(name())
-        .description(description())
-        .alias(aliases())
-        .syntax("获取今日幸运值")
-        .example("luck")
-        .build()
-
-    override fun register(dispatcher: CommandDispatcher<CommandSource>) {
-        dispatcher.register(
-            literal(name()).executes { ctx ->
-                try {
-                    val today = LocalDate.now()
-                    val monthDay = MonthDay.from(today)
-                    val userId = ctx.source.userId()
-
-                    val luck = MathUtils.stableRandom(
-                        0, 100,
-                        userId,
-                        today
-                    )
-                    val response = generateLuckMessage(monthDay, luck)
-
-                    ctx.source.reply("你今天的幸运值是……\n$response")
-                    1
-                } catch (e: Exception) {
-                    log.error("Error executing luck command", e)
-                    ctx.source.reply("获取幸运值失败，请稍后再试。")
-                    0
-                }
-            }
-        )
+        val luck = MathUtils.stableRandom(0, 100, userId, today)
+        return "你今天的幸运值是……\n${generateLuckMessage(monthDay, luck)}"
     }
 
     private fun generateLuckMessage(date: MonthDay, luck: Int): String = when (date) {

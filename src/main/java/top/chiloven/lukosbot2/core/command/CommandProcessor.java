@@ -1,32 +1,26 @@
 package top.chiloven.lukosbot2.core.command;
 
-import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.IBotCommand;
 import top.chiloven.lukosbot2.config.AppProperties;
 import top.chiloven.lukosbot2.core.IProcessor;
+import top.chiloven.lukosbot2.core.command.runtime.BotCommandRuntime;
 import top.chiloven.lukosbot2.core.policy.PolicyService;
 import top.chiloven.lukosbot2.model.message.inbound.InboundMessage;
 import top.chiloven.lukosbot2.model.message.outbound.OutboundMessage;
-import top.chiloven.lukosbot2.util.brigadier.BrigadierUtils;
 import top.chiloven.lukosbot2.util.message.TextExtractor;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Command processor based on Mojang Brigadier.
- *
- * <p>This processor extracts the command line from an {@link InboundMessage} (caption first,
- * otherwise first text part), checks prefix, then executes the Brigadier dispatcher.</p>
+ * Command processor using the project's own CommandRuntime.
  */
 @Service
 @Log4j2
 public class CommandProcessor implements IProcessor {
 
-    private final CommandDispatcher<CommandSource> dispatcher = new CommandDispatcher<>();
     private final String prefix;
     private final CommandRegistry registry;
     private final PolicyService policyService;
@@ -45,11 +39,10 @@ public class CommandProcessor implements IProcessor {
 
         if (commands != null) for (IBotCommand cmd : commands) {
             try {
-                cmd.register(dispatcher);
-                BrigadierUtils.registerAliases(dispatcher, cmd.name(), cmd.aliases());
-                log.info("[Cmd] Registered command: {}", cmd.name() + (cmd.aliases().isEmpty()
-                        ? ""
-                        : " aliases: " + cmd.aliases()));
+                log.info("[Cmd] Registered command: {}",
+                        cmd.name() + (cmd.aliases().isEmpty()
+                                ? ""
+                                : " aliases: " + cmd.aliases()));
             } catch (Exception e) {
                 log.warn("[Cmd] Failed to register command {}: {}", cmd.name(), e.getMessage(), e);
             }
@@ -74,18 +67,17 @@ public class CommandProcessor implements IProcessor {
         CommandSource src = CommandSource.forInbound(in, outs::add);
 
         IBotCommand command = registry.get(firstToken(cmdLine));
-        if (command != null && !policyService.isCommandAllowed(src, command.name())) {
+        if (command == null) {
+            return outs;
+        }
+
+        if (!policyService.isCommandAllowed(src, command.name())) {
             src.reply(policyService.commandDeniedMessage(command.name()));
             return outs;
         }
 
         try {
-            dispatcher.execute(cmdLine, src);
-        } catch (CommandSyntaxException e) {
-            String input = e.getInput() == null ? cmdLine : e.getInput();
-            int cursor = Math.max(0, e.getCursor());
-            String pointer = " ".repeat(Math.min(cursor, input.length())) + "^";
-            src.reply("命令语法错误：\n" + input + "\n" + pointer + "\n" + e.getMessage() + "\n请检查参数是否完整，或发送 /help 查看用法。");
+            BotCommandRuntime.INSTANCE.execute(command, src, cmdLine);
         } catch (Exception e) {
             log.warn("[Cmd] Command execution error: {}", e.getMessage(), e);
             src.reply("命令执行失败，请稍后再试。");

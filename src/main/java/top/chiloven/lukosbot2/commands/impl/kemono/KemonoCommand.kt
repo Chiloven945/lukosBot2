@@ -4,8 +4,8 @@ import okhttp3.Request
 import org.apache.logging.log4j.LogManager
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import top.chiloven.lukosbot2.Constants
+import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.commands.definition.ArgType
-import top.chiloven.lukosbot2.commands.definition.bridge.SpecBotCommand
 import top.chiloven.lukosbot2.commands.definition.dsl.botCommand
 import top.chiloven.lukosbot2.commands.impl.kemono.schema.Creator
 import top.chiloven.lukosbot2.commands.impl.kemono.schema.HashSearchFile
@@ -51,7 +51,7 @@ import java.util.concurrent.TimeUnit
 class KemonoCommand(
     private val appProperties: AppProperties,
     private val proxyConfigProp: ProxyConfigProp,
-) : SpecBotCommand() {
+) : IBotCommand {
 
     private companion object {
 
@@ -73,7 +73,7 @@ class KemonoCommand(
     private val okHttp
         get() = clientCache.client
 
-    override fun spec() = botCommand("kemono") {
+    override fun definition() = botCommand("kemono") {
         description = "从 kemono.cr 查询帖子/创作者信息，并支持打包下载附件"
         visible = false
 
@@ -104,7 +104,12 @@ class KemonoCommand(
                 execute { args ->
                     executeSafely(source) {
                         val posList = args.positionals
-                        handlePost(posList, args.get("showAllAttachments"), args.get("archive"), source)
+                        handlePost(
+                            posList,
+                            args.get("showAllAttachments"),
+                            args.get("archive"),
+                            source
+                        )
                     }
                 }
             }

@@ -12,7 +12,7 @@ class CommandUsageMapperTest {
 
     @Test
     fun ping_usage() {
-        val spec = BotCommandSpec(
+        val spec = CommandDefinition(
             name = "ping",
             description = "return bot status and version info",
             root = CommandNodeSpec(
@@ -39,7 +39,7 @@ class CommandUsageMapperTest {
 
     @Test
     fun dice_usage() {
-        val spec = BotCommandSpec(
+        val spec = CommandDefinition(
             name = "dice",
             description = "roll dice, optionally specify count",
             root = CommandNodeSpec(
@@ -74,7 +74,7 @@ class CommandUsageMapperTest {
 
     @Test
     fun ip_usage() {
-        val spec = BotCommandSpec(
+        val spec = CommandDefinition(
             name = "ip",
             description = "query IP info",
             root = CommandNodeSpec(
@@ -125,7 +125,7 @@ class CommandUsageMapperTest {
 
     @Test
     fun github_nested_usage() {
-        val spec = BotCommandSpec(
+        val spec = CommandDefinition(
             name = "github",
             aliases = listOf("gh"),
             description = "GitHub search tools",
@@ -187,7 +187,7 @@ class CommandUsageMapperTest {
 
     @Test
     fun argv_options_render() {
-        val spec = BotCommandSpec(
+        val spec = CommandDefinition(
             name = "cmd",
             description = "test",
             root = CommandNodeSpec(
@@ -232,7 +232,7 @@ class CommandUsageMapperTest {
 
     @Test
     fun aliases_render() {
-        val spec = BotCommandSpec(
+        val spec = CommandDefinition(
             name = "github",
             aliases = listOf("gh", "git"),
             description = "GitHub tools",
@@ -253,7 +253,7 @@ class CommandUsageMapperTest {
 
     @Test
     fun tree_leaf_usage() {
-        val spec = BotCommandSpec(
+        val spec = CommandDefinition(
             name = "calc",
             description = "calculate something",
             root = CommandNodeSpec(
@@ -279,7 +279,7 @@ class CommandUsageMapperTest {
 
     @Test
     fun empty_leaf_no_tail() {
-        val spec = BotCommandSpec(
+        val spec = CommandDefinition(
             name = "ping",
             description = "pong",
             root = CommandNodeSpec(

@@ -5,6 +5,7 @@ import top.chiloven.lukosbot2.commands.impl.music.TrackInfo
 import java.net.http.HttpClient
 
 interface IMusicProvider {
+
     /**
      * Return the music platform
      * 
@@ -37,10 +38,12 @@ interface IMusicProvider {
     fun resolveLink(link: String): TrackInfo?
 
     companion object {
+
         /**
          * HTTP client instance
          */
         @JvmField
         val HTTP: HttpClient = HttpClient.newHttpClient()
     }
+
 }

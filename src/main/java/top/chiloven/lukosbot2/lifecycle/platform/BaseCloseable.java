@@ -11,6 +11,7 @@ public final class BaseCloseable implements AutoCloseable {
      * Add a closeable resource to be closed when this is closed.
      *
      * @param c the closeable resource
+     *
      * @return this instance for chaining
      */
     public synchronized BaseCloseable add(AutoCloseable c) {
@@ -22,6 +23,7 @@ public final class BaseCloseable implements AutoCloseable {
      * Add multiple closeable resources to be closed when this is closed.
      *
      * @param cs the list of closeable resources
+     *
      * @return this instance for chaining
      */
     public synchronized BaseCloseable addAll(List<? extends AutoCloseable> cs) {

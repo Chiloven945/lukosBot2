@@ -2,7 +2,7 @@ package top.chiloven.lukosbot2.commands.impl
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
-import top.chiloven.lukosbot2.commands.definition.bridge.SpecBotCommand
+import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.commands.definition.dsl.arg
 import top.chiloven.lukosbot2.commands.definition.dsl.botCommand
 
@@ -13,17 +13,14 @@ import top.chiloven.lukosbot2.commands.definition.dsl.botCommand
     havingValue = "true",
     matchIfMissing = true
 )
-class EchoCommand : SpecBotCommand() {
+class EchoCommand : IBotCommand {
 
-    override fun spec() = botCommand("echo") {
+    override fun definition() = botCommand("echo") {
         description = "原样返回文本"
 
         raw("text", required = false) { text ->
-            if (text.isBlank()) {
-                reply("请输入要回显的文本。用法：/echo <text>")
-            } else {
-                reply(text)
-            }
+            if (text.isBlank()) source.reply("请输入要回显的文本。用法：/echo <text>")
+            else source.reply(text)
         }
 
         syntax("回显输入的文本", arg("text"))

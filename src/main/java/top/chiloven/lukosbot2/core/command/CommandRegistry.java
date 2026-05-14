@@ -27,6 +27,7 @@ public class CommandRegistry {
      * Get a command by its name (case-insensitive).
      *
      * @param name the command name
+     *
      * @return the IBotCommand instance, or null if not found
      */
     public IBotCommand get(String name) {

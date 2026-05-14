@@ -125,12 +125,13 @@ public final class UsageNode {
      * Creates a builder for a root usage node.
      *
      * <p>The {@code name} is the canonical literal label for the node (typically the Brigadier
-     * literal name), and is stored without any command prefix (for example: {@code "wiki"},
-     * {@code "help"}). Alternative labels may be added later via {@link Builder#alias(String)} or
-     * {@link Builder#alias(String...)}.
+     * literal name), and is stored without any command prefix (for example: {@code "wiki"}, {@code "help"}).
+     * Alternative labels may be added later via {@link Builder#alias(String)} or {@link Builder#alias(String...)}.
      *
      * @param name the literal name for this node; must be non-null and non-blank
+     *
      * @return a builder for configuring the node
+     *
      * @throws NullPointerException     if {@code name} is {@code null}
      * @throws IllegalArgumentException if {@code name} is blank after trimming
      */
@@ -145,6 +146,7 @@ public final class UsageNode {
      * typed as-is by the user.
      *
      * @param text literal token text; {@code null} is treated as an empty string
+     *
      * @return a literal item
      */
     public static Item lit(String text) {
@@ -158,7 +160,9 @@ public final class UsageNode {
      * automatically; command authors should not manually include them.
      *
      * @param name parameter name (without brackets); must be non-null and non-blank
+     *
      * @return an argument item
+     *
      * @throws NullPointerException     if {@code name} is {@code null}
      * @throws IllegalArgumentException if {@code name} is blank after trimming
      */
@@ -172,7 +176,9 @@ public final class UsageNode {
      * <p>When rendered, the result becomes {@code [item]}.
      *
      * @param item the item to mark optional; must be non-null
+     *
      * @return an optional wrapper item
+     *
      * @throws NullPointerException if {@code item} is {@code null}
      */
     public static Item opt(Item item) {
@@ -186,7 +192,9 @@ public final class UsageNode {
      * Use {@link #optOneOf(Item...)} for an optional choice.
      *
      * @param options two or more alternative items
+     *
      * @return a required choice item
+     *
      * @throws IllegalArgumentException if fewer than two options are provided
      */
     public static Item oneOf(Item... options) {
@@ -200,7 +208,9 @@ public final class UsageNode {
      * be used; otherwise the entire choice may be omitted.
      *
      * @param options two or more alternative items
+     *
      * @return an optional choice item
+     *
      * @throws IllegalArgumentException if fewer than two options are provided
      */
     public static Item optOneOf(Item... options) {
@@ -215,6 +225,7 @@ public final class UsageNode {
      * behave as a single conceptual unit.
      *
      * @param items items to group (may be empty or {@code null})
+     *
      * @return a grouped item
      */
     public static Item group(Item... items) {
@@ -228,6 +239,7 @@ public final class UsageNode {
      * tokens like {@code --k=<v>} where a placeholder is embedded inside a single token.
      *
      * @param items items to concatenate (may be empty or {@code null})
+     *
      * @return a concatenation item
      */
     public static Item concat(Item... items) {
@@ -250,6 +262,7 @@ public final class UsageNode {
      * <p>Unknown item implementations fall back to {@link Object#toString()}.
      *
      * @param item the item to render; {@code null} yields an empty string
+     *
      * @return rendered syntax text for the item (never {@code null})
      */
     public static String renderItem(Item item) {
@@ -281,6 +294,7 @@ public final class UsageNode {
      * <p>Blank or empty renderings are skipped. The resulting string is trimmed.
      *
      * @param items items to render; {@code null} or empty yields an empty string
+     *
      * @return rendered sequence (never {@code null})
      */
     public static String renderItems(List<Item> items) {
@@ -395,7 +409,10 @@ public final class UsageNode {
      * @param optional whether the entire choice is optional
      * @param options  two or more alternatives
      */
-    public record Choice(boolean optional, List<Item> options) implements Item {
+    public record Choice(
+            boolean optional,
+            List<Item> options
+    ) implements Item {
 
         /**
          * @throws IllegalArgumentException if fewer than two options are provided
@@ -495,7 +512,10 @@ public final class UsageNode {
      * @param tail        syntax tail representation (never {@code null}; defaults to empty raw tail)
      * @param description optional one-line description (trimmed; may be empty)
      */
-    public record Syntax(SyntaxTail tail, String description) {
+    public record Syntax(
+            SyntaxTail tail,
+            String description
+    ) {
 
         public Syntax {
             tail = Objects.requireNonNullElseGet(tail, () -> new RawTail(""));
@@ -524,7 +544,10 @@ public final class UsageNode {
      * @param token       the parameter token item (non-null)
      * @param description parameter description (trimmed; may be empty)
      */
-    public record Parameter(Item token, String description) {
+    public record Parameter(
+            Item token,
+            String description
+    ) {
 
         public Parameter {
             token = Objects.requireNonNull(token, "token");
@@ -542,7 +565,10 @@ public final class UsageNode {
      * @param token       the option token item (non-null)
      * @param description option description (trimmed; may be empty)
      */
-    public record Option(Item token, String description) {
+    public record Option(
+            Item token,
+            String description
+    ) {
 
         public Option {
             token = Objects.requireNonNull(token, "token");
@@ -587,24 +613,14 @@ public final class UsageNode {
         }
 
         /**
-         * Sets the one-line description for the node being built.
-         *
-         * @param description node description; {@code null} becomes empty
-         * @return this builder
-         */
-        public Builder description(String description) {
-            this.description = description == null ? "" : description.trim();
-            return this;
-        }
-
-        /**
          * Adds a single alias for the node being built.
          *
          * <p>An alias is an alternative literal label for the same usage node. The canonical label
-         * remains {@link UsageNode#getName()}. Blank aliases are ignored. Normalization, duplicate
-         * removal, and canonical-name filtering are applied when {@link #build()} is called.
+         * remains {@link UsageNode#getName()}. Blank aliases are ignored. Normalization, duplicate removal, and
+         * canonical-name filtering are applied when {@link #build()} is called.
          *
          * @param alias alias label to add
+         *
          * @return this builder
          */
         public Builder alias(String alias) {
@@ -618,10 +634,10 @@ public final class UsageNode {
          * Adds multiple aliases for the node being built.
          *
          * <p>{@code null} input is ignored. Blank entries are skipped. Each alias is trimmed.
-         * Normalization, duplicate removal, and canonical-name filtering are applied when
-         * {@link #build()} is called.
+         * Normalization, duplicate removal, and canonical-name filtering are applied when {@link #build()} is called.
          *
          * @param aliases alias labels to add
+         *
          * @return this builder
          */
         public Builder alias(String... aliases) {
@@ -638,10 +654,10 @@ public final class UsageNode {
          * Adds multiple aliases for the node being built in {@code Collection<String>}.
          *
          * <p>{@code null} input is ignored. Blank entries are skipped. Each alias is trimmed.
-         * Normalization, duplicate removal, and canonical-name filtering are applied when
-         * {@link #build()} is called.
+         * Normalization, duplicate removal, and canonical-name filtering are applied when {@link #build()} is called.
          *
          * @param aliases alias labels to add
+         *
          * @return this builder
          */
         public Builder alias(Collection<String> aliases) {
@@ -662,6 +678,7 @@ public final class UsageNode {
          *
          * @param description optional per-syntax description (trimmed; may be empty)
          * @param tailItems   tail items to render after the command path (may be {@code null} / empty)
+         *
          * @return this builder
          */
         public Builder syntax(String description, Item... tailItems) {
@@ -678,7 +695,9 @@ public final class UsageNode {
          *
          * @param tail        raw tail text after the command path (trimmed; may be empty)
          * @param description optional per-syntax description (trimmed; may be empty)
+         *
          * @return this builder
+         *
          * @deprecated Use {@link #syntax(String, Item...)} to avoid manual bracket syntax.
          */
         @Deprecated
@@ -697,7 +716,9 @@ public final class UsageNode {
          *
          * @param name        placeholder name (without brackets); must be non-blank
          * @param description parameter description (trimmed; may be empty)
+         *
          * @return this builder
+         *
          * @throws NullPointerException     if {@code name} is {@code null}
          * @throws IllegalArgumentException if {@code name} is blank after trimming
          */
@@ -710,7 +731,9 @@ public final class UsageNode {
          *
          * @param token       parameter token item (non-null)
          * @param description parameter description (trimmed; may be empty)
+         *
          * @return this builder
+         *
          * @throws NullPointerException if {@code token} is {@code null}
          */
         public Builder parameter(Item token, String description) {
@@ -728,6 +751,7 @@ public final class UsageNode {
          *
          * @param flag        literal flag token (e.g. {@code "-n"}, {@code "--force"})
          * @param description option description (trimmed; may be empty)
+         *
          * @return this builder
          */
         public Builder option(String flag, String description) {
@@ -739,7 +763,9 @@ public final class UsageNode {
          *
          * @param token       option token item (non-null)
          * @param description option description (trimmed; may be empty)
+         *
          * @return this builder
+         *
          * @throws NullPointerException if {@code token} is {@code null}
          */
         public Builder option(Item token, String description) {
@@ -754,6 +780,7 @@ public final class UsageNode {
          * so that renderers can inject the configured prefix consistently.
          *
          * @param example example invocation text
+         *
          * @return this builder
          */
         public Builder example(String example) {
@@ -769,6 +796,7 @@ public final class UsageNode {
          * <p>{@code null} input is ignored. Blank entries are skipped. Each example is trimmed.
          *
          * @param examples example invocation strings
+         *
          * @return this builder
          */
         public Builder example(String... examples) {
@@ -787,6 +815,7 @@ public final class UsageNode {
          * <p>Blank notes are ignored. Notes are intended for free-form hints and caveats.
          *
          * @param note note text
+         *
          * @return this builder
          */
         public Builder note(String note) {
@@ -802,6 +831,7 @@ public final class UsageNode {
          * <p>{@code null} input is ignored. Blank entries are skipped. Each note is trimmed.
          *
          * @param notes note strings
+         *
          * @return this builder
          */
         public Builder note(String... notes) {
@@ -820,6 +850,7 @@ public final class UsageNode {
          * <p>{@code null} values are ignored.
          *
          * @param node child node
+         *
          * @return this builder
          */
         public Builder child(UsageNode node) {
@@ -835,6 +866,7 @@ public final class UsageNode {
          * <p>{@code null} input is ignored.
          *
          * @param nodes child nodes
+         *
          * @return this builder
          */
         public Builder child(UsageNode... nodes) {
@@ -860,7 +892,9 @@ public final class UsageNode {
          * @param name        child node name (non-blank)
          * @param description child node description (trimmed; may be empty)
          * @param spec        builder customizer for the child; may be {@code null}
+         *
          * @return this builder
+         *
          * @throws NullPointerException     if {@code name} is {@code null}
          * @throws IllegalArgumentException if {@code name} is blank after trimming
          */
@@ -868,6 +902,18 @@ public final class UsageNode {
             Builder b = new Builder(name).description(description);
             if (spec != null) spec.accept(b);
             this.children.add(b.build());
+            return this;
+        }
+
+        /**
+         * Sets the one-line description for the node being built.
+         *
+         * @param description node description; {@code null} becomes empty
+         *
+         * @return this builder
+         */
+        public Builder description(String description) {
+            this.description = description == null ? "" : description.trim();
             return this;
         }
 

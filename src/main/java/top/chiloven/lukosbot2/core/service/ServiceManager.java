@@ -174,6 +174,7 @@ public class ServiceManager {
      * Called by {@code MessageDispatcher} for incoming messages.
      *
      * @param in inbound message.
+     *
      * @return outbound messages produced by enabled trigger services for this message; may be empty.
      */
     public List<OutboundMessage> onMessage(InboundMessage in) {

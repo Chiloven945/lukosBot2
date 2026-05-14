@@ -1,6 +1,6 @@
 package top.chiloven.lukosbot2.commands.definition
 
-data class CommandNodeSpec(
+data class CommandNodeSpec<S>(
     val name: String,
     val description: String = "",
     val aliases: List<String> = emptyList(),
@@ -9,6 +9,6 @@ data class CommandNodeSpec(
     val options: List<CommandOptionDoc> = emptyList(),
     val examples: List<String> = emptyList(),
     val notes: List<String> = emptyList(),
-    val children: List<CommandNodeSpec> = emptyList(),
-    val leaf: CommandLeafSpec? = null
+    val children: List<CommandNodeSpec<S>> = emptyList(),
+    val leaf: CommandLeafSpec<S>? = null
 )

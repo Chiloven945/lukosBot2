@@ -1,8 +1,8 @@
 package top.chiloven.lukosbot2.commands.definition
 
-fun interface CommandExecutor {
+fun interface CommandExecutor<S> {
 
-    fun execute(invocation: CommandInvocation): Int
+    fun execute(invocation: CommandInvocation<S>): Int
 
 }
 

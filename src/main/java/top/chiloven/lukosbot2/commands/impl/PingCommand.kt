@@ -3,7 +3,7 @@ package top.chiloven.lukosbot2.commands.impl
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.Constants
-import top.chiloven.lukosbot2.commands.definition.bridge.SpecBotCommand
+import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.commands.definition.dsl.botCommand
 import top.chiloven.lukosbot2.util.StringUtils
 import top.chiloven.lukosbot2.util.TimeUtils
@@ -18,13 +18,13 @@ import java.time.ZoneId
     havingValue = "true",
     matchIfMissing = true
 )
-class PingCommand : SpecBotCommand() {
+class PingCommand : IBotCommand {
 
-    override fun spec() = botCommand("ping") {
+    override fun definition() = botCommand("ping") {
         description = "返回机器人的运行状态与版本信息"
 
         execute {
-            reply(buildStatus())
+            source.reply(buildStatus())
         }
 
         syntax("检测机器人在线状态")

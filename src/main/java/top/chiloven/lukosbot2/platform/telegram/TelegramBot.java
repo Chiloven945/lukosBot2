@@ -53,9 +53,12 @@ final class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
         User from = m.getFrom();
         Sender sender = (from == null)
                 ? Sender.unknown()
-                : new Sender(from.getId(), from.getUserName(),
-                joinName(from.getFirstName(), from.getLastName()),
-                from.getIsBot());
+                : new Sender(
+                        from.getId(),
+                        from.getUserName(),
+                        joinName(from.getFirstName(), from.getLastName()),
+                        from.getIsBot()
+                );
 
         // chat info
         String title = (m.getChat() != null) ? m.getChat().getTitle() : null;

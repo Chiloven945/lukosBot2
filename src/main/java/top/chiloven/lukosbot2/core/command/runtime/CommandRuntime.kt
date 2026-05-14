@@ -3,14 +3,13 @@ package top.chiloven.lukosbot2.core.command.runtime
 import top.chiloven.lukosbot2.commands.definition.*
 import top.chiloven.lukosbot2.commands.definition.parser.ArgvParser
 import top.chiloven.lukosbot2.commands.definition.parser.ShellWords
-import top.chiloven.lukosbot2.core.command.CommandSource
 
 object CommandRuntime {
 
-    fun execute(
-        root: CommandNodeSpec,
+    fun <S> execute(
+        root: CommandNodeSpec<S>,
         rawTail: String,
-        source: CommandSource,
+        source: S,
         path: List<String> = emptyList()
     ): Int {
         val tail = rawTail.trimStart()
@@ -29,133 +28,68 @@ object CommandRuntime {
         }
 
         val leaf = root.leaf
-        if (leaf == null) {
-            if (firstToken != null) {
-                source.reply("未知子命令：$firstToken\n\n发送 /help ${path.joinToString(" ")} 查看详细用法。")
+            ?: if (firstToken != null) {
+                throw CommandDispatchException(path, "未知子命令：$firstToken")
             } else {
-                source.reply("缺少子命令。\n\n发送 /help ${path.joinToString(" ")} 查看详细用法。")
+                throw CommandDispatchException(path, "缺少子命令")
             }
-            return 0
-        }
 
         return executeLeaf(leaf, tail, source, path)
     }
 
-    private fun executeLeaf(
-        leaf: CommandLeafSpec,
+    private fun <S> executeLeaf(
+        leaf: CommandLeafSpec<S>,
         rawTail: String,
-        source: CommandSource,
+        source: S,
         path: List<String>
     ): Int {
         return try {
             when (leaf) {
-                is EmptyLeafSpec -> executeEmptyLeaf(leaf, rawTail, source, path)
-                is RawLeafSpec -> executeRawLeaf(leaf, rawTail, source, path)
-                is ArgvLeafSpec -> executeArgvLeaf(leaf, rawTail, source, path)
-                is TreeLeafSpec -> executeTreeLeaf(leaf, rawTail, source, path)
+                is EmptyLeafSpec -> {
+                    if (rawTail.isNotEmpty()) throw CommandDispatchException(path, "不需要参数，但收到了：$rawTail")
+                    val inv = CommandInvocation(source, path.joinToString(" "), path, "")
+                    leaf.executor.execute(inv)
+                }
+
+                is RawLeafSpec -> {
+                    if (leaf.required && rawTail.isBlank()) throw CommandDispatchException(
+                        path,
+                        "缺少必填参数：${leaf.name}"
+                    )
+                    val fullLine = if (rawTail.isNotEmpty()) "${path.joinToString(" ")} $rawTail" else path.joinToString(" ")
+                    val inv = CommandInvocation(source, fullLine, path, rawTail)
+                    leaf.executor.execute(inv)
+                }
+
+                is ArgvLeafSpec -> {
+                    val tokens = ShellWords.split(rawTail)
+                    val result = ArgvParser.parse(tokens, leaf.positionals, leaf.options)
+                    val fullLine =
+                        if (rawTail.isNotEmpty()) "${path.joinToString(" ")} $rawTail" else path.joinToString(" ")
+                    val inv = CommandInvocation(source, fullLine, path, rawTail, argv = result)
+                    leaf.executor.execute(inv)
+                }
+
+                is TreeLeafSpec -> {
+                    val tokens = ShellWords.split(rawTail)
+                    val result = ArgvParser.parse(tokens, leaf.arguments, emptyList())
+                    val fullLine =
+                        if (rawTail.isNotEmpty()) "${path.joinToString(" ")} $rawTail" else path.joinToString(" ")
+                    val inv = CommandInvocation(source, fullLine, path, rawTail, argv = result)
+                    leaf.executor.execute(inv)
+                }
             }
         } catch (e: CommandParseException) {
-            source.reply(formatError(e.message ?: "参数错误", path))
-            0
+            throw CommandDispatchException(path, e.message ?: "参数错误")
         } catch (e: IllegalArgumentException) {
-            source.reply(formatError(e.message ?: "参数错误", path))
-            0
+            throw CommandDispatchException(path, e.message ?: "参数错误")
         }
-    }
-
-    private fun executeEmptyLeaf(
-        leaf: EmptyLeafSpec,
-        rawTail: String,
-        source: CommandSource,
-        path: List<String>
-    ): Int {
-        if (rawTail.isNotEmpty()) {
-            source.reply(formatError("不需要参数，但收到了：$rawTail", path))
-            return 0
-        }
-        val inv = CommandInvocation(
-            source = source,
-            rawCommandLine = path.joinToString(" "),
-            path = path,
-            rawTail = ""
-        )
-        return leaf.executor.execute(inv)
-    }
-
-    private fun executeRawLeaf(
-        leaf: RawLeafSpec,
-        rawTail: String,
-        source: CommandSource,
-        path: List<String>
-    ): Int {
-        if (leaf.required && rawTail.isBlank()) {
-            source.reply(formatError("缺少必填参数：${leaf.name}", path))
-            return 0
-        }
-        val fullLine = if (rawTail.isNotEmpty()) {
-            "${path.joinToString(" ")} $rawTail"
-        } else {
-            path.joinToString(" ")
-        }
-        val inv = CommandInvocation(
-            source = source,
-            rawCommandLine = fullLine,
-            path = path,
-            rawTail = rawTail
-        )
-        return leaf.executor.execute(inv)
-    }
-
-    private fun executeArgvLeaf(
-        leaf: ArgvLeafSpec,
-        rawTail: String,
-        source: CommandSource,
-        path: List<String>
-    ): Int {
-        val tokens = ShellWords.split(rawTail)
-        val result = ArgvParser.parse(tokens, leaf.positionals, leaf.options)
-        val fullLine = if (rawTail.isNotEmpty()) {
-            "${path.joinToString(" ")} $rawTail"
-        } else {
-            path.joinToString(" ")
-        }
-        val inv = CommandInvocation(
-            source = source,
-            rawCommandLine = fullLine,
-            path = path,
-            rawTail = rawTail,
-            argv = result
-        )
-        return leaf.executor.execute(inv)
-    }
-
-    private fun executeTreeLeaf(
-        leaf: TreeLeafSpec,
-        rawTail: String,
-        source: CommandSource,
-        path: List<String>
-    ): Int {
-        val tokens = ShellWords.split(rawTail)
-        val result = ArgvParser.parse(tokens, leaf.arguments, emptyList())
-        val fullLine = if (rawTail.isNotEmpty()) {
-            "${path.joinToString(" ")} $rawTail"
-        } else {
-            path.joinToString(" ")
-        }
-        val inv = CommandInvocation(
-            source = source,
-            rawCommandLine = fullLine,
-            path = path,
-            rawTail = rawTail,
-            argv = result
-        )
-        return leaf.executor.execute(inv)
     }
 
     internal fun matchChildLiteral(
-        children: List<CommandNodeSpec>,
+        children: List<CommandNodeSpec<*>>,
         token: String
-    ): CommandNodeSpec? {
+    ): CommandNodeSpec<*>? {
         for (child in children) {
             if (child.name.equals(token, ignoreCase = true)) return child
             if (child.aliases.any { it.equals(token, ignoreCase = true) }) return child
@@ -174,11 +108,6 @@ object CommandRuntime {
         val trimmed = input.trimStart()
         val spaceIdx = trimmed.indexOf(' ')
         return if (spaceIdx < 0) "" else trimmed.substring(spaceIdx + 1).trimStart()
-    }
-
-    private fun formatError(cause: String, path: List<String>): String {
-        val cmdPath = path.joinToString(" ")
-        return "命令参数错误：\n$cause\n\n发送 /help $cmdPath 查看详细用法。"
     }
 
 }

@@ -16,6 +16,7 @@ public interface IProcessor {
      * Handle an inbound message.
      *
      * @param in inbound message
+     *
      * @return outbound messages to be sent (may be empty, never null)
      */
     List<OutboundMessage> handle(InboundMessage in);

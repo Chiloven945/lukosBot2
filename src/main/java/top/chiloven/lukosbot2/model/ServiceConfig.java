@@ -29,6 +29,7 @@ public record ServiceConfig(Map<String, String> values) {
      * Read {@code intervalMs} from config.
      *
      * @param def default interval in milliseconds
+     *
      * @return interval in milliseconds (>= 1)
      */
     public long intervalMs(long def) {

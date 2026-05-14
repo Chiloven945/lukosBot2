@@ -3,12 +3,13 @@ package top.chiloven.lukosbot2.commands.impl.ip
 import org.apache.logging.log4j.LogManager
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
+import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.commands.definition.ArgType
 import top.chiloven.lukosbot2.commands.definition.CommandInvocation
-import top.chiloven.lukosbot2.commands.definition.bridge.SpecBotCommand
 import top.chiloven.lukosbot2.commands.definition.dsl.arg
 import top.chiloven.lukosbot2.commands.definition.dsl.botCommand
 import top.chiloven.lukosbot2.commands.impl.ip.IpQueryResult.IpQueryException
+import top.chiloven.lukosbot2.core.command.CommandSource
 
 @Service
 @ConditionalOnProperty(
@@ -19,26 +20,23 @@ import top.chiloven.lukosbot2.commands.impl.ip.IpQueryResult.IpQueryException
 )
 class IpCommand(
     private val ipQueryService: IpQueryService
-) : SpecBotCommand() {
+) : IBotCommand {
 
     private val log = LogManager.getLogger(IpCommand::class.java)
 
-    override fun spec() = botCommand("ip") {
+    override fun definition() = botCommand("ip") {
         description = "查询 IP 信息"
-
         argv {
             positional("ip", ArgType.StringType) {
                 required = true
                 description = "IP 地址"
             }
-
             option("providers") {
                 names = listOf("-p", "--provider", "--providers")
                 type = ArgType.StringType
                 splitBy = ","
                 description = "指定数据源；多个用逗号分隔"
             }
-
             execute { args ->
                 runQuery(
                     ip = args.get("ip"),
@@ -46,7 +44,6 @@ class IpCommand(
                 )
             }
         }
-
         syntax("按默认数据源优先级查询", arg("ip_address"))
         param("ip_address", "IP 地址（IPv4 / IPv6）")
         example(
@@ -57,21 +54,18 @@ class IpCommand(
         )
     }
 
-    private fun CommandInvocation.runQuery(ip: String, providers: List<String>) {
+    private fun CommandInvocation<CommandSource>.runQuery(ip: String, providers: List<String>) {
         try {
-            val result = ipQueryService.query(
-                ip = ip,
-                requestedProviders = providers
-            )
-            reply(result.toDisplayText())
+            val result = ipQueryService.query(ip = ip, requestedProviders = providers)
+            source.reply(result.toDisplayText())
         } catch (e: IllegalArgumentException) {
-            reply(e.message ?: "参数错误，请检查 IP 地址或数据源名称")
+            source.reply(e.message ?: "参数错误，请检查 IP 地址或数据源名称")
         } catch (e: IpQueryException) {
             log.warn("IP query failed. ip={}", e.ip, e)
-            reply(e.message ?: "IP 查询失败，请稍后重试")
+            source.reply(e.message ?: "IP 查询失败，请稍后重试")
         } catch (e: Exception) {
             log.warn("IP query unexpected failure. ip={}", ip, e)
-            reply("IP 查询失败：${e.message ?: "未知错误"}")
+            source.reply("IP 查询失败：${e.message ?: "未知错误"}")
         }
     }
 

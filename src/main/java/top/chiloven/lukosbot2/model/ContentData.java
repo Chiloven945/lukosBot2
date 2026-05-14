@@ -7,6 +7,10 @@ package top.chiloven.lukosbot2.model;
  * @param mime     the MIME type of the file
  * @param bytes    the file content as a byte array
  */
-public record ContentData(String filename, String mime, byte[] bytes) {
+public record ContentData(
+        String filename,
+        String mime,
+        byte[] bytes
+) {
 
 }

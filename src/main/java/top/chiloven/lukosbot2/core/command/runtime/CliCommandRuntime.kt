@@ -1,11 +1,11 @@
 package top.chiloven.lukosbot2.core.command.runtime
 
-import top.chiloven.lukosbot2.commands.IBotCommand
-import top.chiloven.lukosbot2.core.command.CommandSource
+import top.chiloven.lukosbot2.cli.ICliCommand
+import top.chiloven.lukosbot2.core.cli.CliCmdContext
 
-object BotCommandRuntime {
+object CliCommandRuntime {
 
-    fun execute(command: IBotCommand, source: CommandSource, rawCommandLine: String): Int {
+    fun execute(command: ICliCommand, source: CliCmdContext, rawCommandLine: String): Int {
         val rootToken = CommandRuntime.firstToken(rawCommandLine.trim()) ?: return 0
         if (!command.matches(rootToken)) return 0
 
@@ -17,11 +17,12 @@ object BotCommandRuntime {
                 path = listOf(command.name())
             )
         } catch (e: CommandDispatchException) {
-            source.reply(
+            source.printlnErr(
                 """
-                命令参数错误：${e.message}
-
-                发送 /help ${e.path.joinToString(" ")} 查看详细用法。
+                CLI command syntax error:
+                ${e.message}
+                
+                Usage: ${e.path.joinToString(" ")}
                 """.trimIndent()
             )
             0

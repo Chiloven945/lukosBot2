@@ -32,6 +32,7 @@ public final class Execs {
      *
      * @param pattern the thread name pattern containing an optional {@code %d} placeholder that will be replaced by a
      *                monotonically increasing index starting at 1
+     *
      * @return a per-task executor that creates named virtual threads for each submitted task
      */
     public static ExecutorService newVirtualExecutor(String pattern) {
@@ -48,6 +49,7 @@ public final class Execs {
      * “lane” executors and clearer diagnostics.
      *
      * @param pattern the thread name pattern, optionally including {@code %d} for an index
+     *
      * @return a thread factory producing named daemon platform threads
      */
     public static ThreadFactory platformNamedFactory(String pattern) {

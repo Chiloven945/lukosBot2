@@ -72,7 +72,10 @@ public class TelegramChatAdminResolver implements IChatAdminResolver {
         }
     }
 
-    private record CacheEntry(boolean value, long expiresAt) {
+    private record CacheEntry(
+            boolean value,
+            long expiresAt
+    ) {
 
     }
 

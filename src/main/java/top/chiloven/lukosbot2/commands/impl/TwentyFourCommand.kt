@@ -1,19 +1,15 @@
 package top.chiloven.lukosbot2.commands.impl
 
-import com.mojang.brigadier.CommandDispatcher
-import com.mojang.brigadier.arguments.StringArgumentType
-import org.apache.logging.log4j.LogManager
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
-import top.chiloven.lukosbot2.commands.UsageNode
+import top.chiloven.lukosbot2.commands.definition.dsl.arg
+import top.chiloven.lukosbot2.commands.definition.dsl.botCommand
 import top.chiloven.lukosbot2.config.CommandConfigProp
 import top.chiloven.lukosbot2.core.MessageSenderHub
 import top.chiloven.lukosbot2.core.command.CommandSource
 import top.chiloven.lukosbot2.model.message.Address
 import top.chiloven.lukosbot2.model.message.outbound.OutboundMessage
-import top.chiloven.lukosbot2.util.brigadier.builder.CommandLAB.literal
-import top.chiloven.lukosbot2.util.brigadier.builder.CommandRAB.argument
 import java.util.*
 import java.util.concurrent.*
 import kotlin.math.abs
@@ -32,8 +28,7 @@ class TwentyFourCommand(
 
     companion object {
 
-        private val log = LogManager.getLogger(TwentyFourCommand::class.java)
-
+        private val log = org.apache.logging.log4j.LogManager.getLogger(TwentyFourCommand::class.java)
         private const val TARGET = 24.0
         private const val EPS = 1e-6
 
@@ -43,43 +38,25 @@ class TwentyFourCommand(
 
     private val sessions: ConcurrentMap<Long, Session> = ConcurrentHashMap()
 
-    private val scheduler: ScheduledExecutorService =
-        Executors.newSingleThreadScheduledExecutor { runnable ->
-            Thread(runnable, "24-game-timeout").apply { isDaemon = true }
+    private val scheduler: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor {
+        Thread(it, "24-game-timeout").apply { isDaemon = true }
+    }
+
+    override fun definition() = botCommand("24") {
+        description = "玩 24 点游戏"
+
+        raw("input", required = false) { input ->
+            if (input.isBlank()) startGame(source)
+            else handleInput(source, input)
         }
 
-    override fun name(): String = "24"
+        syntax("开始一场新游戏")
+        syntax("提交答案表达式", arg("expression"))
 
-    override fun description(): String = "玩 24 点游戏"
-
-    override fun usage(): UsageNode =
-        UsageNode.root(name())
-            .description(description())
-            .syntax("开始一场新游戏")
-            .syntax("提交答案表达式", UsageNode.arg("expression"))
-            .syntax("放弃作答并公布答案", UsageNode.lit("giveup"))
-            .param("expression", "表达式（可使用 + - * / ()，且必须使用给出的 4 个数字）")
-            .example(
-                "24",
-                "24 (2+1)*7+3",
-                "24 giveup",
-            )
-            .build()
-
-    override fun register(dispatcher: CommandDispatcher<CommandSource>) {
-        dispatcher.register(
-            literal(name())
-                .executes { ctx ->
-                    startGame(ctx.source)
-                    1
-                }
-                .then(
-                    argument("input", StringArgumentType.greedyString())
-                        .executes { ctx ->
-                            handleInput(ctx.source, StringArgumentType.getString(ctx, "input"))
-                            1
-                        },
-                ),
+        example(
+            "24",
+            "24 (2+1)*7+3",
+            "24 giveup"
         )
     }
 
@@ -132,8 +109,7 @@ class TwentyFourCommand(
 
     private fun onTimeout(userId: Long, session: Session) {
         val now = System.currentTimeMillis()
-        val current = sessions[userId]
-
+        val current = sessions[userId] ?: return
         if (current !== session || !session.isExpired(now)) return
 
         sessions.remove(userId, session)
@@ -149,8 +125,8 @@ class TwentyFourCommand(
         senderHub.send(OutboundMessage.text(session.addr, msg))
     }
 
-    private fun handleInput(src: CommandSource, rawInput: String?) {
-        val input = rawInput?.trim().orEmpty()
+    private fun handleInput(src: CommandSource, rawInput: String) {
+        val input = rawInput.trim()
         if (input.isEmpty()) {
             sendUsage(src)
             return

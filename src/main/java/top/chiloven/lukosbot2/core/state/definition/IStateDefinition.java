@@ -185,7 +185,9 @@ public interface IStateDefinition<T> {
      * clear error messages via {@link IllegalArgumentException}.</p>
      *
      * @param raw raw user-supplied string (not null).
+     *
      * @return parsed typed value.
+     *
      * @throws IllegalArgumentException if the input cannot be parsed.
      */
     T parse(String raw) throws IllegalArgumentException;
@@ -199,6 +201,7 @@ public interface IStateDefinition<T> {
      * <p>Default implementation performs no validation.</p>
      *
      * @param value parsed value.
+     *
      * @throws IllegalArgumentException if the value is not acceptable.
      */
     default void validate(T value) throws IllegalArgumentException {
@@ -210,6 +213,7 @@ public interface IStateDefinition<T> {
      * <p>This is used by {@code /pref get ...} and confirmation messages after setting a value.</p>
      *
      * @param value typed value.
+     *
      * @return user-facing string representation.
      */
     String format(T value);

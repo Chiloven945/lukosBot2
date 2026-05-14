@@ -12,6 +12,7 @@ data class TrackInfo(
     val url: String? = null,
     val durationMs: Long = 0L
 ) {
+
     fun formatted(): String = buildString {
         append("平台：").append(platform.displayName).append('\n')
         append("标题：").append(name).append('\n')
@@ -30,4 +31,5 @@ data class TrackInfo(
             append("封面：").append(it).append('\n')
         }
     }
+
 }

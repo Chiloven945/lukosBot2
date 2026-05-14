@@ -295,7 +295,10 @@ public class ShiroBridge {
         return String.valueOf(value);
     }
 
-    record ParseResult(List<InPart> parts, String replyId) {
+    record ParseResult(
+            List<InPart> parts,
+            String replyId
+    ) {
 
         ParseResult {
             if (parts == null) parts = List.of();

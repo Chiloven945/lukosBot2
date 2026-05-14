@@ -59,52 +59,10 @@ public class TranslationService {
                 .build();
     }
 
-    /**
-     * 对外翻译接口
-     */
-    public String translate(String from, String to, String text) {
-        String src = (from == null || from.isBlank()) ? "auto" : from;
-        String tgt = (to == null || to.isBlank()) ? defaultLang : to;
-
-        try {
-            String body = "q=" + StringUtils.encodeTo(text)
-                    + "&source=" + StringUtils.encodeTo(src)
-                    + "&target=" + StringUtils.encodeTo(tgt)
-                    + "&format=text";
-
-            HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create(baseUrl + "/translate"))
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .timeout(Duration.ofSeconds(30))
-                    .POST(HttpRequest.BodyPublishers.ofString(body))
-                    .build();
-
-            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
-
-            if (resp.statusCode() != 200) {
-                return "翻译失败（HTTP " + resp.statusCode() + "）：" + resp.body();
-            }
-
-            return extractTranslatedText(resp.body());
-        } catch (IOException | InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return "翻译失败：" + e.getMessage();
-        }
+    private String normalizeBaseUrl(String url) {
+        String u = url.trim();
+        return u.endsWith("/") ? u.substring(0, u.length() - 1) : u;
     }
-
-    private String extractTranslatedText(String body) {
-        try {
-            ObjectNode obj = MAPPER.readTree(body).asObject();
-            if (obj.has("translatedText") && !obj.get("translatedText").isNull()) {
-                return obj.get("translatedText").asString();
-            }
-            return "翻译结果缺失：" + body;
-        } catch (Exception e) {
-            return "解析翻译结果失败：" + body;
-        }
-    }
-
-    /* ===================== Docker 部分 ===================== */
 
     private DockerClient createDockerClient() {
         DefaultDockerClientConfig config = DefaultDockerClientConfig.createDefaultConfigBuilder().build();
@@ -119,6 +77,8 @@ public class TranslationService {
 
         return DockerClientImpl.getInstance(config, httpClient);
     }
+
+    /* ===================== Docker 部分 ===================== */
 
     private void ensureLibreTranslateContainer() {
         try {
@@ -170,9 +130,49 @@ public class TranslationService {
         }
     }
 
-    private String normalizeBaseUrl(String url) {
-        String u = url.trim();
-        return u.endsWith("/") ? u.substring(0, u.length() - 1) : u;
+    /**
+     * 对外翻译接口
+     */
+    public String translate(String from, String to, String text) {
+        String src = (from == null || from.isBlank()) ? "auto" : from;
+        String tgt = (to == null || to.isBlank()) ? defaultLang : to;
+
+        try {
+            String body = "q=" + StringUtils.encodeTo(text)
+                    + "&source=" + StringUtils.encodeTo(src)
+                    + "&target=" + StringUtils.encodeTo(tgt)
+                    + "&format=text";
+
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(baseUrl + "/translate"))
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .timeout(Duration.ofSeconds(30))
+                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .build();
+
+            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+
+            if (resp.statusCode() != 200) {
+                return "翻译失败（HTTP " + resp.statusCode() + "）：" + resp.body();
+            }
+
+            return extractTranslatedText(resp.body());
+        } catch (IOException | InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return "翻译失败：" + e.getMessage();
+        }
+    }
+
+    private String extractTranslatedText(String body) {
+        try {
+            ObjectNode obj = MAPPER.readTree(body).asObject();
+            if (obj.has("translatedText") && !obj.get("translatedText").isNull()) {
+                return obj.get("translatedText").asString();
+            }
+            return "翻译结果缺失：" + body;
+        } catch (Exception e) {
+            return "解析翻译结果失败：" + body;
+        }
     }
 
 }

@@ -11,7 +11,10 @@ import top.chiloven.lukosbot2.platform.ChatPlatform;
  * <p>We store different kinds of states (prefs, services, etc.) in a single table, partitioned by:
  * (scopeType, scopeId, namespace, key) -> json</p>
  */
-public record Scope(ScopeType type, String id) {
+public record Scope(
+        ScopeType type,
+        String id
+) {
 
     public static @NonNull Scope global() {
         return new Scope(ScopeType.GLOBAL, "_");

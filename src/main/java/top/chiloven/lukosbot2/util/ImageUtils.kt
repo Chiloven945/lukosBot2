@@ -15,6 +15,7 @@ import javax.imageio.ImageWriteParam
  * @author Chiloven945
  */
 object ImageUtils {
+
     /**
      * Convert PNG bytes to JPG bytes with specified quality.
      * Fills transparent areas with a white background.
@@ -56,4 +57,5 @@ object ImageUtils {
             return baos.toByteArray()
         }
     }
+
 }

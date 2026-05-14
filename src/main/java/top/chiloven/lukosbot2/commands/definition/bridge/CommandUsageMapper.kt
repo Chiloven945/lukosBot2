@@ -5,12 +5,12 @@ import top.chiloven.lukosbot2.commands.definition.*
 
 object CommandUsageMapper {
 
-    fun toUsageNode(spec: BotCommandSpec): UsageNode {
+    fun <S> toUsageNode(spec: CommandDefinition<S>): UsageNode {
         return mapNode(spec.root, spec.name, spec.description, spec.aliases)
     }
 
     private fun mapNode(
-        node: CommandNodeSpec,
+        node: CommandNodeSpec<*>,
         name: String,
         description: String,
         aliases: List<String>
@@ -29,7 +29,7 @@ object CommandUsageMapper {
         }
 
         if (node.syntaxes.isEmpty() && node.leaf != null) {
-            val autoItems = generateSyntaxItems(node.leaf!!)
+            val autoItems = generateSyntaxItems(node.leaf)
             if (autoItems.isNotEmpty()) {
                 builder.syntax("", *autoItems.toTypedArray())
             } else {
@@ -116,7 +116,7 @@ object CommandUsageMapper {
         return if (opt.required) item else UsageNode.opt(item)
     }
 
-    private fun generateAutoParams(node: CommandNodeSpec): List<Pair<UsageNode.Item, String>> {
+    private fun generateAutoParams(node: CommandNodeSpec<*>): List<Pair<UsageNode.Item, String>> {
         val leaf = node.leaf ?: return emptyList()
         return when (leaf) {
             is ArgvLeafSpec -> leaf.positionals.map { pos ->
@@ -131,7 +131,7 @@ object CommandUsageMapper {
         }
     }
 
-    private fun generateAutoOptions(node: CommandNodeSpec): List<Pair<UsageNode.Item, String>> {
+    private fun generateAutoOptions(node: CommandNodeSpec<*>): List<Pair<UsageNode.Item, String>> {
         val leaf = node.leaf
         if (leaf !is ArgvLeafSpec) return emptyList()
 

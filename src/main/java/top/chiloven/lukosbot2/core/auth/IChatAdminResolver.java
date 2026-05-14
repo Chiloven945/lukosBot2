@@ -20,6 +20,7 @@ public interface IChatAdminResolver {
      * Returns whether this resolver can evaluate chat admin status for the given platform.
      *
      * @param platform chat platform to check.
+     *
      * @return {@code true} if this resolver supports the platform; otherwise {@code false}.
      */
     boolean supports(ChatPlatform platform);
@@ -31,6 +32,7 @@ public interface IChatAdminResolver {
      * management permissions, or a OneBot group owner/admin.</p>
      *
      * @param src unified command/service source.
+     *
      * @return {@code true} if the actor is a chat administrator; otherwise {@code false}.
      */
     boolean isChatAdmin(CommandSource src);

@@ -3,6 +3,7 @@ package top.chiloven.lukosbot2.core.command.runtime
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.commands.definition.*
 import top.chiloven.lukosbot2.core.command.CommandSource
 import top.chiloven.lukosbot2.model.message.Address
@@ -23,6 +24,11 @@ class CommandRuntimeTest {
 
     private fun fakeSource(): FakeSource = FakeSource()
 
+    
+    private fun asCommand(spec: CommandDefinition<CommandSource>): IBotCommand = object : IBotCommand {
+        override fun definition() = spec
+    }
+
     private class FakeSource {
 
         val replies = mutableListOf<String>()
@@ -40,23 +46,23 @@ class CommandRuntimeTest {
             Address(ChatPlatform.TELEGRAM, 1L, false)
         ) { out -> replies += extractText(out) }
 
-        val spec = BotCommandSpec(
+        val spec = CommandDefinition<CommandSource>(
             name = "ping",
             description = "pong",
-            root = CommandNodeSpec(
+            root = CommandNodeSpec<CommandSource>(
                 name = "ping",
-                leaf = EmptyLeafSpec {
-                    it.reply("pong!")
+                leaf = EmptyLeafSpec<CommandSource>(CommandExecutor {
+                    it.source.reply("pong!")
                     1
                 }
             )
         )
 
-        val result = BotCommandRuntime.execute(spec, src, "ping")
+        val result = BotCommandRuntime.execute(asCommand(spec), src, "ping")
         assertEquals(1, result)
         assertEquals(listOf("pong!"), replies)
 
-        val result2 = BotCommandRuntime.execute(spec, src, "ping extra")
+        val result2 = BotCommandRuntime.execute(asCommand(spec), src, "ping extra")
         assertEquals(0, result2)
         assertTrue(replies[1].contains("不需要参数"))
     }
@@ -65,23 +71,23 @@ class CommandRuntimeTest {
     fun execute_raw_leaf() {
         val s = fakeSource()
 
-        val spec = BotCommandSpec(
+        val spec = CommandDefinition<CommandSource>(
             name = "echo",
             description = "echo",
-            root = CommandNodeSpec(
+            root = CommandNodeSpec<CommandSource>(
                 name = "echo",
-                leaf = RawLeafSpec(
+                leaf = RawLeafSpec<CommandSource>(
                     name = "text",
                     required = true,
                     executor = { inv ->
-                        inv.reply(inv.rawTail)
+                        inv.source.reply(inv.rawTail)
                         1
                     }
                 )
             )
         )
 
-        val result = BotCommandRuntime.execute(spec, s.source, "echo hello world")
+        val result = BotCommandRuntime.execute(asCommand(spec), s.source, "echo hello world")
         assertEquals(1, result)
         assertEquals(listOf("hello world"), s.replies)
     }
@@ -90,23 +96,23 @@ class CommandRuntimeTest {
     fun execute_required_raw_missing() {
         val s = fakeSource()
 
-        val spec = BotCommandSpec(
+        val spec = CommandDefinition<CommandSource>(
             name = "echo",
             description = "echo",
-            root = CommandNodeSpec(
+            root = CommandNodeSpec<CommandSource>(
                 name = "echo",
-                leaf = RawLeafSpec(
+                leaf = RawLeafSpec<CommandSource>(
                     name = "text",
                     required = true,
                     executor = { inv ->
-                        inv.reply(inv.rawTail)
+                        inv.source.reply(inv.rawTail)
                         1
                     }
                 )
             )
         )
 
-        val result = BotCommandRuntime.execute(spec, s.source, "echo")
+        val result = BotCommandRuntime.execute(asCommand(spec), s.source, "echo")
         assertEquals(0, result)
         assertTrue(s.replies[0].contains("缺少必填参数"))
     }
@@ -115,12 +121,12 @@ class CommandRuntimeTest {
     fun execute_argv_leaf() {
         val s = fakeSource()
 
-        val spec = BotCommandSpec(
+        val spec = CommandDefinition<CommandSource>(
             name = "dice",
             description = "roll dice",
-            root = CommandNodeSpec(
+            root = CommandNodeSpec<CommandSource>(
                 name = "dice",
-                leaf = ArgvLeafSpec(
+                leaf = ArgvLeafSpec<CommandSource>(
                     positionals = listOf(
                         CommandArgSpec(
                             "count",
@@ -132,18 +138,18 @@ class CommandRuntimeTest {
                     options = emptyList(),
                     executor = { inv ->
                         val count = inv.argv!!.get<Long>("count")
-                        inv.reply("rolled $count dice")
+                        inv.source.reply("rolled $count dice")
                         1
                     }
                 )
             )
         )
 
-        val result = BotCommandRuntime.execute(spec, s.source, "dice 3")
+        val result = BotCommandRuntime.execute(asCommand(spec), s.source, "dice 3")
         assertEquals(1, result)
         assertEquals(listOf("rolled 3 dice"), s.replies)
 
-        val result2 = BotCommandRuntime.execute(spec, s.source, "dice")
+        val result2 = BotCommandRuntime.execute(asCommand(spec), s.source, "dice")
         assertEquals(1, result2)
         assertEquals("rolled 1 dice", s.replies[1])
     }
@@ -152,12 +158,12 @@ class CommandRuntimeTest {
     fun execute_tree_leaf() {
         val s = fakeSource()
 
-        val spec = BotCommandSpec(
+        val spec = CommandDefinition<CommandSource>(
             name = "calc",
             description = "calculate",
-            root = CommandNodeSpec(
+            root = CommandNodeSpec<CommandSource>(
                 name = "calc",
-                leaf = TreeLeafSpec(
+                leaf = TreeLeafSpec<CommandSource>(
                     arguments = listOf(
                         CommandArgSpec("a", ArgType.IntType, required = true),
                         CommandArgSpec("b", ArgType.IntType, required = true)
@@ -165,14 +171,14 @@ class CommandRuntimeTest {
                     executor = { inv ->
                         val a = inv.argv!!.get<Int>("a")
                         val b = inv.argv.get<Int>("b")
-                        inv.reply("sum = ${a + b}")
+                        inv.source.reply("sum = ${a + b}")
                         1
                     }
                 )
             )
         )
 
-        val result = BotCommandRuntime.execute(spec, s.source, "calc 3 5")
+        val result = BotCommandRuntime.execute(asCommand(spec), s.source, "calc 3 5")
         assertEquals(1, result)
         assertEquals(listOf("sum = 8"), s.replies)
     }
@@ -181,33 +187,33 @@ class CommandRuntimeTest {
     fun nested_literal_wins_over_raw() {
         val s = fakeSource()
 
-        val spec = BotCommandSpec(
+        val spec = CommandDefinition<CommandSource>(
             name = "music",
             description = "music",
-            root = CommandNodeSpec(
+            root = CommandNodeSpec<CommandSource>(
                 name = "music",
                 children = listOf(
-                    CommandNodeSpec(
+                    CommandNodeSpec<CommandSource>(
                         name = "link",
                         description = "parse link",
-                        leaf = EmptyLeafSpec { inv ->
-                            inv.reply("link called")
+                        leaf = EmptyLeafSpec<CommandSource>(CommandExecutor { inv ->
+                            inv.source.reply("link called")
                             1
                         }
                     )
                 ),
-                leaf = RawLeafSpec(
+                leaf = RawLeafSpec<CommandSource>(
                     name = "query",
                     required = true,
                     executor = { inv ->
-                        inv.reply("search: ${inv.rawTail}")
+                        inv.source.reply("search: ${inv.rawTail}")
                         1
                     }
                 )
             )
         )
 
-        val result = BotCommandRuntime.execute(spec, s.source, "music link")
+        val result = BotCommandRuntime.execute(asCommand(spec), s.source, "music link")
         assertEquals(1, result)
         assertEquals(listOf("link called"), s.replies)
     }
@@ -216,18 +222,18 @@ class CommandRuntimeTest {
     fun child_alias_match() {
         val s = fakeSource()
 
-        val spec = BotCommandSpec(
+        val spec = CommandDefinition<CommandSource>(
             name = "wiki",
             description = "wiki",
-            root = CommandNodeSpec(
+            root = CommandNodeSpec<CommandSource>(
                 name = "wiki",
                 children = listOf(
-                    CommandNodeSpec(
+                    CommandNodeSpec<CommandSource>(
                         name = "markdown",
                         aliases = listOf("md"),
                         description = "export md",
-                        leaf = EmptyLeafSpec { inv ->
-                            inv.reply("md export")
+                        leaf = EmptyLeafSpec<CommandSource>(CommandExecutor { inv ->
+                            inv.source.reply("md export")
                             1
                         }
                     )
@@ -235,7 +241,7 @@ class CommandRuntimeTest {
             )
         )
 
-        val result = BotCommandRuntime.execute(spec, s.source, "wiki md")
+        val result = BotCommandRuntime.execute(asCommand(spec), s.source, "wiki md")
         assertEquals(1, result)
         assertEquals(listOf("md export"), s.replies)
     }
@@ -244,16 +250,16 @@ class CommandRuntimeTest {
     fun unknown_subcommand_returns_parse_error() {
         val s = fakeSource()
 
-        val spec = BotCommandSpec(
+        val spec = CommandDefinition<CommandSource>(
             name = "wiki",
             description = "wiki",
-            root = CommandNodeSpec(
+            root = CommandNodeSpec<CommandSource>(
                 name = "wiki",
                 children = listOf(
-                    CommandNodeSpec(
+                    CommandNodeSpec<CommandSource>(
                         name = "md",
-                        leaf = EmptyLeafSpec {
-                            it.reply("ok")
+                        leaf = EmptyLeafSpec<CommandSource>(CommandExecutor {
+                            it.source.reply("ok")
                             1
                         }
                     )
@@ -261,7 +267,7 @@ class CommandRuntimeTest {
             )
         )
 
-        val result = BotCommandRuntime.execute(spec, s.source, "wiki unknown")
+        val result = BotCommandRuntime.execute(asCommand(spec), s.source, "wiki unknown")
         assertEquals(0, result)
         assertTrue(s.replies[0].contains("未知子命令"))
         assertTrue(s.replies[0].contains("/help"))
@@ -271,19 +277,19 @@ class CommandRuntimeTest {
     fun extra_args_on_empty_leaf_returns_parse_error() {
         val s = fakeSource()
 
-        val spec = BotCommandSpec(
+        val spec = CommandDefinition<CommandSource>(
             name = "ping",
             description = "pong",
-            root = CommandNodeSpec(
+            root = CommandNodeSpec<CommandSource>(
                 name = "ping",
-                leaf = EmptyLeafSpec {
-                    it.reply("pong")
+                leaf = EmptyLeafSpec<CommandSource>(CommandExecutor {
+                    it.source.reply("pong")
                     1
                 }
             )
         )
 
-        val result = BotCommandRuntime.execute(spec, s.source, "ping extra args")
+        val result = BotCommandRuntime.execute(asCommand(spec), s.source, "ping extra args")
         assertEquals(0, result)
         assertTrue(s.replies[0].contains("不需要参数"))
     }
@@ -292,21 +298,21 @@ class CommandRuntimeTest {
     fun missing_subcommand_shows_help_hint() {
         val s = fakeSource()
 
-        val spec = BotCommandSpec(
+        val spec = CommandDefinition<CommandSource>(
             name = "github",
             description = "GitHub tools",
-            root = CommandNodeSpec(
+            root = CommandNodeSpec<CommandSource>(
                 name = "github",
                 children = listOf(
-                    CommandNodeSpec(
+                    CommandNodeSpec<CommandSource>(
                         name = "user",
-                        leaf = EmptyLeafSpec { 1 }
+                        leaf = EmptyLeafSpec<CommandSource>(CommandExecutor { 1 }
                     )
                 )
             )
         )
 
-        val result = BotCommandRuntime.execute(spec, s.source, "github")
+        val result = BotCommandRuntime.execute(asCommand(spec), s.source, "github")
         assertEquals(0, result)
         assertTrue(s.replies[0].contains("缺少子命令"))
     }

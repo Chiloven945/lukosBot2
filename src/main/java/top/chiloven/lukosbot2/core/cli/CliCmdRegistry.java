@@ -27,6 +27,7 @@ public class CliCmdRegistry {
      * Get a CLI command by its name (case-insensitive).
      *
      * @param name the CLI command name
+     *
      * @return the ICliBotCommand instance, or null if not found
      */
     public ICliCommand get(String name) {
