@@ -46,8 +46,17 @@ object CommandRuntime {
         return try {
             when (leaf) {
                 is EmptyLeafSpec -> {
-                    if (rawTail.isNotEmpty()) throw CommandDispatchException(path, "不需要参数，但收到了：$rawTail")
-                    val inv = CommandInvocation(source, path.joinToString(" "), path, "")
+                    if (rawTail.isNotEmpty()) throw CommandDispatchException(
+                        path,
+                        "不需要参数，但收到了：$rawTail"
+                    )
+
+                    val inv = CommandInvocation(
+                        source,
+                        path.joinToString(" "),
+                        path,
+                        ""
+                    )
                     leaf.executor.execute(inv)
                 }
 
@@ -56,7 +65,12 @@ object CommandRuntime {
                         path,
                         "缺少必填参数：${leaf.name}"
                     )
-                    val fullLine = if (rawTail.isNotEmpty()) "${path.joinToString(" ")} $rawTail" else path.joinToString(" ")
+
+                    val fullLine = if (rawTail.isNotEmpty()) {
+                        "${path.joinToString(" ")} $rawTail"
+                    } else {
+                        path.joinToString(" ")
+                    }
                     val inv = CommandInvocation(source, fullLine, path, rawTail)
                     leaf.executor.execute(inv)
                 }
@@ -64,18 +78,36 @@ object CommandRuntime {
                 is ArgvLeafSpec -> {
                     val tokens = ShellWords.split(rawTail)
                     val result = ArgvParser.parse(tokens, leaf.positionals, leaf.options)
-                    val fullLine =
-                        if (rawTail.isNotEmpty()) "${path.joinToString(" ")} $rawTail" else path.joinToString(" ")
-                    val inv = CommandInvocation(source, fullLine, path, rawTail, argv = result)
+                    val fullLine = if (rawTail.isNotEmpty()) {
+                        "${path.joinToString(" ")} $rawTail"
+                    } else {
+                        path.joinToString(" ")
+                    }
+                    val inv = CommandInvocation(
+                        source,
+                        fullLine,
+                        path,
+                        rawTail,
+                        argv = result
+                    )
                     leaf.executor.execute(inv)
                 }
 
                 is TreeLeafSpec -> {
                     val tokens = ShellWords.split(rawTail)
                     val result = ArgvParser.parse(tokens, leaf.arguments, emptyList())
-                    val fullLine =
-                        if (rawTail.isNotEmpty()) "${path.joinToString(" ")} $rawTail" else path.joinToString(" ")
-                    val inv = CommandInvocation(source, fullLine, path, rawTail, argv = result)
+                    val fullLine = if (rawTail.isNotEmpty()) {
+                        "${path.joinToString(" ")} $rawTail"
+                    } else {
+                        path.joinToString(" ")
+                    }
+                    val inv = CommandInvocation(
+                        source,
+                        fullLine,
+                        path,
+                        rawTail,
+                        argv = result
+                    )
                     leaf.executor.execute(inv)
                 }
             }
@@ -86,10 +118,10 @@ object CommandRuntime {
         }
     }
 
-    internal fun matchChildLiteral(
-        children: List<CommandNodeSpec<*>>,
+    internal fun <S> matchChildLiteral(
+        children: List<CommandNodeSpec<S>>,
         token: String
-    ): CommandNodeSpec<*>? {
+    ): CommandNodeSpec<S>? {
         for (child in children) {
             if (child.name.equals(token, ignoreCase = true)) return child
             if (child.aliases.any { it.equals(token, ignoreCase = true) }) return child

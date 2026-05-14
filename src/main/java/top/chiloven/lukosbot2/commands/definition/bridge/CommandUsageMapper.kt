@@ -9,8 +9,8 @@ object CommandUsageMapper {
         return mapNode(spec.root, spec.name, spec.description, spec.aliases)
     }
 
-    private fun mapNode(
-        node: CommandNodeSpec<*>,
+    private fun <S> mapNode(
+        node: CommandNodeSpec<S>,
         name: String,
         description: String,
         aliases: List<String>
@@ -69,7 +69,7 @@ object CommandUsageMapper {
         return builder.build()
     }
 
-    private fun generateSyntaxItems(leaf: Any): List<UsageNode.Item> {
+    private fun <S> generateSyntaxItems(leaf: CommandLeafSpec<S>): List<UsageNode.Item> {
         return when (leaf) {
             is EmptyLeafSpec -> emptyList()
             is RawLeafSpec -> {
@@ -95,8 +95,6 @@ object CommandUsageMapper {
                     if (arg.required) item else UsageNode.opt(item)
                 }
             }
-
-            else -> emptyList()
         }
     }
 
@@ -116,7 +114,7 @@ object CommandUsageMapper {
         return if (opt.required) item else UsageNode.opt(item)
     }
 
-    private fun generateAutoParams(node: CommandNodeSpec<*>): List<Pair<UsageNode.Item, String>> {
+    private fun <S> generateAutoParams(node: CommandNodeSpec<S>): List<Pair<UsageNode.Item, String>> {
         val leaf = node.leaf ?: return emptyList()
         return when (leaf) {
             is ArgvLeafSpec -> leaf.positionals.map { pos ->
@@ -127,11 +125,12 @@ object CommandUsageMapper {
                 UsageNode.arg(arg.name) to arg.description
             }
 
-            else -> emptyList()
+            is EmptyLeafSpec -> emptyList()
+            is RawLeafSpec -> emptyList()
         }
     }
 
-    private fun generateAutoOptions(node: CommandNodeSpec<*>): List<Pair<UsageNode.Item, String>> {
+    private fun <S> generateAutoOptions(node: CommandNodeSpec<S>): List<Pair<UsageNode.Item, String>> {
         val leaf = node.leaf
         if (leaf !is ArgvLeafSpec) return emptyList()
 

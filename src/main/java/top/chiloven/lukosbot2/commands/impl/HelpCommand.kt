@@ -20,15 +20,21 @@ class HelpCommand(
     private val policyService: PolicyService
 ) : IBotCommand {
 
-    private val commandDefinition = botCommand("help") {
+    override fun definition() = botCommand("help") {
         alias("h")
         description = "列出可用命令或其详细用法"
 
         execute { showList(source) }
 
         argv {
-            positional("command", ArgType.StringType) { required = true; description = "命令名" }
-            positional("mode", ArgType.StringType) { required = false; description = "img 或 text" }
+            positional("command", ArgType.StringType) {
+                required = true
+                description = "命令名"
+            }
+            positional("mode", ArgType.StringType) {
+                required = false
+                description = "img 或 text"
+            }
             execute { args ->
                 val cmdName = args.get<String>("command")
                 val mode = args.getOrNull<String>("mode")
@@ -39,11 +45,15 @@ class HelpCommand(
         syntax("列出所有可用命令")
         syntax("查看命令用法（可选强制输出方式）", arg("command"), optOneOf(lit("img"), lit("text")))
         param("command", "命令名（不带前缀），例如：wiki / music / github")
-        note("输出方式：\n- `img`：强制输出图片版用法\n- `text`：强制输出文本版用法\n- 不指定时自动决定")
-        example("help", "help wiki", "help wiki img")
-    }
 
-    override fun definition() = commandDefinition
+        note("输出方式：\n- `img`：强制输出图片版用法\n- `text`：强制输出文本版用法\n- 不指定时自动决定")
+
+        example(
+            "help",
+            "help wiki",
+            "help wiki img"
+        )
+    }
 
     private val p: String get() = appProperties.prefix.let { it.ifBlank { "/" } }
 
@@ -63,7 +73,11 @@ class HelpCommand(
         src.reply(sb.toString().trim())
     }
 
-    private fun showUsage(src: CommandSource, cmdName: String, modeRaw: String?): Int {
+    private fun showUsage(
+        src: CommandSource,
+        cmdName: String,
+        modeRaw: String?
+    ): Int {
         val cmd = registry().get(cmdName)
         if (cmd == null || !cmd.isVisible) {
             src.reply("未知的命令：$cmdName\n发送 `$p${name()}` 查看可用命令列表。")
@@ -73,6 +87,7 @@ class HelpCommand(
             src.reply(policyService.commandDeniedMessage(cmd.name()))
             return 0
         }
+
         val node: UsageNode = cmd.usage()
         val opt = UsageTextRenderer.Options.forHelp(p)
         UsageOutput.sendUsage(

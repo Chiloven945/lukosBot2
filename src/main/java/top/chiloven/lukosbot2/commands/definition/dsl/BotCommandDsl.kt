@@ -22,7 +22,7 @@ class CommandDefinitionBuilder<S>(private val name: String) {
     private val optionDocs = mutableListOf<CommandOptionDoc>()
     private val exampleList = mutableListOf<String>()
     private val noteList = mutableListOf<String>()
-    private var leaf: top.chiloven.lukosbot2.commands.definition.CommandLeafSpec<S>? = null
+    private var leaf: CommandLeafSpec<S>? = null
 
     fun alias(vararg values: String) {
         aliases += values
@@ -33,10 +33,10 @@ class CommandDefinitionBuilder<S>(private val name: String) {
     }
 
     fun execute(block: CommandInvocation<S>.() -> Unit) {
-        leaf = EmptyLeafSpec(CommandExecutor { inv ->
+        leaf = EmptyLeafSpec { inv ->
             inv.block()
             1
-        })
+        }
     }
 
     fun raw(
@@ -47,7 +47,7 @@ class CommandDefinitionBuilder<S>(private val name: String) {
         leaf = RawLeafSpec(
             name = argName,
             required = required,
-            executor = CommandExecutor { inv ->
+            executor = { inv ->
                 inv.block(inv.rawTail)
                 1
             }
@@ -110,17 +110,28 @@ open class NodeBuilder<S>(private val name: String) {
     private val optionDocs = mutableListOf<CommandOptionDoc>()
     private val exampleList = mutableListOf<String>()
     private val noteList = mutableListOf<String>()
-    private var leaf: top.chiloven.lukosbot2.commands.definition.CommandLeafSpec<S>? = null
+    private var leaf: CommandLeafSpec<S>? = null
 
     fun execute(block: CommandInvocation<S>.() -> Unit) {
-        leaf = EmptyLeafSpec(CommandExecutor { inv -> inv.block(); 1 })
+        leaf = EmptyLeafSpec { inv ->
+            inv.block()
+            1
+        }
     }
 
-    fun raw(argName: String = "text", required: Boolean = true, block: CommandInvocation<S>.(String) -> Unit) {
+    fun raw(
+        argName: String = "text",
+        required: Boolean = true,
+        block: CommandInvocation<S>.(String) -> Unit
+    ) {
         leaf = RawLeafSpec(
             name = argName,
             required = required,
-            executor = CommandExecutor { inv -> inv.block(inv.rawTail); 1 })
+            executor = { inv ->
+                inv.block(inv.rawTail)
+                1
+            }
+        )
     }
 
     fun argv(block: ArgvBuilder<S>.() -> Unit) {
@@ -148,9 +159,14 @@ open class NodeBuilder<S>(private val name: String) {
     }
 
     fun build(): CommandNodeSpec<S> = CommandNodeSpec(
-        name = name, description = description,
-        syntaxes = syntaxes.toList(), params = paramDocs.toList(), options = optionDocs.toList(),
-        examples = exampleList.toList(), notes = noteList.toList(), leaf = leaf
+        name = name,
+        description = description,
+        syntaxes = syntaxes.toList(),
+        params = paramDocs.toList(),
+        options = optionDocs.toList(),
+        examples = exampleList.toList(),
+        notes = noteList.toList(),
+        leaf = leaf
     )
 }
 
@@ -160,13 +176,17 @@ class ArgvBuilder<S> {
     internal val optionSpecs = mutableListOf<CommandOptionSpec>()
     internal var executorBlock: (CommandInvocation<S>.(ArgvParseResult) -> Unit)? = null
 
-    fun positional(name: String, type: ArgType, block: PositionalConfigBuilder.() -> Unit = {}) {
+    fun positional(
+        name: String,
+        type: ArgType,
+        block: PositionalConfigBuilder.() -> Unit = {}
+    ) {
         val config = PositionalConfigBuilder(type).apply(block)
         positionals += CommandArgSpec(
             name = name,
             type = config.type,
             required = config.required,
-            default = config.default,
+            defaultValue = config.default,
             greedy = config.greedy,
             description = config.description,
             choices = config.choices,
@@ -200,8 +220,12 @@ class ArgvBuilder<S> {
             positionals = positionals.toList(),
             options = optionSpecs.toList(),
             executor = { inv ->
-                val argv = inv.argv ?: throw IllegalStateException("argv not set"); inv.block(argv); 1
-            })
+                val argv = inv.argv
+                    ?: throw IllegalStateException("argv not set")
+                inv.block(argv)
+                1
+            }
+        )
     }
 
 }
