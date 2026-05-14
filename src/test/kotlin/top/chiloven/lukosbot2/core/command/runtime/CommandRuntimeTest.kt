@@ -353,4 +353,38 @@ class CommandRuntimeTest {
         assertTrue(s.replies[0].contains("缺少子命令"))
     }
 
+    @Test
+    fun deeply_nested_literal_routing() {
+        val s = fakeSource()
+        val spec = CommandDefinition(
+            name = "a",
+            description = "nested test",
+            root = CommandNode(
+                name = "a",
+                children = listOf(
+                    CommandNode(
+                        name = "b",
+                        children = listOf(
+                            CommandNode(
+                                name = "c",
+                                leaf = EmptyLeaf(CommandExecutor<CommandSource> {
+                                    it.source.reply("deep")
+                                    1
+                                })
+                            )
+                        )
+                    )
+                )
+            )
+        )
+        val result = BotCommandRuntime.execute(
+            asCommand(spec),
+            s.source,
+            "a b c"
+        )
+
+        assertEquals(1, result)
+        assertEquals(listOf("deep"), s.replies)
+    }
+
 }

@@ -14,12 +14,17 @@ open class NodeBuilder<S>(private val name: String) {
 
     var description: String = ""
 
+    private val children = mutableListOf<CommandNode<S>>()
     private val syntaxes = mutableListOf<CommandSyntax>()
     private val paramDocs = mutableListOf<CommandParamDoc>()
     private val optionDocs = mutableListOf<CommandOptionDoc>()
     private val exampleList = mutableListOf<String>()
     private val noteList = mutableListOf<String>()
     private var leaf: CommandLeaf<S>? = null
+
+    fun literal(childName: String, block: NodeBuilder<S>.() -> Unit) {
+        children += NodeBuilder<S>(childName).apply(block).build()
+    }
 
     fun execute(block: CommandInvocation<S>.() -> Unit) {
         leaf = EmptyLeaf { inv ->
@@ -75,6 +80,7 @@ open class NodeBuilder<S>(private val name: String) {
         options = optionDocs.toList(),
         examples = exampleList.toList(),
         notes = noteList.toList(),
+        children = children.toList(),
         leaf = leaf
     )
 
