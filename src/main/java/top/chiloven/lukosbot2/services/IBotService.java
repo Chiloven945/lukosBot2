@@ -1,10 +1,10 @@
 package top.chiloven.lukosbot2.services;
 
-import top.chiloven.lukosbot2.core.command.CommandSource;
+import top.chiloven.lukosbot2.core.command.bot.CommandSource;
+import top.chiloven.lukosbot2.core.model.ServiceConfig;
+import top.chiloven.lukosbot2.core.model.ServiceEvent;
+import top.chiloven.lukosbot2.core.model.message.inbound.InboundMessage;
 import top.chiloven.lukosbot2.core.service.ServiceType;
-import top.chiloven.lukosbot2.model.ServiceConfig;
-import top.chiloven.lukosbot2.model.ServiceEvent;
-import top.chiloven.lukosbot2.model.message.inbound.InboundMessage;
 
 import java.util.Collections;
 import java.util.Map;

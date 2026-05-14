@@ -5,11 +5,11 @@ import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.utils.FileUpload;
-import top.chiloven.lukosbot2.model.message.media.BytesRef;
-import top.chiloven.lukosbot2.model.message.media.MediaRef;
-import top.chiloven.lukosbot2.model.message.media.PlatformFileRef;
-import top.chiloven.lukosbot2.model.message.media.UrlRef;
-import top.chiloven.lukosbot2.model.message.outbound.*;
+import top.chiloven.lukosbot2.core.model.message.media.BytesRef;
+import top.chiloven.lukosbot2.core.model.message.media.MediaRef;
+import top.chiloven.lukosbot2.core.model.message.media.PlatformFileRef;
+import top.chiloven.lukosbot2.core.model.message.media.UrlRef;
+import top.chiloven.lukosbot2.core.model.message.outbound.*;
 import top.chiloven.lukosbot2.platform.ISender;
 import top.chiloven.lukosbot2.util.message.OutboundPartUtils;
 

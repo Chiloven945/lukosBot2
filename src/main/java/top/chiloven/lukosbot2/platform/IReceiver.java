@@ -1,6 +1,6 @@
 package top.chiloven.lukosbot2.platform;
 
-import top.chiloven.lukosbot2.model.message.inbound.InboundMessage;
+import top.chiloven.lukosbot2.core.model.message.inbound.InboundMessage;
 
 import java.util.function.Consumer;
 

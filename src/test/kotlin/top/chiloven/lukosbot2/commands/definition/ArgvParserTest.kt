@@ -4,15 +4,23 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import top.chiloven.lukosbot2.commands.definition.parser.ArgvParser
-import top.chiloven.lukosbot2.commands.definition.parser.ShellWords
+import top.chiloven.lukosbot2.core.command.definition.ArgType
+import top.chiloven.lukosbot2.core.command.definition.CommandArg
+import top.chiloven.lukosbot2.core.command.definition.CommandOption
+import top.chiloven.lukosbot2.core.command.definition.CommandParseException
+import top.chiloven.lukosbot2.core.command.definition.parser.ArgvParser
+import top.chiloven.lukosbot2.core.command.definition.parser.ShellWords
 
 class ArgvParserTest {
 
     @Test
     fun parse_long_option_equals() {
         val opts = listOf(
-            CommandOptionSpec("provider", listOf("--provider"), ArgType.StringType)
+            CommandOption(
+                "provider",
+                listOf("--provider"),
+                ArgType.StringType
+            )
         )
         val result = ArgvParser.parse(
             tokens = ShellWords.split("--provider=ipsb"),
@@ -25,7 +33,11 @@ class ArgvParserTest {
     @Test
     fun parse_long_option_space() {
         val opts = listOf(
-            CommandOptionSpec("provider", listOf("--provider"), ArgType.StringType)
+            CommandOption(
+                "provider",
+                listOf("--provider"),
+                ArgType.StringType
+            )
         )
         val result = ArgvParser.parse(
             tokens = ShellWords.split("--provider ipsb"),
@@ -38,7 +50,11 @@ class ArgvParserTest {
     @Test
     fun parse_short_option() {
         val opts = listOf(
-            CommandOptionSpec("provider", listOf("-p", "--provider"), ArgType.StringType)
+            CommandOption(
+                "provider",
+                listOf("-p", "--provider"),
+                ArgType.StringType
+            )
         )
         val result = ArgvParser.parse(
             tokens = ShellWords.split("-p ipsb"),
@@ -51,7 +67,11 @@ class ArgvParserTest {
     @Test
     fun parse_boolean_flag() {
         val opts = listOf(
-            CommandOptionSpec("verbose", listOf("-v", "--verbose"), ArgType.BooleanType)
+            CommandOption(
+                "verbose",
+                listOf("-v", "--verbose"),
+                ArgType.BooleanType
+            )
         )
         val result = ArgvParser.parse(
             tokens = ShellWords.split("--verbose"),
@@ -64,7 +84,7 @@ class ArgvParserTest {
     @Test
     fun parse_split_list() {
         val opts = listOf(
-            CommandOptionSpec(
+            CommandOption(
                 "providers",
                 listOf("--providers"),
                 ArgType.StringType,
@@ -85,7 +105,11 @@ class ArgvParserTest {
     @Test
     fun parse_required_positional() {
         val positionals = listOf(
-            CommandArgSpec("ip", ArgType.StringType, required = true)
+            CommandArg(
+                "ip",
+                ArgType.StringType,
+                required = true
+            )
         )
         val result = ArgvParser.parse(
             tokens = ShellWords.split("1.1.1.1"),
@@ -98,7 +122,12 @@ class ArgvParserTest {
     @Test
     fun parse_optional_positional_default() {
         val positionals = listOf(
-            CommandArgSpec("count", ArgType.LongType, required = false, defaultValue = 1L)
+            CommandArg(
+                "count",
+                ArgType.LongType,
+                required = false,
+                defaultValue = 1L
+            )
         )
         val result = ArgvParser.parse(
             tokens = emptyList(),
@@ -111,7 +140,11 @@ class ArgvParserTest {
     @Test
     fun parse_greedy_positional() {
         val positionals = listOf(
-            CommandArgSpec("keyword", ArgType.StringType, greedy = true)
+            CommandArg(
+                "keyword",
+                ArgType.StringType,
+                greedy = true
+            )
         )
         val result = ArgvParser.parse(
             tokens = ShellWords.split("hello world kotlin"),
@@ -136,7 +169,11 @@ class ArgvParserTest {
     @Test
     fun missing_option_value() {
         val opts = listOf(
-            CommandOptionSpec("provider", listOf("--provider"), ArgType.StringType)
+            CommandOption(
+                "provider",
+                listOf("--provider"),
+                ArgType.StringType
+            )
         )
         val ex = assertThrows<CommandParseException> {
             ArgvParser.parse(
@@ -151,7 +188,10 @@ class ArgvParserTest {
     @Test
     fun invalid_int() {
         val positionals = listOf(
-            CommandArgSpec("count", ArgType.IntType)
+            CommandArg(
+                "count",
+                ArgType.IntType
+            )
         )
         assertThrows<NumberFormatException> {
             ArgvParser.parse(
@@ -165,7 +205,7 @@ class ArgvParserTest {
     @Test
     fun invalid_choice() {
         val opts = listOf(
-            CommandOptionSpec(
+            CommandOption(
                 "sort",
                 listOf("--sort"),
                 ArgType.StringType,
@@ -185,7 +225,11 @@ class ArgvParserTest {
     @Test
     fun too_many_positionals() {
         val positionals = listOf(
-            CommandArgSpec("ip", ArgType.StringType, required = true)
+            CommandArg(
+                "ip",
+                ArgType.StringType,
+                required = true
+            )
         )
         assertThrows<CommandParseException> {
             ArgvParser.parse(
@@ -199,10 +243,14 @@ class ArgvParserTest {
     @Test
     fun parse_mixed() {
         val positionals = listOf(
-            CommandArgSpec("ip", ArgType.StringType, required = true)
+            CommandArg(
+                "ip",
+                ArgType.StringType,
+                required = true
+            )
         )
         val opts = listOf(
-            CommandOptionSpec(
+            CommandOption(
                 "providers",
                 listOf("-p", "--providers"),
                 ArgType.StringType,

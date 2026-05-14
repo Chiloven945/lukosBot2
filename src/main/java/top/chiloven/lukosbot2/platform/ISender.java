@@ -1,6 +1,6 @@
 package top.chiloven.lukosbot2.platform;
 
-import top.chiloven.lukosbot2.model.message.outbound.OutboundMessage;
+import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage;
 
 /**
  * Platform-specific sender for outbound rich messages.

@@ -4,11 +4,11 @@ import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
-import top.chiloven.lukosbot2.model.message.media.BytesRef;
-import top.chiloven.lukosbot2.model.message.media.MediaRef;
-import top.chiloven.lukosbot2.model.message.media.PlatformFileRef;
-import top.chiloven.lukosbot2.model.message.media.UrlRef;
-import top.chiloven.lukosbot2.model.message.outbound.*;
+import top.chiloven.lukosbot2.core.model.message.media.BytesRef;
+import top.chiloven.lukosbot2.core.model.message.media.MediaRef;
+import top.chiloven.lukosbot2.core.model.message.media.PlatformFileRef;
+import top.chiloven.lukosbot2.core.model.message.media.UrlRef;
+import top.chiloven.lukosbot2.core.model.message.outbound.*;
 import top.chiloven.lukosbot2.platform.ISender;
 import top.chiloven.lukosbot2.util.message.OutboundPartUtils;
 

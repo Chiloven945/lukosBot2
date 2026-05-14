@@ -11,11 +11,11 @@ import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import top.chiloven.lukosbot2.core.MessageDispatcher;
-import top.chiloven.lukosbot2.model.message.Address;
-import top.chiloven.lukosbot2.model.message.inbound.*;
-import top.chiloven.lukosbot2.model.message.media.MediaRef;
-import top.chiloven.lukosbot2.model.message.media.PlatformFileRef;
-import top.chiloven.lukosbot2.model.message.media.UrlRef;
+import top.chiloven.lukosbot2.core.model.message.Address;
+import top.chiloven.lukosbot2.core.model.message.inbound.*;
+import top.chiloven.lukosbot2.core.model.message.media.MediaRef;
+import top.chiloven.lukosbot2.core.model.message.media.PlatformFileRef;
+import top.chiloven.lukosbot2.core.model.message.media.UrlRef;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
 
 import java.lang.reflect.Method;

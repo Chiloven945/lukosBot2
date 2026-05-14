@@ -3,9 +3,9 @@ package top.chiloven.lukosbot2.core;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.core.model.message.inbound.InboundMessage;
+import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage;
 import top.chiloven.lukosbot2.core.service.ServiceManager;
-import top.chiloven.lukosbot2.model.message.inbound.InboundMessage;
-import top.chiloven.lukosbot2.model.message.outbound.OutboundMessage;
 import top.chiloven.lukosbot2.util.concurrent.Execs;
 import top.chiloven.lukosbot2.util.message.MessageIoLog;
 

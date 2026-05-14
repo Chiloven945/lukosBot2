@@ -9,7 +9,7 @@ import org.openqa.selenium.edge.EdgeDriver
 import org.openqa.selenium.edge.EdgeOptions
 import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.config.ProxyConfigProp
-import top.chiloven.lukosbot2.model.ContentData
+import top.chiloven.lukosbot2.core.model.ContentData
 import top.chiloven.lukosbot2.util.ImageUtils
 import top.chiloven.lukosbot2.util.PathUtils.sanitizeFileName
 import top.chiloven.lukosbot2.util.spring.SpringBeans

@@ -1,6 +1,6 @@
 package top.chiloven.lukosbot2.platform.telegram;
 
-import top.chiloven.lukosbot2.model.message.inbound.InboundMessage;
+import top.chiloven.lukosbot2.core.model.message.inbound.InboundMessage;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
 import top.chiloven.lukosbot2.platform.IReceiver;
 import top.chiloven.lukosbot2.platform.ISender;

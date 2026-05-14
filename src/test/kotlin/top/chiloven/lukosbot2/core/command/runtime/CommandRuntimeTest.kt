@@ -4,11 +4,16 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import top.chiloven.lukosbot2.commands.IBotCommand
-import top.chiloven.lukosbot2.commands.definition.*
-import top.chiloven.lukosbot2.core.command.CommandSource
-import top.chiloven.lukosbot2.model.message.Address
-import top.chiloven.lukosbot2.model.message.outbound.OutText
-import top.chiloven.lukosbot2.model.message.outbound.OutboundMessage
+import top.chiloven.lukosbot2.core.command.bot.BotCommandRuntime
+import top.chiloven.lukosbot2.core.command.bot.CommandSource
+import top.chiloven.lukosbot2.core.command.definition.*
+import top.chiloven.lukosbot2.core.command.definition.leaf.ArgvLeaf
+import top.chiloven.lukosbot2.core.command.definition.leaf.EmptyLeaf
+import top.chiloven.lukosbot2.core.command.definition.leaf.RawLeaf
+import top.chiloven.lukosbot2.core.command.definition.leaf.TreeLeaf
+import top.chiloven.lukosbot2.core.model.message.Address
+import top.chiloven.lukosbot2.core.model.message.outbound.OutText
+import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage
 import top.chiloven.lukosbot2.platform.ChatPlatform
 
 class CommandRuntimeTest {
@@ -50,9 +55,13 @@ class CommandRuntimeTest {
         val spec = CommandDefinition(
             name = "ping",
             description = "pong",
-            root = CommandNodeSpec<CommandSource>(
+            root = CommandNode<CommandSource>(
                 name = "ping",
-                leaf = EmptyLeafSpec(CommandExecutor { it.source.reply("pong!"); 1 })
+                leaf = EmptyLeaf(CommandExecutor {
+                    it.source.reply(
+                        "pong!"
+                    ); 1
+                })
             )
         )
 
@@ -79,9 +88,9 @@ class CommandRuntimeTest {
         val spec = CommandDefinition(
             name = "echo",
             description = "echo",
-            root = CommandNodeSpec(
+            root = CommandNode(
                 name = "echo",
-                leaf = RawLeafSpec(
+                leaf = RawLeaf(
                     name = "text",
                     required = true,
                     executor = CommandExecutor<CommandSource> { inv ->
@@ -106,9 +115,9 @@ class CommandRuntimeTest {
         val spec = CommandDefinition(
             name = "echo",
             description = "echo",
-            root = CommandNodeSpec(
+            root = CommandNode(
                 name = "echo",
-                leaf = RawLeafSpec(
+                leaf = RawLeaf(
                     name = "text",
                     required = true,
                     executor = CommandExecutor<CommandSource> { inv ->
@@ -134,11 +143,11 @@ class CommandRuntimeTest {
         val spec = CommandDefinition(
             name = "dice",
             description = "roll dice",
-            root = CommandNodeSpec(
+            root = CommandNode(
                 name = "dice",
-                leaf = ArgvLeafSpec(
+                leaf = ArgvLeaf(
                     positionals = listOf(
-                        CommandArgSpec(
+                        CommandArg(
                             "count",
                             ArgType.LongType,
                             required = false,
@@ -165,12 +174,20 @@ class CommandRuntimeTest {
         val spec = CommandDefinition(
             name = "calc",
             description = "calculate",
-            root = CommandNodeSpec(
+            root = CommandNode(
                 name = "calc",
-                leaf = TreeLeafSpec(
+                leaf = TreeLeaf(
                     arguments = listOf(
-                        CommandArgSpec("a", ArgType.IntType, required = true),
-                        CommandArgSpec("b", ArgType.IntType, required = true)
+                        CommandArg(
+                            "a",
+                            ArgType.IntType,
+                            required = true
+                        ),
+                        CommandArg(
+                            "b",
+                            ArgType.IntType,
+                            required = true
+                        )
                     ),
                     executor = CommandExecutor<CommandSource> { inv ->
                         val a = inv.argv!!.get<Int>("a")
@@ -196,18 +213,18 @@ class CommandRuntimeTest {
         val spec = CommandDefinition(
             name = "music",
             description = "music",
-            root = CommandNodeSpec(
+            root = CommandNode(
                 name = "music",
                 children = listOf(
-                    CommandNodeSpec(
+                    CommandNode(
                         name = "link",
-                        leaf = EmptyLeafSpec(CommandExecutor {
+                        leaf = EmptyLeaf(CommandExecutor {
                             it.source.reply("link called")
                             1
                         })
                     )
                 ),
-                leaf = RawLeafSpec(
+                leaf = RawLeaf(
                     name = "query",
                     required = true,
                     executor = CommandExecutor<CommandSource> { inv ->
@@ -233,13 +250,13 @@ class CommandRuntimeTest {
         val spec = CommandDefinition(
             name = "wiki",
             description = "wiki",
-            root = CommandNodeSpec(
+            root = CommandNode(
                 name = "wiki",
                 children = listOf(
-                    CommandNodeSpec(
+                    CommandNode(
                         name = "markdown",
                         aliases = listOf("md"),
-                        leaf = EmptyLeafSpec(CommandExecutor<CommandSource> {
+                        leaf = EmptyLeaf(CommandExecutor<CommandSource> {
                             it.source.reply("md export")
                             1
                         })
@@ -263,12 +280,12 @@ class CommandRuntimeTest {
         val spec = CommandDefinition(
             name = "wiki",
             description = "wiki",
-            root = CommandNodeSpec(
+            root = CommandNode(
                 name = "wiki",
                 children = listOf(
-                    CommandNodeSpec(
+                    CommandNode(
                         name = "md",
-                        leaf = EmptyLeafSpec(CommandExecutor<CommandSource> { 1 })
+                        leaf = EmptyLeaf(CommandExecutor<CommandSource> { 1 })
                     )
                 )
             )
@@ -289,9 +306,9 @@ class CommandRuntimeTest {
         val spec = CommandDefinition(
             name = "ping",
             description = "pong",
-            root = CommandNodeSpec(
+            root = CommandNode(
                 name = "ping",
-                leaf = EmptyLeafSpec(CommandExecutor<CommandSource> {
+                leaf = EmptyLeaf(CommandExecutor<CommandSource> {
                     it.source.reply("pong")
                     1
                 })
@@ -313,12 +330,12 @@ class CommandRuntimeTest {
         val spec = CommandDefinition(
             name = "github",
             description = "GitHub tools",
-            root = CommandNodeSpec(
+            root = CommandNode(
                 name = "github",
                 children = listOf(
-                    CommandNodeSpec(
+                    CommandNode(
                         name = "user",
-                        leaf = EmptyLeafSpec(CommandExecutor<CommandSource> { 1 })
+                        leaf = EmptyLeaf(CommandExecutor<CommandSource> { 1 })
                     )
                 )
             )

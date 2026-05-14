@@ -4,8 +4,8 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Service;
-import top.chiloven.lukosbot2.core.cli.CliCmdContext;
-import top.chiloven.lukosbot2.core.cli.CliCmdProcessor;
+import top.chiloven.lukosbot2.core.command.cli.CliCmdContext;
+import top.chiloven.lukosbot2.core.command.cli.CliCmdProcessor;
 import top.chiloven.lukosbot2.util.concurrent.Execs;
 
 import java.io.*;

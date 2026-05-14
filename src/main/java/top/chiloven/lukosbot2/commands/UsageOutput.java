@@ -2,10 +2,10 @@ package top.chiloven.lukosbot2.commands;
 
 import lombok.NonNull;
 import lombok.extern.log4j.Log4j2;
-import top.chiloven.lukosbot2.core.command.CommandSource;
-import top.chiloven.lukosbot2.model.message.media.BytesRef;
-import top.chiloven.lukosbot2.model.message.outbound.OutImage;
-import top.chiloven.lukosbot2.model.message.outbound.OutboundMessage;
+import top.chiloven.lukosbot2.core.command.bot.CommandSource;
+import top.chiloven.lukosbot2.core.model.message.media.BytesRef;
+import top.chiloven.lukosbot2.core.model.message.outbound.OutImage;
+import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage;
 
 import java.util.List;
 

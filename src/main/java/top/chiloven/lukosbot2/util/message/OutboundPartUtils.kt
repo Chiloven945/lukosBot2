@@ -1,7 +1,7 @@
 package top.chiloven.lukosbot2.util.message
 
-import top.chiloven.lukosbot2.model.message.outbound.OutPart
-import top.chiloven.lukosbot2.model.message.outbound.OutText
+import top.chiloven.lukosbot2.core.model.message.outbound.OutPart
+import top.chiloven.lukosbot2.core.model.message.outbound.OutText
 import java.util.*
 
 /**

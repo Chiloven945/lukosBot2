@@ -3,23 +3,33 @@ package top.chiloven.lukosbot2.commands.definition.bridge
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import top.chiloven.lukosbot2.commands.definition.*
-import top.chiloven.lukosbot2.core.command.CommandSource
+import top.chiloven.lukosbot2.core.command.bot.CommandSource
+import top.chiloven.lukosbot2.core.command.definition.*
+import top.chiloven.lukosbot2.core.command.definition.bridge.CommandUsageMapper
+import top.chiloven.lukosbot2.core.command.definition.leaf.ArgvLeaf
+import top.chiloven.lukosbot2.core.command.definition.leaf.EmptyLeaf
+import top.chiloven.lukosbot2.core.command.definition.leaf.RawLeaf
+import top.chiloven.lukosbot2.core.command.definition.leaf.TreeLeaf
 
 class CommandUsageMapperTest {
 
-    private val noop = CommandExecutor<CommandSource> { 1 }
+    private val noop =
+        CommandExecutor<CommandSource> { 1 }
 
     @Test
     fun ping_usage() {
         val spec = CommandDefinition(
             name = "ping",
             description = "return bot status",
-            root = CommandNodeSpec(
+            root = CommandNode(
                 name = "ping",
-                syntaxes = listOf(CommandSyntaxSpec(description = "Check status")),
+                syntaxes = listOf(
+                    CommandSyntax(
+                        description = "Check status"
+                    )
+                ),
                 examples = listOf("ping"),
-                leaf = EmptyLeafSpec(noop)
+                leaf = EmptyLeaf(noop)
             )
         )
         val node = CommandUsageMapper.toUsageNode(spec)
@@ -33,12 +43,12 @@ class CommandUsageMapperTest {
         val spec = CommandDefinition(
             name = "dice",
             description = "roll dice",
-            root = CommandNodeSpec(
+            root = CommandNode(
                 name = "dice",
                 examples = listOf("dice", "dice 3"),
-                leaf = ArgvLeafSpec(
+                leaf = ArgvLeaf(
                     positionals = listOf(
-                        CommandArgSpec(
+                        CommandArg(
                             "count",
                             ArgType.LongType,
                             required = false,
@@ -61,13 +71,19 @@ class CommandUsageMapperTest {
         val spec = CommandDefinition(
             name = "ip",
             description = "query IP",
-            root = CommandNodeSpec(
+            root = CommandNode(
                 name = "ip",
                 examples = listOf("ip 1.1.1.1"),
-                leaf = ArgvLeafSpec(
-                    positionals = listOf(CommandArgSpec("ip", ArgType.StringType, required = true)),
+                leaf = ArgvLeaf(
+                    positionals = listOf(
+                        CommandArg(
+                            "ip",
+                            ArgType.StringType,
+                            required = true
+                        )
+                    ),
                     options = listOf(
-                        CommandOptionSpec(
+                        CommandOption(
                             "providers",
                             listOf("--provider"),
                             ArgType.StringType,
@@ -89,20 +105,20 @@ class CommandUsageMapperTest {
             name = "github",
             aliases = listOf("gh"),
             description = "GitHub",
-            root = CommandNodeSpec(
+            root = CommandNode(
                 name = "github",
                 children = listOf(
-                    CommandNodeSpec(
+                    CommandNode(
                         name = "user",
                         examples = listOf("github user x"),
-                        leaf = RawLeafSpec("username", required = true, executor = noop)
+                        leaf = RawLeaf("username", required = true, executor = noop)
                     ),
-                    CommandNodeSpec(
+                    CommandNode(
                         name = "search",
                         examples = listOf("github search x"),
-                        leaf = ArgvLeafSpec(
+                        leaf = ArgvLeaf(
                             positionals = listOf(
-                                CommandArgSpec(
+                                CommandArg(
                                     "keyword",
                                     ArgType.StringType,
                                     required = true,
@@ -110,7 +126,7 @@ class CommandUsageMapperTest {
                                 )
                             ),
                             options = listOf(
-                                CommandOptionSpec(
+                                CommandOption(
                                     "top",
                                     listOf("--top"),
                                     ArgType.IntType
@@ -134,23 +150,23 @@ class CommandUsageMapperTest {
         val spec = CommandDefinition(
             name = "cmd",
             description = "test",
-            root = CommandNodeSpec(
+            root = CommandNode(
                 name = "cmd",
-                leaf = ArgvLeafSpec(
+                leaf = ArgvLeaf(
                     positionals = listOf(
-                        CommandArgSpec(
+                        CommandArg(
                             "input",
                             ArgType.StringType,
                             required = true
                         )
                     ),
                     options = listOf(
-                        CommandOptionSpec(
+                        CommandOption(
                             "verbose",
                             listOf("-v"),
                             ArgType.BooleanType
                         ),
-                        CommandOptionSpec(
+                        CommandOption(
                             "count",
                             listOf("-n"),
                             ArgType.IntType
@@ -172,9 +188,9 @@ class CommandUsageMapperTest {
             name = "github",
             aliases = listOf("gh", "git"),
             description = "GitHub tools",
-            root = CommandNodeSpec(
+            root = CommandNode(
                 name = "github",
-                leaf = EmptyLeafSpec(noop)
+                leaf = EmptyLeaf(noop)
             )
         )
         val node = CommandUsageMapper.toUsageNode(spec)
@@ -187,12 +203,20 @@ class CommandUsageMapperTest {
         val spec = CommandDefinition(
             name = "calc",
             description = "calculate",
-            root = CommandNodeSpec(
+            root = CommandNode(
                 name = "calc",
-                leaf = TreeLeafSpec(
+                leaf = TreeLeaf(
                     arguments = listOf(
-                        CommandArgSpec("a", ArgType.IntType, required = true),
-                        CommandArgSpec("b", ArgType.IntType, required = false)
+                        CommandArg(
+                            "a",
+                            ArgType.IntType,
+                            required = true
+                        ),
+                        CommandArg(
+                            "b",
+                            ArgType.IntType,
+                            required = false
+                        )
                     ),
                     executor = noop
                 )
@@ -210,9 +234,9 @@ class CommandUsageMapperTest {
         val spec = CommandDefinition(
             name = "ping",
             description = "pong",
-            root = CommandNodeSpec(
+            root = CommandNode(
                 name = "ping",
-                leaf = EmptyLeafSpec(noop)
+                leaf = EmptyLeaf(noop)
             )
         )
         val node = CommandUsageMapper.toUsageNode(spec)

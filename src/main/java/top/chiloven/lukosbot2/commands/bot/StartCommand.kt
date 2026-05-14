@@ -1,0 +1,19 @@
+package top.chiloven.lukosbot2.commands.bot
+
+import org.springframework.stereotype.Service
+import top.chiloven.lukosbot2.commands.IBotCommand
+import top.chiloven.lukosbot2.core.command.definition.dsl.botCommand
+
+@Service
+class StartCommand : IBotCommand {
+
+    override fun definition() = botCommand("start") {
+        description = "开始使用 LukosBot2"
+        visible = false
+        execute {
+            source.reply("欢迎使用 LukosBot2！这是由 @chiloven945 制作的聊天机器人，你可以在 Discord 和 Telegram 上找到他！发送 /help 查看可用命令。")
+        }
+        syntax("开始使用机器人")
+    }
+
+}

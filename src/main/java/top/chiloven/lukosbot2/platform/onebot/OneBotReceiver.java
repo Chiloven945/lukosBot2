@@ -1,7 +1,7 @@
 package top.chiloven.lukosbot2.platform.onebot;
 
 import com.mikuac.shiro.core.BotContainer;
-import top.chiloven.lukosbot2.model.message.inbound.InboundMessage;
+import top.chiloven.lukosbot2.core.model.message.inbound.InboundMessage;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
 import top.chiloven.lukosbot2.platform.IReceiver;
 

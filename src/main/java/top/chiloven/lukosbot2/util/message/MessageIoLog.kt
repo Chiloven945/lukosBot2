@@ -1,12 +1,12 @@
 package top.chiloven.lukosbot2.util.message
 
 import org.apache.logging.log4j.LogManager
-import top.chiloven.lukosbot2.model.message.inbound.*
-import top.chiloven.lukosbot2.model.message.media.BytesRef
-import top.chiloven.lukosbot2.model.message.media.MediaRef
-import top.chiloven.lukosbot2.model.message.media.PlatformFileRef
-import top.chiloven.lukosbot2.model.message.media.UrlRef
-import top.chiloven.lukosbot2.model.message.outbound.*
+import top.chiloven.lukosbot2.core.model.message.inbound.*
+import top.chiloven.lukosbot2.core.model.message.media.BytesRef
+import top.chiloven.lukosbot2.core.model.message.media.MediaRef
+import top.chiloven.lukosbot2.core.model.message.media.PlatformFileRef
+import top.chiloven.lukosbot2.core.model.message.media.UrlRef
+import top.chiloven.lukosbot2.core.model.message.outbound.*
 
 object MessageIoLog {
 
