@@ -39,7 +39,6 @@ dependencies {
     runtimeOnly(libs.h2)
 
     // Core Library
-    implementation(libs.brigadier)
     implementation(libs.commons.net)
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)

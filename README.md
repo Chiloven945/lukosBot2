@@ -14,8 +14,7 @@
 lukosBot2 is a multifunctional and multiplatform chatbot, using
 the [TelegramBots](https://github.com/rubenlagus/TelegramBots) for Telegram platform,
 the [JDA](https://github.com/discord-jda/JDA) for Discord platform, and the [Shiro](https://github.com/MisakaTAT/Shiro)
-for QQ using [OneBot](https://github.com/botuniverse/onebot-11) protocol, analysing command with
-the [brigadier](https://github.com/Mojang/brigadier). The programme is powered
+for QQ using [OneBot](https://github.com/botuniverse/onebot-11) protocol. The programme is powered
 by [SpringBoot](https://github.com/spring-projects/spring-boot).
 
 This is an experimental project. I'm using it to practice my skills, and it is not guaranteed to be stable or secure.
@@ -163,7 +162,6 @@ licences are respected:
 
 | Library                           | Repository / Project                                                                  | License                                                                            |
 |-----------------------------------|---------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|
-| Brigadier                         | [Mojang/brigadier](https://github.com/Mojang/brigadier)                               | [MIT](https://github.com/Mojang/brigadier/blob/master/LICENSE)                     |
 | Commons Net                       | [apache/commons-net](https://github.com/apache/commons-net)                           | [Apache-2.0](https://github.com/apache/commons-net/blob/master/LICENSE.txt)        |
 | Docker Java                       | [docker-java/docker-java](https://github.com/docker-java/docker-java)                 | [Apache-2.0](https://github.com/docker-java/docker-java/blob/main/LICENSE)         |
 | Docker Java Transport HttpClient5 | [docker-java/docker-java](https://github.com/docker-java/docker-java)                 | [Apache-2.0](https://github.com/docker-java/docker-java/blob/main/LICENSE)         |
