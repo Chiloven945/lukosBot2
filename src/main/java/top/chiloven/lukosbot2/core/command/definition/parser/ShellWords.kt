@@ -72,7 +72,12 @@ object ShellWords {
         return tokens
     }
 
-    private fun readQuoted(input: String, start: Int, quote: Char, current: StringBuilder): Int {
+    private fun readQuoted(
+        input: String,
+        start: Int,
+        quote: Char,
+        current: StringBuilder
+    ): Int {
         var i = start + 1
         while (i < input.length) {
             if (input[i] == quote) {

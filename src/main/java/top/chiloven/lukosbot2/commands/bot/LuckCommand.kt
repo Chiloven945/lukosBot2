@@ -25,7 +25,7 @@ class LuckCommand : IBotCommand {
         description = "获取今日幸运值"
 
         execute {
-            source.reply(getLuck())
+            source.reply(getLuck(source.userId()))
         }
 
         syntax("获取今日幸运值")
@@ -33,10 +33,9 @@ class LuckCommand : IBotCommand {
         example("luck")
     }
 
-    private fun getLuck(): String {
+    private fun getLuck(userId: Long): String {
         val today = LocalDate.now()
         val monthDay = MonthDay.from(today)
-        val userId = 0L
 
         val luck = MathUtils.stableRandom(0, 100, userId, today)
         return "你今天的幸运值是……\n${generateLuckMessage(monthDay, luck)}"

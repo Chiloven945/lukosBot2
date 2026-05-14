@@ -115,7 +115,6 @@ public final class UsageOutput {
     public static boolean shouldAutoUseImage(UsageTextRenderer.Result rendered) {
         if (rendered == null) return false;
         String md = rendered.markdownText();
-        rendered.lines();
         int lines = rendered.lines().size();
         int chars = md.length();
         return chars > AUTO_IMAGE_MAX_CHARS || lines > AUTO_IMAGE_MAX_LINES;

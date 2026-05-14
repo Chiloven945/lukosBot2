@@ -1,7 +1,6 @@
 package top.chiloven.lukosbot2.core.command.definition.parser
 
-import top.chiloven.lukosbot2.core.command.definition.ArgType
-import top.chiloven.lukosbot2.core.command.definition.CommandParseException
+import top.chiloven.lukosbot2.core.command.definition.*
 
 /**
  * Parses argv-style tokens into named positional and option values.
@@ -36,15 +35,15 @@ object ArgvParser {
      */
     fun parse(
         tokens: List<String>,
-        positionals: List<top.chiloven.lukosbot2.core.command.definition.CommandArg>,
-        options: List<top.chiloven.lukosbot2.core.command.definition.CommandOption>,
+        positionals: List<CommandArg>,
+        options: List<CommandOption>,
         converters: TypeConverterRegistry = TypeConverterRegistry.default
     ): ArgvParseResult {
         val values = mutableMapOf<String, Any?>()
         val rawPositionals = mutableListOf<String>()
 
-        val longOptionIndex = mutableMapOf<String, top.chiloven.lukosbot2.core.command.definition.CommandOption>()
-        val shortOptionIndex = mutableMapOf<String, top.chiloven.lukosbot2.core.command.definition.CommandOption>()
+        val longOptionIndex = mutableMapOf<String, CommandOption>()
+        val shortOptionIndex = mutableMapOf<String, CommandOption>()
         for (opt in options) {
             for (name in opt.names) {
                 when {
@@ -86,7 +85,7 @@ object ArgvParser {
         tokens: List<String>,
         idx: Int,
         token: String,
-        index: Map<String, top.chiloven.lukosbot2.core.command.definition.CommandOption>,
+        index: Map<String, CommandOption>,
         values: MutableMap<String, Any?>,
         converters: TypeConverterRegistry
     ): Int {
@@ -127,7 +126,7 @@ object ArgvParser {
         tokens: List<String>,
         idx: Int,
         token: String,
-        index: Map<String, top.chiloven.lukosbot2.core.command.definition.CommandOption>,
+        index: Map<String, CommandOption>,
         values: MutableMap<String, Any?>,
         converters: TypeConverterRegistry
     ): Int {
@@ -149,14 +148,14 @@ object ArgvParser {
 
     private fun storeConvertedValue(
         values: MutableMap<String, Any?>,
-        spec: top.chiloven.lukosbot2.core.command.definition.CommandOption,
+        spec: CommandOption,
         rawValue: String,
         converters: TypeConverterRegistry
     ) {
         if (spec.splitBy != null) {
             val parts = rawValue.split(spec.splitBy)
             val convertedParts = parts.map {
-                convertAndValidate(spec.type, it, spec.choices, spec.validator)
+                convertAndValidate(spec.type, it, spec.choices, spec.validator, converters)
             }
             if (spec.repeatable) {
                 @Suppress("UNCHECKED_CAST")
@@ -166,16 +165,14 @@ object ArgvParser {
                 values[spec.canonicalName] = convertedParts
             }
         } else {
-            val converted = convertAndValidate(
-                spec.type, rawValue, spec.choices, spec.validator
-            )
+            val converted = convertAndValidate(spec.type, rawValue, spec.choices, spec.validator, converters)
             storeValue(values, spec, converted)
         }
     }
 
     private fun storeValue(
         values: MutableMap<String, Any?>,
-        spec: top.chiloven.lukosbot2.core.command.definition.CommandOption,
+        spec: CommandOption,
         converted: Any
     ) {
         if (spec.repeatable) {
@@ -190,7 +187,7 @@ object ArgvParser {
     private fun processPositionals(
         values: MutableMap<String, Any?>,
         rawPositionals: List<String>,
-        specs: List<top.chiloven.lukosbot2.core.command.definition.CommandArg>,
+        specs: List<CommandArg>,
         converters: TypeConverterRegistry
     ) {
         var posIdx = 0
@@ -201,9 +198,7 @@ object ArgvParser {
             if (spec.greedy) {
                 val remaining = rawPositionals.subList(posIdx, rawPositionals.size)
                 val joined = remaining.joinToString(" ")
-                val converted = convertAndValidate(
-                    spec.type, joined, spec.choices, spec.validator
-                )
+                val converted = convertAndValidate(spec.type, joined, spec.choices, spec.validator, converters)
                 values[spec.name] = converted
                 posIdx = rawPositionals.size
                 specIdx++
@@ -211,7 +206,11 @@ object ArgvParser {
             } else {
                 val raw = rawPositionals[posIdx]
                 val converted = convertAndValidate(
-                    spec.type, raw, spec.choices, spec.validator
+                    spec.type,
+                    raw,
+                    spec.choices,
+                    spec.validator,
+                    converters
                 )
                 values[spec.name] = converted
                 posIdx++
@@ -237,8 +236,8 @@ object ArgvParser {
 
     private fun applyDefaults(
         values: MutableMap<String, Any?>,
-        positionals: List<top.chiloven.lukosbot2.core.command.definition.CommandArg>,
-        options: List<top.chiloven.lukosbot2.core.command.definition.CommandOption>
+        positionals: List<CommandArg>,
+        options: List<CommandOption>
     ) {
         for (spec in positionals) {
             if (spec.name !in values && spec.defaultValue != null) {
@@ -260,9 +259,10 @@ object ArgvParser {
         type: ArgType,
         raw: String,
         choices: List<String>,
-        validator: top.chiloven.lukosbot2.core.command.definition.ValueValidator?
+        validator: ValueValidator?,
+        converters: TypeConverterRegistry
     ): Any {
-        val converted = TypeConverterRegistry.default.convert(type, raw)
+        val converted = converters.convert(type, raw)
         if (choices.isNotEmpty() && converted.toString() !in choices) {
             throw CommandParseException(
                 "参数值无效：$raw，可选值：${choices.joinToString(", ")}"
