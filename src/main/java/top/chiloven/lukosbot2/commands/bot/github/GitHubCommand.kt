@@ -31,6 +31,10 @@ class GitHubCommand(
         alias("gh")
         description = "GitHub 查询工具"
 
+        execute {
+            this@GitHubCommand.sendUsage(source)
+        }
+
         literal("user") {
             description = "查询用户信息"
 

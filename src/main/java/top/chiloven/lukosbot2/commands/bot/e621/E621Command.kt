@@ -29,6 +29,10 @@ class E621Command(
     override fun definition() = botCommand("e621") {
         description = "查询 E621 上的作品和作者信息"
 
+        execute {
+            this@E621Command.sendUsage(source)
+        }
+
         literal("get") {
             literal("artist") {
                 argv {

@@ -24,11 +24,9 @@ class HelpCommand(
         alias("h")
         description = "列出可用命令或其详细用法"
 
-        execute { showList(source) }
-
         argv {
             positional("command", ArgType.StringType) {
-                required = true
+                required = false
                 description = "命令名"
             }
             positional("mode", ArgType.StringType) {
@@ -36,9 +34,13 @@ class HelpCommand(
                 description = "img 或 text"
             }
             execute { args ->
-                val cmdName = args.get<String>("command")
-                val mode = args.getOrNull<String>("mode")
-                showUsage(source, cmdName, mode)
+                val cmdName = args.getOrNull<String>("command")
+                if (cmdName.isNullOrBlank()) {
+                    showList(source)
+                } else {
+                    val mode = args.getOrNull<String>("mode")
+                    showUsage(source, cmdName, mode)
+                }
             }
         }
 

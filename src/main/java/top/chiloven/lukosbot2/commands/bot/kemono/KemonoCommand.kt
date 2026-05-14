@@ -77,6 +77,10 @@ class KemonoCommand(
         description = "从 kemono.cr 查询帖子/创作者信息，并支持打包下载附件"
         visible = false
 
+        execute {
+            this@KemonoCommand.sendUsage(source)
+        }
+
         literal("post") {
             description = "查询帖子信息，支持 SHA-256 与上传文件反查"
 

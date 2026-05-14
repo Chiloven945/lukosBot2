@@ -27,6 +27,10 @@ class AdminCommand(
     override fun definition() = botCommand("admin") {
         description = "管理机器人管理员并查看当前身份"
 
+        execute {
+            this@AdminCommand.sendUsage(source)
+        }
+
         literal("me") {
             description = "查看你的当前身份"
             execute { me(source) }
