@@ -39,7 +39,6 @@ dependencies {
     runtimeOnly(libs.h2)
 
     // Core Library
-    implementation(libs.brigadier)
     implementation(libs.commons.net)
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
@@ -67,6 +66,10 @@ dependencies {
 
     implementation(libs.kotlin.reflect)
     implementation(libs.kotlinx.coroutines.core)
+
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.kotlin.test.junit)
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 tasks.withType<JavaCompile>().configureEach {
@@ -74,7 +77,7 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 tasks.test {
-    failOnNoDiscoveredTests = false
+    useJUnitPlatform()
 }
 
 springBoot {

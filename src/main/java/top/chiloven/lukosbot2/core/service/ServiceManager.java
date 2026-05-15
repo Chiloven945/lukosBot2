@@ -8,15 +8,15 @@ import org.springframework.stereotype.Service;
 import tools.jackson.databind.json.JsonMapper;
 import top.chiloven.lukosbot2.config.ServiceConfigProp;
 import top.chiloven.lukosbot2.core.MessageSenderHub;
-import top.chiloven.lukosbot2.core.command.CommandSource;
+import top.chiloven.lukosbot2.core.command.bot.CommandSource;
+import top.chiloven.lukosbot2.core.model.ServiceConfig;
+import top.chiloven.lukosbot2.core.model.ServiceEvent;
+import top.chiloven.lukosbot2.core.model.message.Address;
+import top.chiloven.lukosbot2.core.model.message.inbound.InboundMessage;
+import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage;
 import top.chiloven.lukosbot2.core.state.Scope;
 import top.chiloven.lukosbot2.core.state.ScopeType;
 import top.chiloven.lukosbot2.core.state.store.IStateStore;
-import top.chiloven.lukosbot2.model.ServiceConfig;
-import top.chiloven.lukosbot2.model.ServiceEvent;
-import top.chiloven.lukosbot2.model.message.Address;
-import top.chiloven.lukosbot2.model.message.inbound.InboundMessage;
-import top.chiloven.lukosbot2.model.message.outbound.OutboundMessage;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
 import top.chiloven.lukosbot2.services.IBotService;
 
@@ -174,6 +174,7 @@ public class ServiceManager {
      * Called by {@code MessageDispatcher} for incoming messages.
      *
      * @param in inbound message.
+     *
      * @return outbound messages produced by enabled trigger services for this message; may be empty.
      */
     public List<OutboundMessage> onMessage(InboundMessage in) {

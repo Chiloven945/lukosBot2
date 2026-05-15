@@ -5,7 +5,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.config.ProxyConfigProp
-import top.chiloven.lukosbot2.model.ContentData
+import top.chiloven.lukosbot2.core.model.ContentData
 import top.chiloven.lukosbot2.util.PathUtils.sanitizeFileName
 import top.chiloven.lukosbot2.util.spring.SpringBeans
 import java.net.Proxy

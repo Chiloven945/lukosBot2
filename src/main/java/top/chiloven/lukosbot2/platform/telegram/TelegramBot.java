@@ -6,9 +6,9 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.photo.PhotoSize;
-import top.chiloven.lukosbot2.model.message.Address;
-import top.chiloven.lukosbot2.model.message.inbound.*;
-import top.chiloven.lukosbot2.model.message.media.PlatformFileRef;
+import top.chiloven.lukosbot2.core.model.message.Address;
+import top.chiloven.lukosbot2.core.model.message.inbound.*;
+import top.chiloven.lukosbot2.core.model.message.media.PlatformFileRef;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
 
 import java.util.ArrayList;
@@ -53,9 +53,12 @@ final class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
         User from = m.getFrom();
         Sender sender = (from == null)
                 ? Sender.unknown()
-                : new Sender(from.getId(), from.getUserName(),
-                joinName(from.getFirstName(), from.getLastName()),
-                from.getIsBot());
+                : new Sender(
+                        from.getId(),
+                        from.getUserName(),
+                        joinName(from.getFirstName(), from.getLastName()),
+                        from.getIsBot()
+                );
 
         // chat info
         String title = (m.getChat() != null) ? m.getChat().getTitle() : null;

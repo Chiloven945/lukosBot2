@@ -48,6 +48,7 @@ public final class StripedExecutor implements AutoCloseable {
      * consistently maps to the same single-threaded executor.
      *
      * @param key the partitioning key (may be {@code null})
+     *
      * @return the zero-based lane index within the internal executor array
      */
     private int indexFor(Object key) {

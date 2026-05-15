@@ -1,0 +1,98 @@
+package top.chiloven.lukosbot2.core.command.bot;
+
+import lombok.extern.log4j.Log4j2;
+import org.springframework.stereotype.Service;
+import top.chiloven.lukosbot2.commands.IBotCommand;
+import top.chiloven.lukosbot2.config.AppProperties;
+import top.chiloven.lukosbot2.core.IProcessor;
+import top.chiloven.lukosbot2.core.model.message.inbound.InboundMessage;
+import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage;
+import top.chiloven.lukosbot2.core.policy.PolicyService;
+import top.chiloven.lukosbot2.util.message.TextExtractor;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import static top.chiloven.lukosbot2.util.StringUtils.indexOfWhitespace;
+
+/**
+ * Command processor using the project's own CommandRuntime.
+ */
+@Service
+@Log4j2
+public class CommandProcessor implements IProcessor {
+
+    private final String prefix;
+    private final CommandRegistry registry;
+    private final PolicyService policyService;
+
+    public CommandProcessor(
+            List<IBotCommand> commands,
+            AppProperties props,
+            CommandRegistry registry,
+            PolicyService policyService
+    ) {
+        String p = props == null ? "/" : props.getPrefix();
+
+        this.prefix = p.isBlank() ? "/" : p;
+        this.registry = registry;
+        this.policyService = policyService;
+
+        if (commands != null) for (IBotCommand cmd : commands) {
+            try {
+                log.info("[Cmd] Registered command: {}",
+                        cmd.name() + (cmd.aliases().isEmpty()
+                                ? ""
+                                : " aliases: " + cmd.aliases()));
+            } catch (Exception e) {
+                log.warn("[Cmd] Failed to register command {}: {}", cmd.name(), e.getMessage(), e);
+            }
+        }
+    }
+
+    @Override
+    public List<OutboundMessage> handle(InboundMessage in) {
+        if (in == null) return List.of();
+
+        String raw = TextExtractor.primaryText(in).trim();
+        if (raw.isEmpty()) return List.of();
+
+        if (!raw.startsWith(prefix)) {
+            return List.of();
+        }
+
+        String cmdLine = raw.substring(prefix.length()).trim();
+        if (cmdLine.isEmpty()) return List.of();
+
+        List<OutboundMessage> outs = new ArrayList<>();
+        CommandSource src = CommandSource.forInbound(in, outs::add);
+
+        IBotCommand command = registry.get(firstToken(cmdLine));
+        if (command == null) {
+            return outs;
+        }
+
+        if (!policyService.isCommandAllowed(src, command.name())) {
+            src.reply(policyService.commandDeniedMessage(command.name()));
+            return outs;
+        }
+
+        try {
+            BotCommandRuntime.INSTANCE.execute(command, src, cmdLine);
+        } catch (Exception e) {
+            log.warn("[Cmd] Command execution error: {}", e.getMessage(), e);
+            src.reply("命令执行失败，请稍后再试。");
+        }
+
+        return outs;
+    }
+
+    private static String firstToken(String cmdLine) {
+        if (cmdLine == null) return "";
+        String trimmed = cmdLine.trim();
+        if (trimmed.isEmpty()) return "";
+        int ws = indexOfWhitespace(trimmed);
+        return ws < 0 ? trimmed : trimmed.substring(0, ws);
+    }
+
+}

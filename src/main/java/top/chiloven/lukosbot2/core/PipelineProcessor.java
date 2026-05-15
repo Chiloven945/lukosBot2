@@ -1,8 +1,8 @@
 package top.chiloven.lukosbot2.core;
 
 import org.springframework.stereotype.Service;
-import top.chiloven.lukosbot2.model.message.inbound.InboundMessage;
-import top.chiloven.lukosbot2.model.message.outbound.OutboundMessage;
+import top.chiloven.lukosbot2.core.model.message.inbound.InboundMessage;
+import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage;
 
 import java.util.ArrayList;
 import java.util.Collections;

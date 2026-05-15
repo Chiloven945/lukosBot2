@@ -17,7 +17,9 @@ public interface IPlatformAdapter {
      *
      * @param md  The message md to handle incoming messages
      * @param msh The sender multiplexer to register platform senders
+     *
      * @return a list of AutoCloseable resources to be closed on shutdown
+     *
      * @throws Exception if startup fails
      */
     List<AutoCloseable> start(MessageDispatcher md, MessageSenderHub msh) throws Exception;

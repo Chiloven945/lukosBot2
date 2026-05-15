@@ -229,6 +229,85 @@ fun trimText(input: String): String {
 
 This rule intentionally creates breathing room around type bodies while keeping method and function bodies compact.
 
+## Kotlin Statement and Lambda Formatting
+
+Kotlin code should not use semicolons to place multiple statements on one line. Prefer one statement per line, especially
+inside lambdas and DSL blocks.
+
+Good:
+
+```kotlin
+positional("mode", ArgType.StringType) {
+    required = false
+    description = "img 或 text"
+}
+```
+
+Bad:
+
+```kotlin
+positional("mode", ArgType.StringType) { required = false; description = "img 或 text" }
+```
+
+This rule applies to similar DSL configuration blocks, command definitions, builders, and callbacks. If a lambda contains
+more than one statement, or if the single-line version becomes hard to scan, expand the lambda body across multiple
+lines.
+
+Good:
+
+```kotlin
+option("limit", ArgType.IntType) {
+    required = false
+    description = "最大返回数量"
+    defaultValue = 3
+}
+```
+
+Bad:
+
+```kotlin
+option("limit", ArgType.IntType) { required = false; description = "最大返回数量"; defaultValue = 3 }
+```
+
+Short single-expression lambdas may stay on one line when they remain genuinely readable:
+
+```kotlin
+items.map { it.name }
+```
+
+Do not use this exception for DSL configuration blocks with assignments, side effects, or multiple logical steps.
+
+Within longer functions, add blank lines between distinct logical groups to improve readability. Avoid dense blocks where
+validation, parsing, execution, and response formatting are all pressed together without separation.
+
+Good:
+
+```kotlin
+val mode = invocation.string("mode") ?: "img"
+val query = invocation.string("query")
+
+if (query.isNullOrBlank()) {
+    source.reply("请提供搜索内容")
+    return@executes 0
+}
+
+val result = search(query, mode)
+source.reply(result)
+```
+
+Bad:
+
+```kotlin
+val mode = invocation.string("mode") ?: "img"
+val query = invocation.string("query")
+if (query.isNullOrBlank()) {
+    source.reply("请提供搜索内容")
+    return@executes 0
+}
+val result = search(query, mode)
+source.reply(result)
+```
+
 ## Function and Method Parameters
 
 When a method or function has **three or more parameters**, place each parameter on its own line.
@@ -684,40 +763,59 @@ If a suitable utility exists, use it. Do not write a second local version unless
 
 Command code should focus on command behavior, not infrastructure.
 
-For Brigadier command registration, use the project’s builder helpers instead of repeatedly spelling out raw builder
-types. This keeps command trees consistent and reduces import noise.
+For command registration, use the project's DSL builder functions instead of manually constructing
+command trees. This keeps command definitions concise and reduces import noise.
 
 Good:
 
 ```kotlin
-dispatcher.register(
-    literal(name())
-        .then(
-            literal("search")
-                .then(
-                    argument("text", StringArgumentType.string())
-                        .executes { ctx ->
-                            val text = StringArgumentType.getString(ctx, "text")
-                            search(ctx.source, text)
-                        }
-                )
-        )
-)
+override fun definition() = botCommand("github") {
+    alias("gh")
+    description = "GitHub tools"
+
+    literal("search") {
+        argv {
+            positional("keyword", ArgType.StringType) {
+                required = true
+                greedy = true
+                description = "search keywords"
+            }
+            option("top") {
+                names = listOf("--top")
+                type = ArgType.IntType
+                default = 3
+            }
+            execute { args ->
+                source.reply(handleSearch(args.get("keyword"), args.getOrNull("top") ?: 3))
+            }
+        }
+        example("github search lukosbot --top=5")
+    }
+    literal("user") {
+        raw("username") { username ->
+            source.reply(handleUser(username))
+        }
+    }
+}
 ```
 
 Bad:
 
 ```kotlin
-dispatcher.register(
-    LiteralArgumentBuilder.literal<CommandSource>("search")
-        .then(
-            RequiredArgumentBuilder.argument<CommandSource, String>(
-                "text",
-                StringArgumentType.string()
-            )
-        )
-)
-```
+override fun definition() = botCommand("github") {
+    alias("gh")
+    description = "GitHub tools"
+
+    literal("search") {
+        argv {
+            positional("keyword", ArgType.StringType) { required = true; greedy = true }
+            option("top") { names = listOf("--top"); type = ArgType.IntType; default = 3 }
+            execute { args ->
+                source.reply(handleSearch(args.get("keyword"), args.getOrNull("top") ?: 3))
+            }
+        }
+    }
+}
 
 When sending messages, use the project’s outbound message model instead of directly depending on one platform’s SDK from
 command logic.
@@ -789,7 +887,7 @@ conservative and predictable.
 
 ### Java Method
 
-This example follows the style used by `BrigadierUtils.registerAliases`: the method has three parameters, so each
+This example follows the style used by the command DSL builder: the method has three parameters, so each
 parameter is placed on its own line. The stream source keeps `.stream()` on the same line as the data, and every stream
 operation after that gets its own line.
 
@@ -888,8 +986,10 @@ Before opening a pull request, check the following:
 - Existing `util` functions are reused instead of duplicated.
 - `core` remains Java unless a Kotlin migration is justified.
 - Interface names follow the `IName` convention.
-- Parameters, records, data classes, annotations, streams, and enums follow the formatting rules above.
-- Feature code uses shared project utilities such as `HttpJson`, `PathUtils`, `OkHttpUtils`, and Brigadier builder
+- Parameters, records, data classes, annotations, streams, enums, and Kotlin DSL lambdas follow the formatting rules
+  above.
+- Kotlin code avoids semicolon-compressed lambda bodies and uses blank lines to separate distinct logical groups.
+- Feature code uses shared project utilities such as `HttpJson`, `PathUtils`, `OkHttpUtils`, and DSL builder
   helpers instead of duplicating infrastructure logic.
 - Configuration models are readable and bind cleanly from `application.yml`.
 

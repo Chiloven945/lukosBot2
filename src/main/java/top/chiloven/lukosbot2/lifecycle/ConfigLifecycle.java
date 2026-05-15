@@ -181,7 +181,8 @@ public class ConfigLifecycle implements SmartLifecycle {
                 Files.writeString(CONFIG_FILE, newText, StandardCharsets.UTF_8,
                         StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
                 log.info("Rewrote ./config/application.yml with canonical order/format.");
-                IntStream.range(0, 3).forEach(_ -> log.warn("YOU MAY NEED TO REBOOT THE BOT TO APPLY THE CONFIGURATION THAT WAS JUST WRITTEN!"));
+                IntStream.range(0, 3)
+                        .forEach(_ -> log.warn("YOU MAY NEED TO REBOOT THE BOT TO APPLY THE CONFIGURATION THAT WAS JUST WRITTEN!"));
             } else {
                 log.debug("Config already canonical; nothing to rewrite.");
             }

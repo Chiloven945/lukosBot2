@@ -1,7 +1,7 @@
 package top.chiloven.lukosbot2.core.auth;
 
 import org.springframework.stereotype.Service;
-import top.chiloven.lukosbot2.core.command.CommandSource;
+import top.chiloven.lukosbot2.core.command.bot.CommandSource;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
 
 import java.util.List;

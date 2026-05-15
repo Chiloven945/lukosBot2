@@ -2,10 +2,10 @@ package top.chiloven.lukosbot2.commands;
 
 import lombok.NonNull;
 import lombok.extern.log4j.Log4j2;
-import top.chiloven.lukosbot2.core.command.CommandSource;
-import top.chiloven.lukosbot2.model.message.media.BytesRef;
-import top.chiloven.lukosbot2.model.message.outbound.OutImage;
-import top.chiloven.lukosbot2.model.message.outbound.OutboundMessage;
+import top.chiloven.lukosbot2.core.command.bot.CommandSource;
+import top.chiloven.lukosbot2.core.model.message.media.BytesRef;
+import top.chiloven.lukosbot2.core.model.message.outbound.OutImage;
+import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage;
 
 import java.util.List;
 
@@ -40,6 +40,7 @@ public final class UsageOutput {
      * </ul>
      *
      * @param modeRaw raw input
+     *
      * @return parsed mode
      */
     public static UseMode parseMode(String modeRaw) {
@@ -114,8 +115,8 @@ public final class UsageOutput {
     public static boolean shouldAutoUseImage(UsageTextRenderer.Result rendered) {
         if (rendered == null) return false;
         String md = rendered.markdownText();
-        int lines = rendered.lines() == null ? 0 : rendered.lines().size();
-        int chars = md == null ? 0 : md.length();
+        int lines = rendered.lines().size();
+        int chars = md.length();
         return chars > AUTO_IMAGE_MAX_CHARS || lines > AUTO_IMAGE_MAX_LINES;
     }
 

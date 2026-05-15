@@ -2,7 +2,7 @@ package top.chiloven.lukosbot2.platform.onebot
 
 import org.springframework.stereotype.Component
 import top.chiloven.lukosbot2.core.MediaRefLoader.LoadedPlatformMedia
-import top.chiloven.lukosbot2.model.message.media.PlatformFileRef
+import top.chiloven.lukosbot2.core.model.message.media.PlatformFileRef
 import top.chiloven.lukosbot2.platform.PlatformFileLoader
 import top.chiloven.lukosbot2.util.HttpBytes
 import java.io.IOException

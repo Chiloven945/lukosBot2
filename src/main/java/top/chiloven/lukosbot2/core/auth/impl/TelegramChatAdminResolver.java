@@ -7,7 +7,7 @@ import org.telegram.telegrambots.meta.api.methods.groupadministration.GetChatMem
 import org.telegram.telegrambots.meta.api.objects.chatmember.ChatMember;
 import top.chiloven.lukosbot2.config.AppProperties;
 import top.chiloven.lukosbot2.core.auth.IChatAdminResolver;
-import top.chiloven.lukosbot2.core.command.CommandSource;
+import top.chiloven.lukosbot2.core.command.bot.CommandSource;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
 
 import java.util.Map;
@@ -72,7 +72,10 @@ public class TelegramChatAdminResolver implements IChatAdminResolver {
         }
     }
 
-    private record CacheEntry(boolean value, long expiresAt) {
+    private record CacheEntry(
+            boolean value,
+            long expiresAt
+    ) {
 
     }
 

@@ -1,6 +1,6 @@
 package top.chiloven.lukosbot2.util.message
 
-import top.chiloven.lukosbot2.model.message.inbound.*
+import top.chiloven.lukosbot2.core.model.message.inbound.*
 
 /**
  * Utilities for extracting text from rich inbound messages.

@@ -1,9 +1,11 @@
 target/
+bin/
 config/
-data/
+/data/
 logs/
 .idea/
 .gradle/
+.kotlin/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
