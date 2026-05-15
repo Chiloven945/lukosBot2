@@ -26,6 +26,4 @@ class ShutdownCliCommand : ICliCommand {
         }
     }
 
-    override fun aliases() = listOf("stop", "close")
-
 }
