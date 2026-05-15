@@ -1,5 +1,7 @@
 package top.chiloven.lukosbot2.util
 
+import top.chiloven.lukosbot2.util.TimeUtils.formatTime
+import java.time.Instant
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -76,6 +78,36 @@ object TimeUtils {
         val minutes = (seconds % 3600) / 60
         val secs = seconds % 60
         return "%d:%02d:%02d:%02d".format(days, hours, minutes, secs)
+    }
+
+    /**
+     * Formats an epoch timestamp in milliseconds into a human-readable date-time string.
+     *
+     * Uses [DateTimeFormatter] which is thread-safe and immutable, unlike [java.text.SimpleDateFormat].
+     *
+     * @param millis the epoch timestamp in milliseconds
+     * @param pattern the date-time pattern string, defaults to `"yyyy-MM-dd HH:mm:ss"`
+     * @return the formatted date-time string, or `"-"` if [millis] <= 0
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun formatTime(millis: Long, pattern: String = "yyyy-MM-dd HH:mm:ss"): String {
+        if (millis <= 0) return "-"
+        val formatter = DateTimeFormatter.ofPattern(pattern)
+        val instant = Instant.ofEpochMilli(millis)
+        val ldt = LocalDateTime.ofInstant(instant, ZoneId.systemDefault())
+        return ldt.format(formatter)
+    }
+
+    /**
+     * Extension variant of [formatTime] for [Long] timestamps.
+     *
+     * @param pattern the date-time pattern string, defaults to `"yyyy-MM-dd HH:mm:ss"`
+     * @return the formatted date-time string, or `"-"` if this value <= 0
+     */
+    @JvmOverloads
+    fun Long.fmtTime(pattern: String = "yyyy-MM-dd HH:mm:ss"): String {
+        return formatTime(this, pattern)
     }
 
 }

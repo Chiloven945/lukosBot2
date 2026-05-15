@@ -17,7 +17,7 @@ import top.chiloven.lukosbot2.core.model.message.outbound.OutText
 import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage
 import top.chiloven.lukosbot2.core.state.Scope
 import top.chiloven.lukosbot2.core.state.store.IStateStore
-import top.chiloven.lukosbot2.util.StringUtils
+import top.chiloven.lukosbot2.util.TimeUtils
 import java.io.IOException
 import java.util.*
 import java.util.concurrent.locks.ReentrantLock
@@ -158,7 +158,7 @@ class CaveService(
     }
 
     private fun buildMetaLine(entry: CaveEntry): String {
-        val createdAt = StringUtils.formatTime(entry.createdAt) ?: "-"
+        val createdAt = TimeUtils.formatTime(entry.createdAt)
         return "#${entry.no} - $createdAt"
     }
 

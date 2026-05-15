@@ -39,7 +39,7 @@ class CommandDefinitionBuilder<S>(private val name: String) {
     fun execute(block: CommandInvocation<S>.() -> Unit) {
         leaf = EmptyLeaf { inv ->
             inv.block()
-            1
+            inv.code()
         }
     }
 
@@ -53,7 +53,7 @@ class CommandDefinitionBuilder<S>(private val name: String) {
             required = required,
             executor = { inv ->
                 inv.block(inv.rawTail)
-                1
+                inv.code()
             }
         )
     }

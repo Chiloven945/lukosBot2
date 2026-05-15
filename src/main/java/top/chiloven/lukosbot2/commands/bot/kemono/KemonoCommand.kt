@@ -73,7 +73,7 @@ class KemonoCommand(
     private val okHttp
         get() = clientCache.client
 
-    override fun definition() = botCommand("kemono") {
+    private val commandDefinition = botCommand("kemono") {
         description = "从 kemono.cr 查询帖子/创作者信息，并支持打包下载附件"
         visible = false
 
@@ -177,6 +177,8 @@ class KemonoCommand(
             "`-t` 仅对 `post` 子命令生效，用于展开全部附件；`-a` 会直接开始下载并发送 ZIP 文件。"
         )
     }
+
+    override fun definition() = commandDefinition
 
     private fun executeSafely(src: CommandSource, block: () -> Unit) {
         runCatching { block() }

@@ -30,7 +30,7 @@ class WikiCommand : IBotCommand, IWikiishCommand {
     override fun pathPrefix() = "/wiki/"
     override fun domainRoot() = "wikipedia.org"
 
-    override fun definition() = botCommand("wiki") {
+    private val commandDefinition = botCommand("wiki") {
         description = "查询维基百科，支持截图和导出 Markdown"
 
         literal("md") {
@@ -62,6 +62,8 @@ class WikiCommand : IBotCommand, IWikiishCommand {
         )
         note("词条名支持 `en:` 前缀指定语言，例如：`en:Albert_Einstein`。")
     }
+
+    override fun definition() = commandDefinition
 
     private fun runScreenshot(src: CommandSource, linkOrTitle: String) {
         try {

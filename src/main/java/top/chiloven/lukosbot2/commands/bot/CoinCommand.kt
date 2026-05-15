@@ -19,7 +19,7 @@ import top.chiloven.lukosbot2.util.MathUtils
 )
 class CoinCommand : IBotCommand {
 
-    override fun definition() = botCommand("coin") {
+    private val commandDefinition = botCommand("coin") {
         description = "抛硬币"
 
         argv {
@@ -40,6 +40,8 @@ class CoinCommand : IBotCommand {
 
         example("coin 10")
     }
+
+    override fun definition() = commandDefinition
 
     private fun runCoin(times: Long): String {
         if (times <= 0) return "硬币数量必须是正整数。"

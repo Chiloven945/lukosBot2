@@ -13,5 +13,6 @@ package top.chiloven.lukosbot2.core.command.definition
 class CommandParseException(
     message: String,
     val input: String? = null,
-    val cursor: Int? = null
-) : RuntimeException(message)
+    val cursor: Int? = null,
+    cause: Throwable? = null
+) : RuntimeException(message, cause)

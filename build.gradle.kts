@@ -69,6 +69,7 @@ dependencies {
 
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.kotlin.test.junit)
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 tasks.withType<JavaCompile>().configureEach {
@@ -76,7 +77,7 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 tasks.test {
-    failOnNoDiscoveredTests = false
+    useJUnitPlatform()
 }
 
 springBoot {

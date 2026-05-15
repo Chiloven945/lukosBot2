@@ -24,7 +24,7 @@ class AdminCommand(
     private val authz: AuthorizationService
 ) : IBotCommand {
 
-    override fun definition() = botCommand("admin") {
+    private val commandDefinition = botCommand("admin") {
         description = "管理机器人管理员并查看当前身份"
 
         execute {
@@ -97,6 +97,8 @@ class AdminCommand(
         )
         note("list/add/remove 仅机器人管理员可用。")
     }
+
+    override fun definition() = commandDefinition
 
     private fun me(src: CommandSource) {
         val auth: AuthContext = authz.inspect(src)

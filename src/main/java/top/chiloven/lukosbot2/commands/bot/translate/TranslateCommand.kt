@@ -19,7 +19,7 @@ class TranslateCommand(ccp: CommandConfigProp) : IBotCommand {
     private val translate = ccp.translate
     private val ts = TranslationService(translate)
 
-    override fun definition() = botCommand("translate") {
+    private val commandDefinition = botCommand("translate") {
         alias("tr")
         description = "翻译文本"
 
@@ -74,5 +74,7 @@ class TranslateCommand(ccp: CommandConfigProp) : IBotCommand {
             "/translate -t ja Hello"
         )
     }
+
+    override fun definition() = commandDefinition
 
 }

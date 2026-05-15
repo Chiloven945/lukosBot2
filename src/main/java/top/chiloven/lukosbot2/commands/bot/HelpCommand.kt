@@ -20,7 +20,7 @@ class HelpCommand(
     private val policyService: PolicyService
 ) : IBotCommand {
 
-    override fun definition() = botCommand("help") {
+    private val commandDefinition = botCommand("help") {
         alias("h")
         description = "列出可用命令或其详细用法"
 
@@ -69,6 +69,8 @@ class HelpCommand(
                 """.trimIndent()
         )
     }
+
+    override fun definition() = commandDefinition
 
     private val p: String get() = appProperties.prefix.let { it.ifBlank { "/" } }
 

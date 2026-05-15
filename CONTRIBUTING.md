@@ -763,40 +763,59 @@ If a suitable utility exists, use it. Do not write a second local version unless
 
 Command code should focus on command behavior, not infrastructure.
 
-For Brigadier command registration, use the project’s builder helpers instead of repeatedly spelling out raw builder
-types. This keeps command trees consistent and reduces import noise.
+For command registration, use the project's DSL builder functions instead of manually constructing
+command trees. This keeps command definitions concise and reduces import noise.
 
 Good:
 
 ```kotlin
-dispatcher.register(
-    literal(name())
-        .then(
-            literal("search")
-                .then(
-                    argument("text", StringArgumentType.string())
-                        .executes { ctx ->
-                            val text = StringArgumentType.getString(ctx, "text")
-                            search(ctx.source, text)
-                        }
-                )
-        )
-)
+override fun definition() = botCommand("github") {
+    alias("gh")
+    description = "GitHub tools"
+
+    literal("search") {
+        argv {
+            positional("keyword", ArgType.StringType) {
+                required = true
+                greedy = true
+                description = "search keywords"
+            }
+            option("top") {
+                names = listOf("--top")
+                type = ArgType.IntType
+                default = 3
+            }
+            execute { args ->
+                source.reply(handleSearch(args.get("keyword"), args.getOrNull("top") ?: 3))
+            }
+        }
+        example("github search lukosbot --top=5")
+    }
+    literal("user") {
+        raw("username") { username ->
+            source.reply(handleUser(username))
+        }
+    }
+}
 ```
 
 Bad:
 
 ```kotlin
-dispatcher.register(
-    LiteralArgumentBuilder.literal<CommandSource>("search")
-        .then(
-            RequiredArgumentBuilder.argument<CommandSource, String>(
-                "text",
-                StringArgumentType.string()
-            )
-        )
-)
-```
+override fun definition() = botCommand("github") {
+    alias("gh")
+    description = "GitHub tools"
+
+    literal("search") {
+        argv {
+            positional("keyword", ArgType.StringType) { required = true; greedy = true }
+            option("top") { names = listOf("--top"); type = ArgType.IntType; default = 3 }
+            execute { args ->
+                source.reply(handleSearch(args.get("keyword"), args.getOrNull("top") ?: 3))
+            }
+        }
+    }
+}
 
 When sending messages, use the project’s outbound message model instead of directly depending on one platform’s SDK from
 command logic.
@@ -868,7 +887,7 @@ conservative and predictable.
 
 ### Java Method
 
-This example follows the style used by `BrigadierUtils.registerAliases`: the method has three parameters, so each
+This example follows the style used by the command DSL builder: the method has three parameters, so each
 parameter is placed on its own line. The stream source keeps `.stream()` on the same line as the data, and every stream
 operation after that gets its own line.
 
@@ -970,7 +989,7 @@ Before opening a pull request, check the following:
 - Parameters, records, data classes, annotations, streams, enums, and Kotlin DSL lambdas follow the formatting rules
   above.
 - Kotlin code avoids semicolon-compressed lambda bodies and uses blank lines to separate distinct logical groups.
-- Feature code uses shared project utilities such as `HttpJson`, `PathUtils`, `OkHttpUtils`, and Brigadier builder
+- Feature code uses shared project utilities such as `HttpJson`, `PathUtils`, `OkHttpUtils`, and DSL builder
   helpers instead of duplicating infrastructure logic.
 - Configuration models are readable and bind cleanly from `application.yml`.
 

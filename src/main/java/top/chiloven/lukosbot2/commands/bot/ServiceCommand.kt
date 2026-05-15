@@ -21,7 +21,7 @@ class ServiceCommand(
     private val authz: AuthorizationService
 ) : IBotCommand {
 
-    override fun definition() = botCommand("service") {
+    private val commandDefinition = botCommand("service") {
         description = "管理机器人服务"
 
         literal("list") {
@@ -90,6 +90,8 @@ class ServiceCommand(
             "service global list"
         )
     }
+
+    override fun definition() = commandDefinition
 
     private fun renderChatList(src: CommandSource): String {
         val st = services.snapshotStates(src.addr())

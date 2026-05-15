@@ -24,7 +24,7 @@ class IpCommand(
 
     private val log = LogManager.getLogger(IpCommand::class.java)
 
-    override fun definition() = botCommand("ip") {
+    private val commandDefinition = botCommand("ip") {
         description = "查询 IP 信息"
 
         argv {
@@ -56,6 +56,8 @@ class IpCommand(
             "ip --provider=ipquery,ipsb 1.1.1.1"
         )
     }
+
+    override fun definition() = commandDefinition
 
     private fun CommandInvocation<CommandSource>.runQuery(ip: String, providers: List<String>) {
         try {

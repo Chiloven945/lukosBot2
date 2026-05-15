@@ -45,23 +45,34 @@ class TypeConverterRegistry {
      * @throws IllegalStateException if no converter is registered for a CustomType
      */
     fun convert(type: ArgType, raw: String): Any {
-        return when (type) {
-            ArgType.StringType -> raw
-            ArgType.IntType -> raw.toInt()
-            ArgType.LongType -> raw.toLong()
-            ArgType.BooleanType -> raw.toBooleanStrict()
-            is ArgType.EnumType -> {
-                if (raw !in type.values) {
-                    throw CommandParseException("参数值无效：$raw，可选值：${type.values.joinToString(", ")}")
+        return try {
+            when (type) {
+                ArgType.StringType -> raw
+                ArgType.IntType -> raw.toInt()
+                ArgType.LongType -> raw.toLong()
+                ArgType.BooleanType -> raw.toBooleanStrict()
+                is ArgType.EnumType -> {
+                    if (raw !in type.values) {
+                        throw CommandParseException("参数值无效：$raw，可选值：${type.values.joinToString(", ")}")
+                    }
+                    raw
                 }
-                raw
-            }
 
-            is ArgType.CustomType<*> -> {
-                val converter = converters[type.klass]
-                    ?: throw IllegalStateException("未注册的类型转换器：${type.klass}")
-                converter(raw)
+                is ArgType.CustomType<*> -> {
+                    val converter = converters[type.klass]
+                        ?: throw IllegalStateException("未注册的类型转换器：${type.klass}")
+                    converter(raw)
+                }
             }
+        } catch (e: NumberFormatException) {
+            throw CommandParseException(
+                message = when (type) {
+                    ArgType.IntType -> "参数需要整数，收到：$raw"
+                    ArgType.LongType -> "参数需要整数，收到：$raw"
+                    else -> "参数格式无效：$raw"
+                },
+                cause = e
+            )
         }
     }
 

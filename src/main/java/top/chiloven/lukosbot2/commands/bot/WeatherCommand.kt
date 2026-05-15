@@ -14,7 +14,7 @@ import top.chiloven.lukosbot2.core.command.definition.dsl.botCommand
 )
 class WeatherCommand : IBotCommand {
 
-    override fun definition() = botCommand("weather") {
+    private val commandDefinition = botCommand("weather") {
         description = "查询天气（暂未开放）"
 
         syntax("该命令暂未开放")
@@ -25,5 +25,7 @@ class WeatherCommand : IBotCommand {
 
         note("天气查询功能尚未接入，暂时无法使用。")
     }
+
+    override fun definition() = commandDefinition
 
 }

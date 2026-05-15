@@ -32,7 +32,7 @@ class MusicCommand(ccp: CommandConfigProp) : IBotCommand {
         if (sc.enabled && sc.clientId.isNotBlank()) SoundCloudMusicProvider(sc.clientId) else null
     }
 
-    override fun definition() = botCommand("music") {
+    private val commandDefinition = botCommand("music") {
         description = "从流媒体平台查询音乐信息"
 
         literal("link") {
@@ -63,6 +63,8 @@ class MusicCommand(ccp: CommandConfigProp) : IBotCommand {
             "music link https://open.spotify.com/track/xxxxxxxx"
         )
     }
+
+    override fun definition() = commandDefinition
 
     private fun runSearch(src: CommandSource, query: String, platformToken: String?): Int {
         return try {

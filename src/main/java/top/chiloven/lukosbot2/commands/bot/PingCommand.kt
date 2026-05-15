@@ -20,7 +20,7 @@ import java.time.ZoneId
 )
 class PingCommand : IBotCommand {
 
-    override fun definition() = botCommand("ping") {
+    private val commandDefinition = botCommand("ping") {
         description = "返回机器人的运行状态与版本信息"
 
         execute {
@@ -31,6 +31,8 @@ class PingCommand : IBotCommand {
 
         example("ping")
     }
+
+    override fun definition() = commandDefinition
 
     private fun buildStatus(): String {
         val runtime = Runtime.getRuntime()

@@ -54,14 +54,21 @@ object ArgvParser {
         }
 
         var i = 0
+        var stopOptions = false
         while (i < tokens.size) {
             val token = tokens[i]
             when {
-                token.startsWith("--") -> {
+                !stopOptions && token == "--" -> {
+                    stopOptions = true
+                }
+
+                !stopOptions && token.startsWith("--") -> {
                     i = parseLongOption(tokens, i, token, longOptionIndex, values, converters)
                 }
 
-                token.startsWith("-") && token.length == 2 -> {
+                !stopOptions && token.startsWith("-")
+                        && token.length == 2
+                        && !isNegativeNumber(token) -> {
                     i = parseShortOption(tokens, i, token, shortOptionIndex, values, converters)
                 }
 
@@ -79,6 +86,12 @@ object ArgvParser {
             values = values,
             positionals = rawPositionals
         )
+    }
+
+    private fun isNegativeNumber(token: String): Boolean {
+        if (token.length < 2) return false
+        if (token[0] != '-') return false
+        return token.substring(1).all { it.isDigit() }
     }
 
     private fun parseLongOption(
@@ -104,14 +117,21 @@ object ArgvParser {
             ?: throw CommandParseException("未知参数：$name")
 
         if (spec.type == ArgType.BooleanType) {
-            storeValue(values, spec, true)
+            if (inlineValue != null) {
+                storeValue(
+                    values, spec,
+                    parseBooleanFlag(inlineValue, name)
+                )
+            } else {
+                storeValue(values, spec, true)
+            }
             return idx
         }
 
         val rawValue = if (inlineValue != null) {
             inlineValue
         } else {
-            if (idx + 1 >= tokens.size) {
+            if (idx + 1 >= tokens.size || startsOption(tokens[idx + 1])) {
                 throw CommandParseException("参数 $name 需要一个值")
             }
             tokens[idx + 1]
@@ -120,6 +140,16 @@ object ArgvParser {
         storeConvertedValue(values, spec, rawValue, converters)
 
         return if (inlineValue == null) idx + 1 else idx
+    }
+
+    private fun parseBooleanFlag(raw: String, name: String): Boolean {
+        return when (raw) {
+            "true" -> true
+            "false" -> false
+            else -> throw CommandParseException(
+                "参数 $name 是布尔类型，只接受 true 或 false，收到：$raw"
+            )
+        }
     }
 
     private fun parseShortOption(
@@ -138,12 +168,18 @@ object ArgvParser {
             return idx
         }
 
-        if (idx + 1 >= tokens.size) {
+        if (idx + 1 >= tokens.size || startsOption(tokens[idx + 1])) {
             throw CommandParseException("参数 $token 需要一个值")
         }
 
         storeConvertedValue(values, spec, tokens[idx + 1], converters)
         return idx + 1
+    }
+
+    private fun startsOption(token: String): Boolean {
+        if (token == "--") return true
+        if (token.startsWith("--")) return true
+        return token.startsWith("-") && token.length == 2 && !isNegativeNumber(token)
     }
 
     private fun storeConvertedValue(
@@ -154,13 +190,21 @@ object ArgvParser {
     ) {
         if (spec.splitBy != null) {
             val parts = rawValue.split(spec.splitBy)
+                .filter { it.isNotEmpty() }
+            if (parts.isEmpty()) {
+                throw CommandParseException("参数 ${spec.canonicalName} 的值不能为空")
+            }
             val convertedParts = parts.map {
                 convertAndValidate(spec.type, it, spec.choices, spec.validator, converters)
             }
             if (spec.repeatable) {
                 @Suppress("UNCHECKED_CAST")
-                val list = values.getOrPut(spec.canonicalName) { mutableListOf<Any>() } as MutableList<Any>
+                val list = values.getOrPut(spec.canonicalName) {
+                    mutableListOf<Any>()
+                } as MutableList<Any>
+
                 list.addAll(convertedParts)
+                values[spec.canonicalName] = list.toList()
             } else {
                 values[spec.canonicalName] = convertedParts
             }
@@ -179,6 +223,7 @@ object ArgvParser {
             @Suppress("UNCHECKED_CAST")
             val list = values.getOrPut(spec.canonicalName) { mutableListOf<Any>() } as MutableList<Any>
             list.add(converted)
+            values[spec.canonicalName] = list.toList()
         } else {
             values[spec.canonicalName] = converted
         }
@@ -206,11 +251,7 @@ object ArgvParser {
             } else {
                 val raw = rawPositionals[posIdx]
                 val converted = convertAndValidate(
-                    spec.type,
-                    raw,
-                    spec.choices,
-                    spec.validator,
-                    converters
+                    spec.type, raw, spec.choices, spec.validator, converters
                 )
                 values[spec.name] = converted
                 posIdx++

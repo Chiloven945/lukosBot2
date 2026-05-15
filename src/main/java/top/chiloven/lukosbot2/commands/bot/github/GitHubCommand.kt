@@ -27,7 +27,7 @@ class GitHubCommand(
     private val log = LogManager.getLogger(GitHubCommand::class.java)
     private val api = GitHubApi(ccp.gitHub.token)
 
-    override fun definition() = botCommand("github") {
+    private val commandDefinition = botCommand("github") {
         alias("gh")
         description = "GitHub 查询工具"
 
@@ -102,6 +102,8 @@ class GitHubCommand(
             example("github search lukosbot --top=5 --lang=java --sort=stars --order=desc")
         }
     }
+
+    override fun definition() = commandDefinition
 
     private fun handleUser(username: String): String {
         return runCatching {

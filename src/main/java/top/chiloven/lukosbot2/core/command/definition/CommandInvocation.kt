@@ -33,6 +33,10 @@ class CommandInvocation<S>(
     val argv: ArgvParseResult? = null
 ) {
 
+    var resultCode: Int = 1
+
+    fun code(): Int = resultCode
+
     /**
      * Retrieves a named value from the parsed argv result.
      *

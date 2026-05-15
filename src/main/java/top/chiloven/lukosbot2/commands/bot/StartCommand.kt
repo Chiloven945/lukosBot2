@@ -7,7 +7,7 @@ import top.chiloven.lukosbot2.core.command.definition.dsl.botCommand
 @Service
 class StartCommand : IBotCommand {
 
-    override fun definition() = botCommand("start") {
+    private val commandDefinition = botCommand("start") {
         description = "开始使用 LukosBot2"
         visible = false
 
@@ -17,5 +17,7 @@ class StartCommand : IBotCommand {
 
         syntax("开始使用机器人")
     }
+
+    override fun definition() = commandDefinition
 
 }

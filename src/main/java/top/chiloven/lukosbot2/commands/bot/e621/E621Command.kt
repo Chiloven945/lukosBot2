@@ -26,7 +26,7 @@ class E621Command(
 
     private val log = LogManager.getLogger(E621Command::class.java)
 
-    override fun definition() = botCommand("e621") {
+    private val commandDefinition = botCommand("e621") {
         description = "查询 E621 上的作品和作者信息"
 
         execute {
@@ -106,6 +106,8 @@ class E621Command(
             "e621 search md5 9f6e6800cfae7749eb6c486619254b9c"
         )
     }
+
+    override fun definition() = commandDefinition
 
     private fun getArtist(src: CommandSource, input: String) {
         val id = src.extractIdOrReply(input) ?: return

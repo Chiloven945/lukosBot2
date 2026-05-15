@@ -1,18 +1,51 @@
 package top.chiloven.lukosbot2.core.command.bot;
 
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.IBotCommand;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
+@Log4j2
 @Service
 public class CommandRegistry {
 
     private final List<IBotCommand> commands;
+    private final Map<String, IBotCommand> index;
 
     public CommandRegistry(List<IBotCommand> commands) {
         this.commands = commands;
+        this.index = buildIndex(commands);
+    }
+
+    private static Map<String, IBotCommand> buildIndex(List<IBotCommand> commands) {
+        var map = new LinkedHashMap<String, IBotCommand>();
+        for (var cmd : commands) {
+            register(map, cmd, cmd.name());
+            for (var alias : cmd.aliases()) {
+                register(map, cmd, alias);
+            }
+        }
+        return Collections.unmodifiableMap(map);
+    }
+
+    private static void register(Map<String, IBotCommand> map, IBotCommand cmd, String key) {
+        var lower = key.toLowerCase();
+        var existing = map.get(lower);
+        if (existing != null) {
+            log.warn(
+                    "Duplicate command key \"{}\": \"{}\" and \"{}\" both registered. "
+                            + "Bean order determines which one is used.",
+                    key,
+                    existing.name(),
+                    cmd.name()
+            );
+        } else {
+            map.put(lower, cmd);
+        }
     }
 
     public List<IBotCommand> all() {
@@ -32,10 +65,7 @@ public class CommandRegistry {
      */
     public IBotCommand get(String name) {
         if (name == null) return null;
-        return commands.stream()
-                .filter(c -> c.matches(name))
-                .findFirst()
-                .orElse(null);
+        return index.get(name.toLowerCase());
     }
 
 }

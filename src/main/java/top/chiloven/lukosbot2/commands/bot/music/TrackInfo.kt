@@ -1,6 +1,6 @@
 package top.chiloven.lukosbot2.commands.bot.music
 
-import top.chiloven.lukosbot2.util.StringUtils.fmtTime
+import top.chiloven.lukosbot2.util.TimeUtils.fmtTime
 
 data class TrackInfo(
     val platform: MusicPlatform,

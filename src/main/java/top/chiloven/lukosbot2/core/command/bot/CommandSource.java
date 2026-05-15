@@ -23,8 +23,8 @@ import java.util.function.Consumer;
 /**
  * Unified execution context for both commands and services.
  *
- * <p>This class intentionally keeps the name {@code CommandSource} so it can be used
- * as the Brigadier command source type, while also replacing the old service-specific context object.</p>
+ * <p>This class serves as the universal command source type, replacing the old
+ * service-specific context object.</p>
  *
  * <p>A {@code CommandSource} may or may not have an associated inbound message:
  * for scheduled services or synthetic triggers, only the target {@link Address} is available. All helper accessors are

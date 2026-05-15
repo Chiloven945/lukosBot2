@@ -11,7 +11,7 @@ class ArgvBuilder<S> {
 
     internal val positionals = mutableListOf<CommandArg>()
     internal val optionSpecs = mutableListOf<CommandOption>()
-    internal var executorBlock: (CommandInvocation<S>.(ArgvParseResult) -> Unit)? = null
+    internal var executorBlock: (CommandInvocation<S>.(ArgvParseResult) -> Int)? = null
 
     fun positional(
         name: String,
@@ -48,7 +48,10 @@ class ArgvBuilder<S> {
     }
 
     fun execute(block: CommandInvocation<S>.(ArgvParseResult) -> Unit) {
-        executorBlock = block
+        executorBlock = { argv ->
+            block(argv)
+            code()
+        }
     }
 
     fun buildLeaf(): ArgvLeaf<S> {
@@ -60,7 +63,6 @@ class ArgvBuilder<S> {
                 val argv = inv.argv
                     ?: throw IllegalStateException("argv not set")
                 inv.block(argv)
-                1
             }
         )
     }

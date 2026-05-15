@@ -23,7 +23,7 @@ class PlayerCommand : IBotCommand {
 
     private val log = LogManager.getLogger(PlayerCommand::class.java)
 
-    override fun definition() = botCommand("player") {
+    private val commandDefinition = botCommand("player") {
         description = "查询 Java 版玩家信息"
 
         argv {
@@ -81,5 +81,7 @@ class PlayerCommand : IBotCommand {
             "player Notch -u"
         )
     }
+
+    override fun definition() = commandDefinition
 
 }

@@ -42,7 +42,7 @@ class TwentyFourCommand(
         Thread(it, "24-game-timeout").apply { isDaemon = true }
     }
 
-    override fun definition() = botCommand("24") {
+    private val commandDefinition = botCommand("24") {
         description = "玩 24 点游戏"
 
         raw("input", required = false) { input ->
@@ -59,6 +59,8 @@ class TwentyFourCommand(
             "24 giveup"
         )
     }
+
+    override fun definition() = commandDefinition
 
     private fun startGame(src: CommandSource) {
         val userId = src.userId()

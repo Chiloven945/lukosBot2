@@ -27,7 +27,7 @@ class PrefCommand(
     private val authz: AuthorizationService
 ) : IBotCommand {
 
-    override fun definition() = botCommand("pref") {
+    private val commandDefinition = botCommand("pref") {
         description = "查看和管理偏好设置"
 
         literal("list") {
@@ -104,6 +104,8 @@ class PrefCommand(
             "pref clear global notifyMode"
         )
     }
+
+    override fun definition() = commandDefinition
 
     private fun displayScope(type: ScopeType) = when (type) {
         ScopeType.USER -> "本人"

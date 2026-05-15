@@ -8,9 +8,9 @@ import top.chiloven.lukosbot2.util.JsonUtils.obj
 import top.chiloven.lukosbot2.util.JsonUtils.str
 import top.chiloven.lukosbot2.util.StringUtils.firstNonBlank
 import top.chiloven.lukosbot2.util.StringUtils.fmtNum
-import top.chiloven.lukosbot2.util.StringUtils.fmtTime
-import top.chiloven.lukosbot2.util.StringUtils.formatTime
 import top.chiloven.lukosbot2.util.StringUtils.truncate
+import top.chiloven.lukosbot2.util.TimeUtils.fmtTime
+import top.chiloven.lukosbot2.util.TimeUtils.formatTime
 
 data class BilibiliVideo(
     val bvid: String,

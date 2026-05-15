@@ -24,7 +24,7 @@ class MotdCommand(
 
     private val log = LogManager.getLogger(MotdCommand::class.java)
 
-    override fun definition() = botCommand("motd") {
+    private val commandDefinition = botCommand("motd") {
         description = "查询 Minecraft Java 版服务器状态"
 
         literal("api") {
@@ -77,6 +77,8 @@ class MotdCommand(
             "motd direct [2001:db8::1]:25565"
         )
     }
+
+    override fun definition() = commandDefinition
 
     private fun executeQuery(
         src: CommandSource,

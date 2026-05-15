@@ -31,7 +31,7 @@ class WhoisCommand : IBotCommand {
         whoisServerMap["中国"] = "whois.cnnic.cn"
     }
 
-    override fun definition() = botCommand("whois") {
+    private val commandDefinition = botCommand("whois") {
         description = "查询域名 Whois 信息"
 
         raw("domain", required = true) { domain ->
@@ -46,6 +46,8 @@ class WhoisCommand : IBotCommand {
             "whois google.com"
         )
     }
+
+    override fun definition() = commandDefinition
 
     fun runQuery(domain: String): String {
         val wc = WhoisClient()

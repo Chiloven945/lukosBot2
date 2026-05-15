@@ -187,8 +187,8 @@ object CommandRuntime {
     internal fun firstToken(input: String): String? {
         val trimmed = input.trimStart()
         if (trimmed.isEmpty()) return null
-        val spaceIdx = trimmed.indexOf(' ')
-        return if (spaceIdx < 0) trimmed else trimmed.substring(0, spaceIdx)
+        val wsIdx = trimmed.indexOfFirst { it.isWhitespace() }
+        return if (wsIdx < 0) trimmed else trimmed.substring(0, wsIdx)
     }
 
     /**
@@ -198,8 +198,8 @@ object CommandRuntime {
      */
     internal fun stripFirstToken(input: String): String {
         val trimmed = input.trimStart()
-        val spaceIdx = trimmed.indexOf(' ')
-        return if (spaceIdx < 0) "" else trimmed.substring(spaceIdx + 1).trimStart()
+        val wsIdx = trimmed.indexOfFirst { it.isWhitespace() }
+        return if (wsIdx < 0) "" else trimmed.substring(wsIdx + 1).trimStart()
     }
 
 }

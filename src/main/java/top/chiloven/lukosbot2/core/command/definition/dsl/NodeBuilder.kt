@@ -10,7 +10,9 @@ import top.chiloven.lukosbot2.core.command.definition.leaf.RawLeaf
 import top.chiloven.lukosbot2.core.command.definition.meta.CommandOptionDoc
 import top.chiloven.lukosbot2.core.command.definition.meta.CommandParamDoc
 
-open class NodeBuilder<S>(private val name: String) {
+open class NodeBuilder<S>(
+    private val name: String
+) {
 
     var description: String = ""
 
@@ -29,7 +31,7 @@ open class NodeBuilder<S>(private val name: String) {
     fun execute(block: CommandInvocation<S>.() -> Unit) {
         leaf = EmptyLeaf { inv ->
             inv.block()
-            1
+            inv.code()
         }
     }
 
@@ -43,7 +45,7 @@ open class NodeBuilder<S>(private val name: String) {
             required = required,
             executor = { inv ->
                 inv.block(inv.rawTail)
-                1
+                inv.code()
             }
         )
     }

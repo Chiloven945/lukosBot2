@@ -193,13 +193,14 @@ class ArgvParserTest {
                 ArgType.IntType
             )
         )
-        assertThrows<NumberFormatException> {
+        val ex = assertThrows<CommandParseException> {
             ArgvParser.parse(
                 tokens = ShellWords.split("abc"),
                 positionals = positionals,
                 options = emptyList()
             )
         }
+        assertTrue(ex.message!!.contains("需要整数"))
     }
 
     @Test

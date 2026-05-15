@@ -15,7 +15,7 @@ import top.chiloven.lukosbot2.core.command.definition.dsl.botCommand
 )
 class EchoCommand : IBotCommand {
 
-    override fun definition() = botCommand("echo") {
+    private val commandDefinition = botCommand("echo") {
         description = "原样返回文本"
 
         raw("text", required = false) { text ->
@@ -28,5 +28,7 @@ class EchoCommand : IBotCommand {
 
         example("echo hello")
     }
+
+    override fun definition() = commandDefinition
 
 }

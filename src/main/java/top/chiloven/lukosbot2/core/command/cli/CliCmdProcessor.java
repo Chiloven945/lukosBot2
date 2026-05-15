@@ -4,6 +4,8 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.ICliCommand;
 
+import static top.chiloven.lukosbot2.util.StringUtils.indexOfWhitespace;
+
 @Service
 @Log4j2
 public class CliCmdProcessor {
@@ -38,7 +40,7 @@ public class CliCmdProcessor {
 
     private static String firstToken(String input) {
         String trimmed = input.trim();
-        int ws = trimmed.indexOf(' ');
+        int ws = indexOfWhitespace(trimmed);
         return ws < 0 ? trimmed : trimmed.substring(0, ws);
     }
 

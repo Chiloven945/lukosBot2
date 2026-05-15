@@ -21,7 +21,7 @@ class CaveCommand(
     private val authz: AuthorizationService
 ) : IBotCommand {
 
-    override fun definition() = botCommand("cave") {
+    private val commandDefinition = botCommand("cave") {
         alias("c")
         description = "回声洞：保存并随机发送文本或图片"
 
@@ -69,6 +69,8 @@ class CaveCommand(
         )
         note("add/delete 仅机器人管理员可用。")
     }
+
+    override fun definition() = commandDefinition
 
     private fun recallRandom(src: CommandSource) {
         val entry = caveService.random() ?: run {

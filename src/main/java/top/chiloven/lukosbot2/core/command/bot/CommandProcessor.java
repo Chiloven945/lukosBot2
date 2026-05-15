@@ -13,6 +13,8 @@ import top.chiloven.lukosbot2.util.message.TextExtractor;
 import java.util.ArrayList;
 import java.util.List;
 
+import static top.chiloven.lukosbot2.util.StringUtils.indexOfWhitespace;
+
 /**
  * Command processor using the project's own CommandRuntime.
  */
@@ -89,7 +91,7 @@ public class CommandProcessor implements IProcessor {
         if (cmdLine == null) return "";
         String trimmed = cmdLine.trim();
         if (trimmed.isEmpty()) return "";
-        int ws = trimmed.indexOf(' ');
+        int ws = indexOfWhitespace(trimmed);
         return ws < 0 ? trimmed : trimmed.substring(0, ws);
     }
 

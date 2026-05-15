@@ -17,7 +17,7 @@ import java.util.function.Consumer;
  * </ul>
  *
  * <h2>Conceptual model</h2>
- * <p>A {@code UsageNode} describes one command node (typically one literal in a Brigadier tree),
+ * <p>A {@code UsageNode} describes one command node (typically one literal in a command tree),
  * optionally with child nodes (subcommands). Each node can define:
  * <ul>
  *   <li><b>Aliases</b>: alternative literal labels that refer to the same node.</li>
@@ -77,7 +77,7 @@ public final class UsageNode {
     /**
      * Returns the literal name for this usage node.
      *
-     * <p>This name is typically the Brigadier literal for the command node, without any global prefix.
+     * <p>This name is the canonical literal for the command node, without any global prefix.
      */
     private final String name;
     private final String description;
@@ -124,7 +124,7 @@ public final class UsageNode {
     /**
      * Creates a builder for a root usage node.
      *
-     * <p>The {@code name} is the canonical literal label for the node (typically the Brigadier
+     * <p>The {@code name} is the canonical literal label for the node (typically the command
      * literal name), and is stored without any command prefix (for example: {@code "wiki"}, {@code "help"}).
      * Alternative labels may be added later via {@link Builder#alias(String)} or {@link Builder#alias(String...)}.
      *
@@ -384,13 +384,15 @@ public final class UsageNode {
      *
      * @param item wrapped item
      */
-    public record Opt(Item item) implements Item {
+    public record Opt(
+            Item item
+    ) implements Item {
 
         /**
          * @throws NullPointerException if {@code item} is {@code null}
          */
         public Opt {
-            item = Objects.requireNonNull(item, "item");
+            Objects.requireNonNull(item, "item");
         }
 
     }
@@ -550,7 +552,7 @@ public final class UsageNode {
     ) {
 
         public Parameter {
-            token = Objects.requireNonNull(token, "token");
+            Objects.requireNonNull(token, "token");
             description = description == null ? "" : description.trim();
         }
 
@@ -571,7 +573,7 @@ public final class UsageNode {
     ) {
 
         public Option {
-            token = Objects.requireNonNull(token, "token");
+            Objects.requireNonNull(token, "token");
             description = description == null ? "" : description.trim();
         }
 
