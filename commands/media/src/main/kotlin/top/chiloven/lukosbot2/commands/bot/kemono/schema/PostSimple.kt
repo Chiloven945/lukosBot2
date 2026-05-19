@@ -4,7 +4,6 @@ import tools.jackson.databind.node.ArrayNode
 import tools.jackson.databind.node.ObjectNode
 import top.chiloven.lukosbot2.util.JsonUtils
 import top.chiloven.lukosbot2.util.JsonUtils.JsonLdt
-import top.chiloven.lukosbot2.util.JsonUtils.isNotEmpty
 import top.chiloven.lukosbot2.util.JsonUtils.obj
 import top.chiloven.lukosbot2.util.StringUtils.truncate
 import top.chiloven.lukosbot2.util.TimeUtils.fmtDate
