@@ -1,6 +1,6 @@
 package top.chiloven.lukosbot2.commands.bot.motd
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import tools.jackson.annotation.JsonIgnoreProperties
 import tools.jackson.databind.node.ObjectNode
 import top.chiloven.lukosbot2.util.JsonUtils
 

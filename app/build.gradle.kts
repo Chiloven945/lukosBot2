@@ -8,6 +8,8 @@ dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:runtime"))
     implementation(project(":command:framework"))
+    implementation(project(":platform:api"))
+    implementation(project(":infra:http"))
 
     implementation(project(":platform:telegram"))
     implementation(project(":platform:discord"))
@@ -22,6 +24,9 @@ dependencies {
     implementation(project(":commands:translate"))
     implementation(project(":commands:cli"))
 
+    implementation(libs.shiro)
+    implementation(libs.snakeyaml)
+    implementation(libs.spring.boot.starter)
     runtimeOnly(libs.h2)
 }
 

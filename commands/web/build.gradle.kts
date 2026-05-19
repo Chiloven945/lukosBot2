@@ -10,5 +10,6 @@ dependencies {
     implementation(project(":infra:http"))
     implementation(project(":shared"))
 
+    implementation(libs.jsoup)
     implementation(libs.spring.boot.starter)
 }

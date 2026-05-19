@@ -6,6 +6,7 @@ dependencies {
     api(project(":core:model"))
     api(project(":platform:api"))
     api(project(":shared"))
+    implementation(project(":properties"))
 
     implementation(libs.spring.boot.starter)
 

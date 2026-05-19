@@ -1,7 +1,7 @@
 package top.chiloven.lukosbot2.commands.bot.kemono.schema
 
-import com.fasterxml.jackson.annotation.JsonCreator
-import com.fasterxml.jackson.annotation.JsonValue
+import tools.jackson.annotation.JsonCreator
+import tools.jackson.annotation.JsonValue
 import java.net.URI
 import java.util.*
 

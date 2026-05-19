@@ -1,6 +1,6 @@
 package top.chiloven.lukosbot2.commands.bot.e621.schema
 
-import com.fasterxml.jackson.annotation.JsonCreator
+import tools.jackson.annotation.JsonCreator
 import tools.jackson.databind.node.ArrayNode
 import tools.jackson.databind.node.ObjectNode
 import top.chiloven.lukosbot2.util.JsonUtils

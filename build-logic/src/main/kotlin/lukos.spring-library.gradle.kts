@@ -1,8 +1,8 @@
+import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-apply(plugin = "java")
-apply(plugin = "org.springframework.boot")
+apply(plugin = "java-library")
 apply(plugin = "org.jetbrains.kotlin.jvm")
 apply(plugin = "org.jetbrains.kotlin.plugin.spring")
 apply(plugin = "org.jetbrains.kotlin.plugin.lombok")
@@ -10,6 +10,7 @@ apply(plugin = "io.spring.dependency-management")
 
 val versionCatalog = extensions.getByType<VersionCatalogsExtension>().named("libs")
 val javaVersionInt = versionCatalog.findVersion("java").orElseThrow().requiredVersion.toInt()
+val springBootVersion = versionCatalog.findVersion("spring-boot").orElseThrow().requiredVersion
 
 fun VersionCatalog.library(alias: String) = findLibrary(alias).orElseThrow()
 
@@ -21,6 +22,12 @@ extensions.configure<JavaPluginExtension> {
 
 extensions.configure<KotlinJvmProjectExtension> {
     jvmToolchain(javaVersionInt)
+}
+
+extensions.configure<DependencyManagementExtension> {
+    imports {
+        mavenBom("org.springframework.boot:spring-boot-dependencies:$springBootVersion")
+    }
 }
 
 tasks.withType<JavaCompile>().configureEach {

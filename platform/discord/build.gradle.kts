@@ -9,6 +9,7 @@ dependencies {
     implementation(project(":command:framework"))
     implementation(project(":properties"))
     implementation(project(":infra:http"))
+    implementation(project(":infra:spring"))
     implementation(project(":shared"))
 
     implementation(libs.jda)

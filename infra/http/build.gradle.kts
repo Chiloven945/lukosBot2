@@ -4,7 +4,8 @@ plugins {
 
 dependencies {
     implementation(project(":shared"))
+    implementation(project(":infra:spring"))
 
-    implementation(libs.okhttp)
+    api(libs.okhttp)
     implementation(libs.spring.boot.starter)
 }

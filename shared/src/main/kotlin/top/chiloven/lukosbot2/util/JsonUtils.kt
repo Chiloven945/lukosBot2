@@ -1,6 +1,6 @@
 package top.chiloven.lukosbot2.util
 
-import com.fasterxml.jackson.annotation.JacksonAnnotationsInside
+import tools.jackson.annotation.JacksonAnnotationsInside
 import tools.jackson.core.JacksonException
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.PropertyNamingStrategies

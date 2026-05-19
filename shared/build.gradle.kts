@@ -3,10 +3,10 @@ plugins {
 }
 
 dependencies {
-    implementation(libs.jackson.core)
-    implementation(libs.jackson.core.databind)
-    implementation(libs.jackson.module.kotlin)
+    api(libs.jackson.core)
+    api(libs.jackson.core.databind)
+    api(libs.jackson.module.kotlin)
+    api(libs.log4j.api)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.zip4j)
-    implementation(libs.log4j.api)
 }

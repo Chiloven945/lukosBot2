@@ -1,10 +1,7 @@
 package top.chiloven.lukosbot2.core;
 
 import org.springframework.stereotype.Component;
-import top.chiloven.lukosbot2.core.model.message.media.BytesRef;
-import top.chiloven.lukosbot2.core.model.message.media.MediaRef;
-import top.chiloven.lukosbot2.core.model.message.media.PlatformFileRef;
-import top.chiloven.lukosbot2.core.model.message.media.UrlRef;
+import top.chiloven.lukosbot2.core.model.message.media.*;
 import top.chiloven.lukosbot2.platform.PlatformFileLoader;
 import top.chiloven.lukosbot2.util.HttpBytes;
 
@@ -40,14 +37,6 @@ public class MediaRefLoader {
                 .findFirst()
                 .orElseThrow(() -> new IOException("当前平台不支持读取该媒体。"))
                 .load(ref);
-    }
-
-    public record LoadedPlatformMedia(
-            byte[] bytes,
-            String name,
-            String mime
-    ) {
-
     }
 
 }

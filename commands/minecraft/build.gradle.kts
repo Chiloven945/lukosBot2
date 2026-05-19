@@ -7,6 +7,7 @@ dependencies {
     implementation(project(":core:runtime"))
     implementation(project(":core:model"))
     implementation(project(":infra:http"))
+    implementation(project(":properties"))
     implementation(project(":shared"))
 
     implementation(libs.commons.net)
