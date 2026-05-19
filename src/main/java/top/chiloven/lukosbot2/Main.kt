@@ -1,11 +1,13 @@
 package top.chiloven.lukosbot2
 
+import kotlin.system.exitProcess
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.context.ConfigurableApplicationContext
-import kotlin.system.exitProcess
+import org.springframework.context.annotation.Bean
+import top.chiloven.lukosbot2.core.IApplicationControl
 
 @SpringBootApplication
 class Main {
@@ -37,20 +39,24 @@ class Main {
             context = SpringApplication.run(Main::class.java, *startupArgs)
         }
 
-        @JvmStatic
-        fun restart() {
+        internal fun getArgs(): Array<String> = startupArgs.copyOf()
+    }
+
+    @Bean
+    fun applicationControl(): IApplicationControl = object : IApplicationControl {
+
+        override fun restart() {
             log.info("Restarting lukosBot2...")
             context.close()
             Thread.sleep(750)
-            context = SpringApplication.run(Main::class.java, *startupArgs)
+            context = SpringApplication.run(Main::class.java, *getArgs())
             log.info("lukosBot2 restarted successfully.")
         }
 
-        @JvmStatic
-        fun shutdown() {
+        override fun shutdown() {
             log.info("Started to shut down lukosBot2...")
             log.info("Shutting down SpringBoot...")
-            val exitCode = SpringApplication.exit(context, { 0 })
+            val exitCode = SpringApplication.exit(context) { 0 }
 
             log.info("Finished shutting down. Now exiting lukosBot2 and JVM... Goodbye!")
             exitProcess(exitCode)

@@ -2,8 +2,8 @@ package top.chiloven.lukosbot2.commands.cli
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
-import top.chiloven.lukosbot2.Main
 import top.chiloven.lukosbot2.commands.ICliCommand
+import top.chiloven.lukosbot2.core.IApplicationControl
 import top.chiloven.lukosbot2.core.command.definition.dsl.cliCommand
 
 @Service
@@ -13,7 +13,9 @@ import top.chiloven.lukosbot2.core.command.definition.dsl.cliCommand
     havingValue = "true",
     matchIfMissing = true
 )
-class ShutdownCliCommand : ICliCommand {
+class ShutdownCliCommand(
+    private val appControl: IApplicationControl
+) : ICliCommand {
 
     override fun definition() = cliCommand("shutdown") {
         alias("stop", "close")
@@ -22,7 +24,7 @@ class ShutdownCliCommand : ICliCommand {
         execute {
             Thread.ofVirtual()
                 .name("shutdown-trigger")
-                .start { Main.shutdown() }
+                .start { appControl.shutdown() }
         }
     }
 

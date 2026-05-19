@@ -1,11 +1,12 @@
-package top.chiloven.lukosbot2.core
+package top.chiloven.lukosbot2
 
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.context.SmartLifecycle
 import org.springframework.stereotype.Service
-import top.chiloven.lukosbot2.Main
+import top.chiloven.lukosbot2.core.IApplicationControl
+import top.chiloven.lukosbot2.core.MessageSenderHub
 import top.chiloven.lukosbot2.lifecycle.ConfigLifecycle
 import top.chiloven.lukosbot2.lifecycle.platform.DiscordLifecycle
 import top.chiloven.lukosbot2.lifecycle.platform.OneBotLifecycle
@@ -18,6 +19,7 @@ import kotlin.concurrent.withLock
 
 @Service
 class ReloadManager(
+    private val appControl: IApplicationControl,
     private val configLifecycle: ConfigLifecycle,
     private val senderHub: MessageSenderHub,
     private val telegramProvider: ObjectProvider<TelegramLifecycle>,
@@ -34,7 +36,7 @@ class ReloadManager(
     fun reloadWholeBot() {
         reloadLock.withLock {
             repeat(3) { println(StringUtils.resolveColorCode("§6Error log message from \"telegrambots.longpolling.BotSession\" might occur, please just ignored it.§r")) }
-            Main.restart()
+            appControl.restart()
         }
     }
 
@@ -47,7 +49,7 @@ class ReloadManager(
         require(normalized.isNotEmpty()) { "No modules specified." }
 
         if (normalized.any { it == "bot" || it == "all" }) {
-            Main.restart()
+            appControl.restart()
             return listOf("bot")
         }
 
