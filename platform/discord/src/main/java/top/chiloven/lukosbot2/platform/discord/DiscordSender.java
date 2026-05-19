@@ -9,7 +9,10 @@ import top.chiloven.lukosbot2.core.model.message.media.BytesRef;
 import top.chiloven.lukosbot2.core.model.message.media.MediaRef;
 import top.chiloven.lukosbot2.core.model.message.media.PlatformFileRef;
 import top.chiloven.lukosbot2.core.model.message.media.UrlRef;
-import top.chiloven.lukosbot2.core.model.message.outbound.*;
+import top.chiloven.lukosbot2.core.model.message.outbound.OutFile;
+import top.chiloven.lukosbot2.core.model.message.outbound.OutImage;
+import top.chiloven.lukosbot2.core.model.message.outbound.OutText;
+import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage;
 import top.chiloven.lukosbot2.platform.ISender;
 import top.chiloven.lukosbot2.util.message.OutboundPartUtils;
 
