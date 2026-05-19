@@ -154,7 +154,7 @@ object WebScreenshot {
                     "--force-device-scale-factor=3"
                 )
 
-                proxy.chromiumProxyArg()
+                SeleniumProxyFactory.chromiumProxyArg(proxy)
                     ?.takeIf { it.isNotBlank() }
                     ?.let { addArguments(it) }
 
@@ -172,7 +172,7 @@ object WebScreenshot {
                     "--force-device-scale-factor=3"
                 )
 
-                proxy.toSeleniumProxy()
+                SeleniumProxyFactory.toSeleniumProxy(proxy)
                     ?.takeIf { isValidSeleniumProxy(it) }
                     ?.let { setProxy(it) }
             }

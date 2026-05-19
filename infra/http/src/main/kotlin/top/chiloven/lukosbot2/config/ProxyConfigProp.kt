@@ -97,11 +97,11 @@ data class ProxyConfigProp(
         )
     }
 
-    private fun hasValidEndpoint(): Boolean {
+    fun hasValidEndpoint(): Boolean {
         return enabled && notBlank(host) && port > 0 && normalizedType() != NormalizedType.NONE
     }
 
-    private fun normalizedType(): NormalizedType {
+    fun normalizedType(): NormalizedType {
         return when (type.trim().uppercase(Locale.ROOT)) {
             "HTTP", "HTTPS" -> NormalizedType.HTTP
             "SOCKS", "SOCKS5" -> NormalizedType.SOCKS5
@@ -116,7 +116,7 @@ data class ProxyConfigProp(
         }
     }
 
-    private fun toInetSocketAddress(): InetSocketAddress = InetSocketAddress(host.orEmpty(), port)
+    fun toInetSocketAddress(): InetSocketAddress = InetSocketAddress(host.orEmpty(), port)
 
     /**
      * Apply proxy configuration to OkHttp.
@@ -190,50 +190,7 @@ data class ProxyConfigProp(
         return builder
     }
 
-    /**
-     * Chromium proxy argument.
-     *
-     * @return argument string like `--proxy-server=socks5://host:port` or
-     * `--proxy-server=http://host:port`, or `null` if proxy is disabled / invalid.
-     */
-    fun chromiumProxyArg(): String? {
-        if (!hasValidEndpoint()) return null
-
-        val proxy = toJavaProxy()
-        if (proxy == Proxy.NO_PROXY) return null
-
-        val addr = proxy.address() as? InetSocketAddress ?: return null
-        val scheme = if (proxy.type() == Proxy.Type.SOCKS) "socks5" else "http"
-        return "--proxy-server=$scheme://${printableHost(addr)}:${addr.port}"
-    }
-
-    /**
-     * Selenium proxy object for Edge/Chrome.
-     *
-     * @return Selenium proxy or `null` if proxy disabled/invalid.
-     */
-    fun toSeleniumProxy(): org.openqa.selenium.Proxy? {
-        if (!hasValidEndpoint()) return null
-
-        val proxy = toJavaProxy()
-        if (proxy == Proxy.NO_PROXY) return null
-
-        val addr = proxy.address() as? InetSocketAddress ?: return null
-        val hostPort = "${printableHost(addr)}:${addr.port}"
-        val sp = org.openqa.selenium.Proxy()
-
-        if (proxy.type() == Proxy.Type.SOCKS) {
-            sp.setSocksProxy(hostPort)
-            sp.setSocksVersion(5)
-        } else {
-            sp.setHttpProxy(hostPort)
-            sp.setSslProxy(hostPort)
-        }
-
-        return sp
-    }
-
-    private enum class NormalizedType {
+    enum class NormalizedType {
         NONE,
         HTTP,
         SOCKS5
@@ -243,7 +200,7 @@ data class ProxyConfigProp(
 
         private fun notBlank(s: String?): Boolean = !s.isNullOrBlank()
 
-        private fun printableHost(addr: InetSocketAddress): String {
+        fun printableHost(addr: InetSocketAddress): String {
             val h = addr.hostString
             return if (h.contains(":") && !h.startsWith("[")) "[$h]" else h
         }
