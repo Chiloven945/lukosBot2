@@ -3,9 +3,6 @@ package top.chiloven.lukosbot2.util.concurrent
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import top.chiloven.lukosbot2.util.concurrent.Coroutines.forEachLimited
-import top.chiloven.lukosbot2.util.concurrent.Coroutines.mapLimited
-import top.chiloven.lukosbot2.util.concurrent.Coroutines.runBlockingIo
 import kotlin.math.max
 
 /**

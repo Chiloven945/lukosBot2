@@ -1,11 +1,5 @@
 package top.chiloven.lukosbot2.util
 
-import top.chiloven.lukosbot2.util.StringUtils.CMD_TO_ANSI_MAP
-import top.chiloven.lukosbot2.util.StringUtils.fmtTimeSec
-import top.chiloven.lukosbot2.util.StringUtils.formatNum
-import top.chiloven.lukosbot2.util.StringUtils.formatStackTrace
-import top.chiloven.lukosbot2.util.StringUtils.replaceWithMap
-import top.chiloven.lukosbot2.util.StringUtils.truncateText
 import java.net.URLEncoder
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
