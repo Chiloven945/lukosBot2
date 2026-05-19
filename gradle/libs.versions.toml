@@ -62,6 +62,10 @@ selenium-java = { module = "org.seleniumhq.selenium:selenium-java", version.ref 
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 webdrivermanager = { module = "io.github.bonigarcia:webdrivermanager", version.ref = "webdrivermanager" }
 
+kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+spring-boot-gradle-plugin = { module = "org.springframework.boot:spring-boot-gradle-plugin", version.ref = "spring-boot" }
+spring-dependency-management-gradle-plugin = { module = "io.spring.gradle:dependency-management-plugin", version.ref = "spring-dependency-management" }
+
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 
