@@ -7,7 +7,7 @@ dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:runtime"))
     implementation(project(":command:framework"))
-    implementation(project(":config"))
+    implementation(project(":properties"))
     implementation(project(":infra:http"))
     implementation(project(":shared"))
 

@@ -1,12 +1,14 @@
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-apply(plugin = "java-library")
+apply(plugin = "java")
 apply(plugin = "org.jetbrains.kotlin.jvm")
 apply(plugin = "org.jetbrains.kotlin.plugin.lombok")
 
 val versionCatalog = extensions.getByType<VersionCatalogsExtension>().named("libs")
 val javaVersionInt = versionCatalog.findVersion("java").orElseThrow().requiredVersion.toInt()
+
+fun VersionCatalog.library(alias: String) = findLibrary(alias).orElseThrow()
 
 extensions.configure<JavaPluginExtension> {
     toolchain {
@@ -27,6 +29,11 @@ tasks.withType<KotlinCompile>().configureEach {
     compilerOptions {
         freeCompilerArgs.add("-Xannotation-default-target=param-property")
     }
+}
+
+dependencies {
+    add("compileOnly", versionCatalog.library("lombok"))
+    add("annotationProcessor", versionCatalog.library("lombok"))
 }
 
 tasks.withType<Test>().configureEach {

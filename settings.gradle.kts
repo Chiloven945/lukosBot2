@@ -21,7 +21,7 @@ rootProject.name = "lukosBot2"
 
 include(":app")
 include(":shared")
-include(":config")
+include(":properties")
 
 include(":core:model")
 include(":core:runtime")
