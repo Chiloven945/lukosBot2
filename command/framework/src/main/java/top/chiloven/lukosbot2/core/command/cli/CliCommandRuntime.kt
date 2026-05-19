@@ -23,7 +23,7 @@ object CliCommandRuntime {
      * Executes a CLI command using the given context and raw command line.
      *
      * The first token is matched case-insensitively against the command's
-     * name and aliases via [top.chiloven.lukosbot2.commands.ICliCommand.matches].
+     * name and aliases via [ICliCommand.matches].
      *
      * @param command the CLI command to execute
      * @param source the console context for output

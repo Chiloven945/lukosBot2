@@ -3,6 +3,7 @@ package top.chiloven.lukosbot2.commands.definition
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import top.chiloven.lukosbot2.core.command.definition.CommandParseException
 import top.chiloven.lukosbot2.core.command.definition.parser.ShellWords
 
 class ShellWordsTest {
@@ -29,10 +30,10 @@ class ShellWordsTest {
 
     @Test
     fun split_unclosed_quote() {
-        assertThrows<top.chiloven.lukosbot2.core.command.definition.CommandParseException> {
+        assertThrows<CommandParseException> {
             ShellWords.split("\"a b")
         }
-        assertThrows<top.chiloven.lukosbot2.core.command.definition.CommandParseException> {
+        assertThrows<CommandParseException> {
             ShellWords.split("'a b")
         }
     }

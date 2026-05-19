@@ -19,7 +19,7 @@ import top.chiloven.lukosbot2.core.command.definition.parser.ShellWords
  *
  * `CommandRuntime` does **not** format error messages or interact
  * with the source directly. Instead, it throws [CommandDispatchException]
- * for structured errors and [top.chiloven.lukosbot2.core.command.definition.CommandParseException] / `IllegalArgumentException`
+ * for structured errors and [CommandParseException] / `IllegalArgumentException`
  * from the parser, which are caught by type-specific wrappers
  * ([top.chiloven.lukosbot2.core.command.bot.BotCommandRuntime], [top.chiloven.lukosbot2.core.command.cli.CliCommandRuntime]) and formatted according
  * to platform conventions.
@@ -42,7 +42,7 @@ object CommandRuntime {
      * @param path the literal path matched so far
      * @return the executor's return code (1 = success, 0 = failure)
      * @throws CommandDispatchException on structure errors
-     * @throws top.chiloven.lukosbot2.core.command.definition.CommandParseException on argument parsing errors
+     * @throws CommandParseException on argument parsing errors
      */
     fun <S> execute(
         root: CommandNode<S>,

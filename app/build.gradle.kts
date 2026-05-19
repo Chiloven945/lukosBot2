@@ -1,6 +1,18 @@
 plugins {
-    id("lukos.spring-boot-app")
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.spring)
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
 }
+
+springBoot {
+    mainClass.set("top.chiloven.lukosbot2.Main")
+}
+
+tasks.bootJar {
+    enabled = true
+}
+
 
 dependencies {
     implementation(project(":shared"))
@@ -10,11 +22,9 @@ dependencies {
     implementation(project(":command:framework"))
     implementation(project(":platform:api"))
     implementation(project(":infra:http"))
-
     implementation(project(":platform:telegram"))
     implementation(project(":platform:discord"))
     implementation(project(":platform:onebot"))
-
     implementation(project(":commands:basic"))
     implementation(project(":commands:admin"))
     implementation(project(":commands:integrations"))
@@ -23,13 +33,10 @@ dependencies {
     implementation(project(":commands:media"))
     implementation(project(":commands:translate"))
     implementation(project(":commands:cli"))
-
     implementation(libs.shiro)
     implementation(libs.snakeyaml)
     implementation(libs.spring.boot.starter)
     runtimeOnly(libs.h2)
-}
-
-springBoot {
-    mainClass.set("top.chiloven.lukosbot2.Main")
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)
 }

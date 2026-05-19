@@ -1,7 +1,10 @@
 plugins {
-    id("lukos.kotlin-library")
+    alias(libs.plugins.kotlin.jvm)
 }
 
+
 dependencies {
-    api(project(":core:model"))
+    implementation(project(":core:model"))
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)
 }

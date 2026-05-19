@@ -25,7 +25,7 @@ object BotCommandRuntime {
      *
      * The raw command line should have the global prefix (e.g. `"/"`)
      * already stripped. The first token is matched case-insensitively against
-     * the command's name and aliases via [top.chiloven.lukosbot2.commands.IBotCommand.matches].
+     * the command's name and aliases via [IBotCommand.matches].
      *
      * @param command the bot command to execute
      * @param source the chat source for replies

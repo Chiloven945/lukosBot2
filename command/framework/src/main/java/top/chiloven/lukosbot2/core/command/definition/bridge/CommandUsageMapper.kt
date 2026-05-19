@@ -1,7 +1,7 @@
 package top.chiloven.lukosbot2.core.command.definition.bridge
 
 import top.chiloven.lukosbot2.commands.UsageNode
-import top.chiloven.lukosbot2.core.command.definition.ArgType
+import top.chiloven.lukosbot2.core.command.definition.*
 import top.chiloven.lukosbot2.core.command.definition.leaf.*
 
 /**
@@ -22,12 +22,12 @@ object CommandUsageMapper {
      * @param spec the command definition
      * @return the root usage node
      */
-    fun <S> toUsageNode(spec: top.chiloven.lukosbot2.core.command.definition.CommandDefinition<S>): UsageNode {
+    fun <S> toUsageNode(spec: CommandDefinition<S>): UsageNode {
         return mapNode(spec.root, spec.name, spec.description, spec.aliases)
     }
 
     private fun <S> mapNode(
-        node: top.chiloven.lukosbot2.core.command.definition.CommandNode<S>,
+        node: CommandNode<S>,
         name: String,
         description: String,
         aliases: List<String>
@@ -115,7 +115,7 @@ object CommandUsageMapper {
         }
     }
 
-    private fun optionToSyntaxItem(opt: top.chiloven.lukosbot2.core.command.definition.CommandOption): UsageNode.Item {
+    private fun optionToSyntaxItem(opt: CommandOption): UsageNode.Item {
         val displayName = opt.names.firstOrNull()
             ?: "--${opt.canonicalName}"
 
@@ -131,7 +131,7 @@ object CommandUsageMapper {
         return if (opt.required) item else UsageNode.opt(item)
     }
 
-    private fun <S> generateAutoParams(node: top.chiloven.lukosbot2.core.command.definition.CommandNode<S>): List<Pair<UsageNode.Item, String>> {
+    private fun <S> generateAutoParams(node: CommandNode<S>): List<Pair<UsageNode.Item, String>> {
         val leaf = node.leaf ?: return emptyList()
         return when (leaf) {
             is ArgvLeaf -> leaf.positionals.map { pos ->
@@ -147,7 +147,7 @@ object CommandUsageMapper {
         }
     }
 
-    private fun <S> generateAutoOptions(node: top.chiloven.lukosbot2.core.command.definition.CommandNode<S>): List<Pair<UsageNode.Item, String>> {
+    private fun <S> generateAutoOptions(node: CommandNode<S>): List<Pair<UsageNode.Item, String>> {
         val leaf = node.leaf
         if (leaf !is ArgvLeaf) return emptyList()
 
@@ -168,20 +168,20 @@ object CommandUsageMapper {
         }
     }
 
-    private fun mapSyntaxItem(item: top.chiloven.lukosbot2.core.command.definition.SyntaxItem): UsageNode.Item {
+    private fun mapSyntaxItem(item: SyntaxItem): UsageNode.Item {
         return when (item) {
-            is top.chiloven.lukosbot2.core.command.definition.SyntaxItem.Lit -> UsageNode.lit(item.text)
-            is top.chiloven.lukosbot2.core.command.definition.SyntaxItem.Arg -> UsageNode.arg(item.name)
-            is top.chiloven.lukosbot2.core.command.definition.SyntaxItem.Opt -> UsageNode.opt(mapSyntaxItem(item.item))
-            is top.chiloven.lukosbot2.core.command.definition.SyntaxItem.Choice -> UsageNode.oneOf(
+            is SyntaxItem.Lit -> UsageNode.lit(item.text)
+            is SyntaxItem.Arg -> UsageNode.arg(item.name)
+            is SyntaxItem.Opt -> UsageNode.opt(mapSyntaxItem(item.item))
+            is SyntaxItem.Choice -> UsageNode.oneOf(
                 *item.items.map { mapSyntaxItem(it) }.toTypedArray()
             )
 
-            is top.chiloven.lukosbot2.core.command.definition.SyntaxItem.Group -> UsageNode.group(
+            is SyntaxItem.Group -> UsageNode.group(
                 *item.items.map { mapSyntaxItem(it) }.toTypedArray()
             )
 
-            is top.chiloven.lukosbot2.core.command.definition.SyntaxItem.Concat -> UsageNode.concat(
+            is SyntaxItem.Concat -> UsageNode.concat(
                 *item.items.map { mapSyntaxItem(it) }.toTypedArray()
             )
         }

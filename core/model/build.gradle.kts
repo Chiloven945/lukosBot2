@@ -1,8 +1,11 @@
 plugins {
-    id("lukos.kotlin-library")
+    alias(libs.plugins.kotlin.jvm)
 }
 
+
 dependencies {
-    api(libs.jspecify)
-    api(libs.log4j.api)
+    implementation(libs.jspecify)
+    implementation(libs.log4j.api)
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)
 }

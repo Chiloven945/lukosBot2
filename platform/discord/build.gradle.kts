@@ -1,5 +1,7 @@
 plugins {
-    id("lukos.spring-library")
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.spring)
+    alias(libs.plugins.spring.dependency.management)
 }
 
 dependencies {
@@ -11,7 +13,8 @@ dependencies {
     implementation(project(":infra:http"))
     implementation(project(":infra:spring"))
     implementation(project(":shared"))
-
     implementation(libs.jda)
     implementation(libs.spring.boot.starter)
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)
 }
