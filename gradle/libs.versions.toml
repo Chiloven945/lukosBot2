@@ -3,7 +3,7 @@ java = "25"
 kotlin = "2.3.21"
 
 kotlinx-coroutines = "1.11.0"
-junit-jupiter = "6.0.3"
+junit-jupiter = "6.1.0"
 spring-boot = "4.0.6"
 spring-dependency-management = "1.1.7"
 
