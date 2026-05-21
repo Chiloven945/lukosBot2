@@ -1,20 +1,22 @@
 plugins {
+    `java-library`
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.spring)
-    alias(libs.plugins.spring.dependency.management)
+    alias(libs.plugins.kotlin.lombok)
 }
 
 dependencies {
+    api(project(":infrastructure:http"))
+    api(libs.jsoup)
+    api(libs.selenium.java)
+
     implementation(project(":shared"))
     implementation(project(":core:model"))
     implementation(project(":properties"))
-    implementation(project(":infra:http"))
-    implementation(project(":infra:spring"))
-    implementation(libs.selenium.java)
-    implementation(libs.jsoup)
-    implementation(libs.webdrivermanager)
+    implementation(project(":infrastructure:spring"))
     implementation(libs.flexmark.html2md.converter)
-    implementation(libs.spring.boot.starter)
+    implementation(libs.webdrivermanager)
+
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
 }

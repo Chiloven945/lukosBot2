@@ -1,17 +1,18 @@
 plugins {
+    `java-library`
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.spring)
-    alias(libs.plugins.spring.dependency.management)
+    alias(libs.plugins.kotlin.lombok)
 }
 
 dependencies {
-    implementation(project(":command:framework"))
-    implementation(project(":core:runtime"))
+    implementation(project(":core:command"))
     implementation(project(":core:model"))
-    implementation(project(":infra:http"))
     implementation(project(":properties"))
     implementation(project(":shared"))
-    implementation(libs.spring.boot.starter)
+    implementation(project(":core:runtime"))
+    implementation(project(":infrastructure:http"))
+
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
 }

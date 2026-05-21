@@ -1,11 +1,12 @@
 plugins {
+    `java-library`
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.lombok)
 }
 
-
 dependencies {
-    implementation(libs.jspecify)
-    implementation(libs.log4j.api)
+    api(libs.jspecify)
+
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
 }

@@ -56,7 +56,7 @@ class Main {
         override fun shutdown() {
             log.info("Started to shut down lukosBot2...")
             log.info("Shutting down SpringBoot...")
-            val exitCode = SpringApplication.exit(context) { 0 }
+            val exitCode = SpringApplication.exit(context, { 0 })
 
             log.info("Finished shutting down. Now exiting lukosBot2 and JVM... Goodbye!")
             exitProcess(exitCode)

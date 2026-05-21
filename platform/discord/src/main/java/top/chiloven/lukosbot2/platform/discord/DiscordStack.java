@@ -15,6 +15,7 @@ import top.chiloven.lukosbot2.commands.IBotCommand;
 import top.chiloven.lukosbot2.config.ProxyConfigProp;
 import top.chiloven.lukosbot2.core.command.bot.CommandRegistry;
 import top.chiloven.lukosbot2.core.model.message.Address;
+import top.chiloven.lukosbot2.core.model.message.inbound.*;
 import top.chiloven.lukosbot2.core.model.message.media.UrlRef;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
 import top.chiloven.lukosbot2.util.OkHttpUtils;

@@ -3,6 +3,7 @@ package top.chiloven.lukosbot2.commands.bot.kemono.schema
 import tools.jackson.databind.node.ObjectNode
 import top.chiloven.lukosbot2.util.JsonUtils
 import top.chiloven.lukosbot2.util.JsonUtils.JsonLdt
+import top.chiloven.lukosbot2.util.JsonUtils.isNotEmpty
 import top.chiloven.lukosbot2.util.JsonUtils.obj
 import top.chiloven.lukosbot2.util.StringUtils.appendSeparator
 import top.chiloven.lukosbot2.util.TimeUtils.fmt

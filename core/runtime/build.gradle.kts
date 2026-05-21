@@ -1,25 +1,21 @@
 plugins {
+    `java-library`
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.spring)
-    alias(libs.plugins.spring.dependency.management)
+    alias(libs.plugins.kotlin.lombok)
 }
 
 dependencies {
-    implementation(project(":core:model"))
-    implementation(project(":shared"))
-    implementation(project(":properties"))
-    implementation(project(":platform:api"))
-    implementation(project(":command:framework"))
-    implementation(project(":infra:http"))
-    implementation(libs.commons.net)
-    implementation(libs.snakeyaml)
-    implementation(libs.spring.boot.starter)
-    implementation(libs.spring.boot.starter.jdbc)
-    implementation(libs.log4j.api)
-    implementation(libs.log4j.core)
+    api(project(":core:command"))
+    api(project(":properties"))
+    api(project(":core:model"))
+    api(project(":infrastructure:http"))
+    api(project(":platform:api"))
+    api(project(":shared"))
+
     implementation(libs.slf4j.api)
-    implementation(libs.log4j.slf4j2.impl)
-    runtimeOnly(libs.h2)
+    implementation(libs.spring.boot.starter.jdbc)
+
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
 }

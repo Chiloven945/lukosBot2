@@ -46,4 +46,4 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: lukos-bot-2
-          path: build/libs/*.jar
+          path: app/build/libs/*.jar

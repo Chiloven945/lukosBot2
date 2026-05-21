@@ -8,8 +8,7 @@ import top.chiloven.lukosbot2.core.model.message.media.BytesRef;
 import top.chiloven.lukosbot2.core.model.message.media.MediaRef;
 import top.chiloven.lukosbot2.core.model.message.media.PlatformFileRef;
 import top.chiloven.lukosbot2.core.model.message.media.UrlRef;
-import top.chiloven.lukosbot2.core.model.message.outbound.DeliveryHints;
-import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage;
+import top.chiloven.lukosbot2.core.model.message.outbound.*;
 import top.chiloven.lukosbot2.platform.ISender;
 import top.chiloven.lukosbot2.util.message.OutboundPartUtils;
 
@@ -77,7 +76,11 @@ public final class TelegramSender implements ISender {
         }
     }
 
-    private void sendPhoto(String chatId, OutImage img, String caption) {
+    private void sendPhoto(
+            String chatId,
+            OutImage img,
+            String caption
+    ) {
         if (img == null) return;
         SendPhoto sp = SendPhoto.builder()
                 .chatId(chatId)
@@ -87,7 +90,11 @@ public final class TelegramSender implements ISender {
         stack.execute(sp);
     }
 
-    private void sendDocument(String chatId, OutFile f, String caption) {
+    private void sendDocument(
+            String chatId,
+            OutFile f,
+            String caption
+    ) {
         if (f == null) return;
         SendDocument sd = SendDocument.builder()
                 .chatId(chatId)
@@ -106,7 +113,11 @@ public final class TelegramSender implements ISender {
         stack.execute(sm);
     }
 
-    private static InputFile toInputFile(MediaRef ref, String name, String mime) {
+    private static InputFile toInputFile(
+            MediaRef ref,
+            String name,
+            String mime
+    ) {
         switch (ref) {
             case null -> {
                 return new InputFile("about:blank");

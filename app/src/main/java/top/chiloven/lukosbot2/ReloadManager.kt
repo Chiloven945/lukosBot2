@@ -6,6 +6,7 @@ import org.springframework.beans.factory.ObjectProvider
 import org.springframework.context.SmartLifecycle
 import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.core.IApplicationControl
+import top.chiloven.lukosbot2.core.IReloadControl
 import top.chiloven.lukosbot2.core.MessageSenderHub
 import top.chiloven.lukosbot2.lifecycle.ConfigLifecycle
 import top.chiloven.lukosbot2.lifecycle.platform.DiscordLifecycle
@@ -25,7 +26,7 @@ class ReloadManager(
     private val telegramProvider: ObjectProvider<TelegramLifecycle>,
     private val discordProvider: ObjectProvider<DiscordLifecycle>,
     private val onebotProvider: ObjectProvider<OneBotLifecycle>,
-) {
+) : IReloadControl {
 
     private val log: Logger = LogManager.getLogger(ReloadManager::class.java)
     private val reloadLock = ReentrantLock()
@@ -33,14 +34,14 @@ class ReloadManager(
     fun supportedModules(): Set<String> =
         linkedSetOf("config", "telegram", "discord", "onebot", "bot", "all")
 
-    fun reloadWholeBot() {
+    override fun reloadWholeBot() {
         reloadLock.withLock {
             repeat(3) { println(StringUtils.resolveColorCode("§6Error log message from \"telegrambots.longpolling.BotSession\" might occur, please just ignored it.§r")) }
             appControl.restart()
         }
     }
 
-    fun reloadModules(names: Collection<String>): List<String> = reloadLock.withLock {
+    override fun reloadModules(names: Collection<String>): List<String> = reloadLock.withLock {
         val normalized = names
             .map { it.trim().lowercase(Locale.ROOT) }
             .filter { it.isNotEmpty() }

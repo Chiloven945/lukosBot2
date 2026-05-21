@@ -1,11 +1,14 @@
 plugins {
+    `java-library`
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.spring)
-    alias(libs.plugins.spring.dependency.management)
+    alias(libs.plugins.kotlin.lombok)
 }
 
 dependencies {
-    implementation(libs.spring.boot.starter)
+    api(platform(libs.spring.boot.dependencies.bom))
+    api(libs.spring.boot.starter)
+
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
 }

@@ -3,7 +3,7 @@ package top.chiloven.lukosbot2.commands.cli
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.ICliCommand
-import top.chiloven.lukosbot2.core.ReloadManager
+import top.chiloven.lukosbot2.core.IReloadControl
 import top.chiloven.lukosbot2.core.command.definition.ArgType
 import top.chiloven.lukosbot2.core.command.definition.dsl.cliCommand
 
@@ -15,7 +15,7 @@ import top.chiloven.lukosbot2.core.command.definition.dsl.cliCommand
     matchIfMissing = true
 )
 class ReloadCliCommand(
-    private val reloadManager: ReloadManager
+    private val reloadManager: IReloadControl
 ) : ICliCommand {
 
     override fun definition() = cliCommand("reload") {

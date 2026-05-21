@@ -23,17 +23,16 @@ include(":properties")
 
 include(":core:model")
 include(":core:runtime")
-
-include(":command:framework")
+include(":core:command")
 
 include(":platform:api")
 include(":platform:telegram")
 include(":platform:discord")
 include(":platform:onebot")
 
-include(":infra:spring")
-include(":infra:http")
-include(":infra:web")
+include(":infrastructure:spring")
+include(":infrastructure:http")
+include(":infrastructure:web-infra")
 
 include(":commands:basic")
 include(":commands:admin")
