@@ -11,7 +11,9 @@ dependencies {
     implementation(project(":properties"))
     implementation(project(":shared"))
     implementation(project(":core:runtime"))
+
     implementation(libs.commons.net)
+
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
 }

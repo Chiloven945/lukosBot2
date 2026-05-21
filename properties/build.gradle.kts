@@ -6,9 +6,10 @@ plugins {
 }
 
 dependencies {
-    api(platform(libs.spring.boot.dependencies.bom))
     api(project(":shared"))
     api(project(":infrastructure:spring"))
+
+    api(platform(libs.spring.boot.dependencies.bom))
     api(libs.spring.boot.starter)
 
     compileOnly(libs.lombok)

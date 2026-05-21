@@ -14,6 +14,7 @@ dependencies {
     implementation(project(":infrastructure:http"))
     implementation(project(":infrastructure:spring"))
     implementation(project(":shared"))
+
     implementation(libs.telegrambots.longpolling)
     implementation(libs.telegrambots.client)
 

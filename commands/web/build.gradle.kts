@@ -12,7 +12,9 @@ dependencies {
     implementation(project(":shared"))
     implementation(project(":infrastructure:http"))
     implementation(project(":infrastructure:web-infra"))
+
     implementation(libs.jsoup)
+
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
 }

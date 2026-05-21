@@ -13,6 +13,7 @@ dependencies {
 
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.kotlin.test.junit)
+    testRuntimeOnly(libs.junit.platform.launcher)
 
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)

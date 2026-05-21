@@ -7,13 +7,15 @@ plugins {
 
 dependencies {
     api(project(":infrastructure:http"))
-    api(libs.jsoup)
-    api(libs.selenium.java)
 
     implementation(project(":shared"))
     implementation(project(":core:model"))
     implementation(project(":properties"))
     implementation(project(":infrastructure:spring"))
+
+    api(libs.jsoup)
+    api(libs.selenium.java)
+
     implementation(libs.flexmark.html2md.converter)
     implementation(libs.webdrivermanager)
 

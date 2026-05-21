@@ -10,6 +10,7 @@ dependencies {
     implementation(project(":core:model"))
     implementation(project(":properties"))
     implementation(project(":shared"))
+
     implementation(libs.docker.java)
     implementation(libs.docker.java.transport.httpclient5)
 

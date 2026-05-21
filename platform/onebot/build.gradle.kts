@@ -14,6 +14,7 @@ dependencies {
     implementation(project(":infrastructure:http"))
     implementation(project(":infrastructure:spring"))
     implementation(project(":shared"))
+
     implementation(libs.shiro)
 
     compileOnly(libs.lombok)
