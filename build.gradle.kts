@@ -1,102 +1,72 @@
+import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    java
-    alias(libs.plugins.kotlin.jvm)
-    alias(libs.plugins.kotlin.spring)
-    alias(libs.plugins.kotlin.lombok)
-    alias(libs.plugins.spring.boot)
-    alias(libs.plugins.spring.dependency.management)
+    alias(libs.plugins.kotlin.jvm) apply false
+    alias(libs.plugins.kotlin.spring) apply false
+    alias(libs.plugins.kotlin.lombok) apply false
+    alias(libs.plugins.spring.boot) apply false
 }
-
-val javaVersionInt = libs.versions.java.get().toInt()
 
 group = property("group") as String
 version = property("version") as String
 description = property("description") as String
 
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(javaVersionInt))
+val javaVersion = providers.gradleProperty("javaVersion").map(String::toInt).get()
+
+subprojects {
+    group = rootProject.group
+    version = rootProject.version
+    description = rootProject.description
+
+    configurations.configureEach {
+        exclude(group = "org.apache.logging.log4j", module = "log4j-to-slf4j")
+        exclude(group = "ch.qos.logback", module = "logback-classic")
+        exclude(group = "ch.qos.logback", module = "logback-core")
+    }
+
+    configurations.matching { it.name == "implementation" }.configureEach {
+        project.dependencies.addProvider(this.name, rootProject.libs.jspecify)
+        project.dependencies.addProvider(this.name, rootProject.libs.log4j.api)
+    }
+
+    pluginManager.withPlugin("org.jetbrains.kotlin.plugin.spring") {
+        configurations.matching { it.name == "implementation" }.configureEach {
+            val springBootBom = project.providers.provider {
+                project.dependencies.platform(rootProject.libs.spring.boot.dependencies.bom.get())
+            }
+            project.dependencies.addProvider(this.name, springBootBom)
+            project.dependencies.addProvider(this.name, rootProject.libs.spring.boot.starter.asProvider())
+        }
+    }
+
+    pluginManager.withPlugin("java") {
+        extensions.configure<JavaPluginExtension> {
+            toolchain {
+                languageVersion.set(JavaLanguageVersion.of(javaVersion))
+            }
+        }
+
+        tasks.withType<JavaCompile>().configureEach {
+            options.release.set(javaVersion)
+            options.encoding = "UTF-8"
+        }
+
+        tasks.withType<Test>().configureEach {
+            useJUnitPlatform()
+        }
+    }
+
+    pluginManager.withPlugin("org.jetbrains.kotlin.jvm") {
+        extensions.configure<KotlinJvmProjectExtension> {
+            jvmToolchain(javaVersion)
+        }
+
+        tasks.withType<KotlinCompile>().configureEach {
+            compilerOptions {
+                freeCompilerArgs.add("-Xannotation-default-target=param-property")
+            }
+        }
     }
 }
 
-dependencies {
-    // Platform API
-    implementation(libs.jda)
-    implementation(libs.shiro)
-    implementation(libs.telegrambots.longpolling)
-    implementation(libs.telegrambots.client)
-
-    // Spring Boot
-    annotationProcessor(libs.spring.boot.configuration.processor)
-    implementation(libs.spring.boot.starter) {
-        exclude(group = "org.springframework.boot", module = "spring-boot-starter-logging")
-    }
-    implementation(libs.spring.boot.starter.log4j2)
-    implementation(libs.spring.boot.starter.actuator)
-    implementation(libs.spring.boot.starter.jdbc)
-    runtimeOnly(libs.h2)
-
-    // Core Library
-    implementation(libs.commons.net)
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
-    implementation(libs.snakeyaml)
-    implementation(libs.okhttp)
-    implementation(libs.zip4j)
-
-    implementation(libs.jackson.core)
-    implementation(libs.jackson.core.databind)
-    implementation(libs.jackson.module.kotlin)
-
-    implementation(libs.log4j.api)
-    implementation(libs.log4j.core)
-    implementation(libs.slf4j.api)
-    implementation(libs.log4j.slf4j2.impl)
-
-    implementation(libs.docker.java)
-    implementation(libs.docker.java.transport.httpclient5)
-
-    // Feature Library
-    implementation(libs.flexmark.html2md.converter)
-    implementation(libs.selenium.java)
-    implementation(libs.jsoup)
-    implementation(libs.webdrivermanager)
-
-    implementation(libs.kotlin.reflect)
-    implementation(libs.kotlinx.coroutines.core)
-
-    testImplementation(libs.junit.jupiter)
-    testImplementation(libs.kotlin.test.junit)
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-}
-
-tasks.withType<JavaCompile>().configureEach {
-    options.release.set(javaVersionInt)
-}
-
-tasks.test {
-    useJUnitPlatform()
-}
-
-springBoot {
-    mainClass.set("top.chiloven.lukosbot2.Main")
-}
-
-configurations.all {
-    exclude(group = "org.apache.logging.log4j", module = "log4j-to-slf4j")
-
-    exclude(group = "ch.qos.logback", module = "logback-classic")
-    exclude(group = "ch.qos.logback", module = "logback-core")
-}
-
-kotlin {
-    jvmToolchain(javaVersionInt)
-}
-
-val compileKotlin: KotlinCompile by tasks
-
-compileKotlin.compilerOptions {
-    freeCompilerArgs.set(listOf("-Xannotation-default-target=param-property"))
-}

@@ -29,19 +29,19 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build bootJar
-        run: ./gradlew clean bootJar
+        run: ./gradlew clean :app:bootJar
 
       - name: Prepare release asset
         id: asset
         shell: bash
         run: |
-          JAR_PATH="$(find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-plain.jar' | head -n 1)"
+          JAR_PATH="$(find app/build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-plain.jar' | head -n 1)"
           if [ -z "$JAR_PATH" ]; then
             echo "bootJar output not found"
             exit 1
           fi
 
-          ASSET_PATH="build/libs/lukosBot2-${{ github.event.release.tag_name }}.jar"
+          ASSET_PATH="app/build/libs/lukosBot2-${{ github.event.release.tag_name }}.jar"
           
           if [ "$JAR_PATH" != "$ASSET_PATH" ]; then
             cp "$JAR_PATH" "$ASSET_PATH"
