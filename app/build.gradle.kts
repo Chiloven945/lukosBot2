@@ -9,6 +9,13 @@ springBoot {
     mainClass.set("top.chiloven.lukosbot2.Main")
 }
 
+tasks.register<Exec>("releaseBootJar") {
+    group = "build"
+    description = "Builds release JAR (no commit hash)"
+    workingDir = rootProject.projectDir
+    commandLine("./gradlew", ":app:bootJar", "-PdevBuild=false")
+}
+
 dependencies {
     implementation(project(":shared"))
     implementation(project(":properties"))

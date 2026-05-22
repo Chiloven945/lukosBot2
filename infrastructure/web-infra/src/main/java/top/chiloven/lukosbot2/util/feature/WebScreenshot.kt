@@ -23,7 +23,7 @@ object WebScreenshot {
 
     private val log = LogManager.getLogger(WebScreenshot::class.java)
 
-    private const val USER_AGENT = "Mozilla/5.0 (compatible; ${Constants.UA})"
+    private val USER_AGENT = "Mozilla/5.0 (compatible; ${Constants.UA})"
     private val PAGE_LOAD_TIMEOUT: Duration = Duration.ofSeconds(20)
 
     private const val FULLPAGE_WIDTH = 1080
