@@ -35,7 +35,10 @@ val devBuildProvider: Provider<Boolean> = providers.gradleProperty("devBuild")
         it.toBooleanStrictOrNull()
             ?: error("Gradle property devBuild must be true or false, but was: $it")
     }
-    .orElse(providers.provider { true })
+    .orElse(providers.provider {
+        val taskNames = gradle.startParameter.taskNames
+        taskNames.none { it.endsWith("releaseBootJar") }
+    })
 
 val gitShortHash = gitShortHashProvider()
 
