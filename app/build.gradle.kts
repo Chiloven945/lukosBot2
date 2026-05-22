@@ -9,6 +9,21 @@ springBoot {
     mainClass.set("top.chiloven.lukosbot2.Main")
 }
 
+@Suppress("UNCHECKED_CAST")
+val lukosDisplayVersionProvider =
+    rootProject.extra["lukosDisplayVersionProvider"] as Provider<String>
+
+tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
+    archiveBaseName.set("lukosBot2")
+    archiveFileName.set("${archiveBaseName.get()}-${lukosDisplayVersionProvider.get()}.jar")
+}
+
+tasks.register("releaseBootJar") {
+    group = "build"
+    description = "Builds release JAR (no commit hash)"
+    dependsOn(tasks.named("bootJar"))
+}
+
 dependencies {
     implementation(project(":shared"))
     implementation(project(":properties"))

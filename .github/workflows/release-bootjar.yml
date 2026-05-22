@@ -29,7 +29,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build bootJar
-        run: ./gradlew clean :app:bootJar
+        run: ./gradlew clean :app:releaseBootJar
 
       - name: Prepare release asset
         id: asset

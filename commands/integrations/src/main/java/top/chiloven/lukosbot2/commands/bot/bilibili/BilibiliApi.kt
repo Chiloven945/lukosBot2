@@ -26,7 +26,7 @@ class BilibiliApi {
         private const val VIEW_API_URL = "https://api.bilibili.com/x/web-interface/view"
         private const val RELATION_API_URL = "https://api.bilibili.com/x/relation/stat"
         private const val HTML_ACCEPT = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
-        private const val UA = "Mozilla/5.0 (compatible; ${Constants.UA}; +https://bilibili.com)"
+        private val UA = "Mozilla/5.0 (compatible; ${Constants.UA}; +https://bilibili.com)"
 
         private val JSON_HEADERS = mapOf(
             "User-Agent" to UA,

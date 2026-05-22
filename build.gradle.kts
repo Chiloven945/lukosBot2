@@ -9,8 +9,48 @@ plugins {
 }
 
 group = property("group") as String
-version = property("version") as String
+
+val baseVersion = property("version") as String
+version = baseVersion
+
 description = property("description") as String
+
+fun gitShortHashProvider(): Provider<String> {
+    val githubShaProvider = providers.environmentVariable("GITHUB_SHA")
+        .map { it.trim().take(8) }
+
+    val localGitProvider = providers.provider {
+        runCatching {
+            providers.exec {
+                commandLine("git", "rev-parse", "--short=8", "HEAD")
+            }.standardOutput.asText.get().trim()
+        }.getOrDefault("unknown")
+    }
+
+    return githubShaProvider.orElse(localGitProvider)
+}
+
+val devBuildProvider: Provider<Boolean> = providers.gradleProperty("devBuild")
+    .map {
+        it.toBooleanStrictOrNull()
+            ?: error("Gradle property devBuild must be true or false, but was: $it")
+    }
+    .orElse(providers.provider {
+        val taskNames = gradle.startParameter.taskNames
+        taskNames.none { it.endsWith("releaseBootJar") }
+    })
+
+val gitShortHash = gitShortHashProvider()
+
+val lukosDisplayVersionProvider: Provider<String> = providers.provider {
+    if (devBuildProvider.get()) {
+        "$baseVersion+${gitShortHash.get()}-Build"
+    } else {
+        baseVersion
+    }
+}
+
+extra["lukosDisplayVersionProvider"] = lukosDisplayVersionProvider
 
 val javaVersion = providers.gradleProperty("javaVersion").map(String::toInt).get()
 
@@ -69,4 +109,3 @@ subprojects {
         }
     }
 }
-

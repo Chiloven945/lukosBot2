@@ -69,7 +69,7 @@ object HttpBytes {
     /**
      * Shared user-agent sent with every request.
      */
-    private const val UA = "Mozilla/5.0 (compatible; ${Constants.UA})"
+    private val UA = "Mozilla/5.0 (compatible; ${Constants.UA})"
 
     private val clientCache = OkHttpUtils.ProxyAwareOkHttpClientCache(
         connectTimeoutMs = 15_000,

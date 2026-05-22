@@ -7,9 +7,13 @@ import java.util.*
  */
 object Constants {
 
-    const val VERSION = "0.3.0-SNAPSHOT"
+    @JvmField
+    val VERSION: String = BuildInfo.VERSION
+
     const val APP_NAME = "lukosBot2"
-    const val UA = "$APP_NAME/$VERSION"
+
+    @JvmField
+    val UA: String = "$APP_NAME/$VERSION"
 
     val javaVersion: String = "%s (%s)".format(
         System.getProperty("java.version"),
