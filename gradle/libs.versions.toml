@@ -9,7 +9,6 @@ spring-dependency-management = "1.1.7"
 
 telegrambots = "9.6.0"
 jda = "6.4.1"
-shiro = "2.5.4"
 
 commons-net = "3.13.0"
 lombok = "1.18.46"
@@ -29,7 +28,6 @@ webdrivermanager = "6.3.4"
 
 [libraries]
 jda = { module = "net.dv8tion:JDA", version.ref = "jda" }
-shiro = { module = "com.mikuac:shiro", version.ref = "shiro" }
 telegrambots-longpolling = { module = "org.telegram:telegrambots-longpolling", version.ref = "telegrambots" }
 telegrambots-client = { module = "org.telegram:telegrambots-client", version.ref = "telegrambots" }
 

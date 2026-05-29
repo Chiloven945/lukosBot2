@@ -36,8 +36,6 @@ dependencies {
 
     implementation(project(":platform:telegram"))
     implementation(project(":platform:discord"))
-    implementation(project(":platform:onebot"))
-
     implementation(project(":commands:basic"))
     implementation(project(":commands:admin"))
     implementation(project(":commands:integrations"))
@@ -48,7 +46,6 @@ dependencies {
     implementation(project(":commands:cli"))
 
     implementation(libs.kotlin.reflect)
-    implementation(libs.shiro)
     implementation(libs.snakeyaml)
     implementation(libs.spring.boot.starter.log4j2)
 

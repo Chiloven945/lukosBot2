@@ -3,8 +3,8 @@ package top.chiloven.lukosbot2.lifecycle.platform;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
 import top.chiloven.lukosbot2.config.AppProperties;
 import top.chiloven.lukosbot2.core.MessageDispatcher;
@@ -18,11 +18,12 @@ import java.util.List;
 @ConditionalOnProperty(prefix = "lukos.telegram", name = "enabled", havingValue = "true")
 @RequiredArgsConstructor
 @Log4j2
-public class TelegramLifecycle implements SmartLifecycle, IPlatformAdapter {
+public class TelegramLifecycle implements IPlatformAdapter {
 
     private final MessageDispatcher md;
     private final MessageSenderHub msh;
     private final AppProperties props;
+
     private final BaseCloseable closeable = new BaseCloseable();
     private volatile boolean running = false;
 
@@ -40,8 +41,11 @@ public class TelegramLifecycle implements SmartLifecycle, IPlatformAdapter {
     }
 
     @Override
-    public List<AutoCloseable> start(MessageDispatcher md, MessageSenderHub msh) throws Exception {
-        TelegramReceiver tg = new TelegramReceiver(
+    public List<AutoCloseable> start(
+            @NonNull MessageDispatcher md,
+            @NonNull MessageSenderHub msh
+    ) throws Exception {
+        var tg = new TelegramReceiver(
                 props.getTelegram().getBotToken(),
                 props.getTelegram().getBotUsername()
         );

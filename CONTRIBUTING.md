@@ -388,8 +388,7 @@ Good:
 public enum Platform {
 
     TELEGRAM,
-    DISCORD,
-    ONEBOT
+    DISCORD
 
 }
 ```
@@ -400,8 +399,7 @@ Good Kotlin:
 enum class Platform {
 
     TELEGRAM,
-    DISCORD,
-    ONEBOT
+    DISCORD
 
 }
 ```
@@ -411,8 +409,7 @@ Avoid:
 ```java
 public enum Platform {
     TELEGRAM,
-    DISCORD,
-    ONEBOT
+    DISCORD
 }
 ```
 

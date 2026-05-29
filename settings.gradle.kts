@@ -28,7 +28,6 @@ include(":core:command")
 include(":platform:api")
 include(":platform:telegram")
 include(":platform:discord")
-include(":platform:onebot")
 
 include(":infrastructure:spring")
 include(":infrastructure:http")

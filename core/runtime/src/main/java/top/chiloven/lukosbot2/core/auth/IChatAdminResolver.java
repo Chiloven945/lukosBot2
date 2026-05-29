@@ -29,7 +29,7 @@ public interface IChatAdminResolver {
      * Determines whether the actor represented by {@code src} is an administrator of the current chat context.
      *
      * <p>Examples include a Telegram group administrator, a Discord member with the relevant guild/channel
-     * management permissions, or a OneBot group owner/admin.</p>
+     * management permissions.</p>
      *
      * @param src unified command/service source.
      *

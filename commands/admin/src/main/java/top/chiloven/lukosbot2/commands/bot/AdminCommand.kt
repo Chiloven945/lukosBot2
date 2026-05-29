@@ -46,7 +46,7 @@ class AdminCommand(
             argv {
                 positional("platform", ArgType.StringType) {
                     required = true
-                    description = "平台：telegram / discord / onebot"
+                    description = "平台：telegram / discord"
                 }
                 positional("userId", ArgType.LongType) {
                     required = true

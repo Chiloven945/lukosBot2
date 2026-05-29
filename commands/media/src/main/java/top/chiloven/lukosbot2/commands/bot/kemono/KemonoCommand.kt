@@ -399,7 +399,6 @@ class KemonoCommand(
             is UrlRef -> sha256OfRemote(ref.url())
             is PlatformFileRef -> when (ref.platform().lowercase(Locale.ROOT)) {
                 "telegram" -> sha256OfRemote(resolveTelegramFileUrl(ref.fileId()))
-                "onebot" -> sha256OfOneBotFile(ref.fileId())
                 else -> throw IllegalArgumentException("当前平台的上传文件暂不支持自动读取，请直接提供 SHA-256。")
             }
         }
@@ -408,14 +407,6 @@ class KemonoCommand(
             throw IllegalArgumentException("无法读取上传文件内容，请直接提供 SHA-256。")
         }
         return sha256
-    }
-
-    private fun sha256OfOneBotFile(fileId: String): String {
-        val candidate: Path? = runCatching { Path.of(fileId) }.getOrNull()
-        if (candidate != null && Files.exists(candidate) && Files.isRegularFile(candidate)) {
-            return ShaUtils.hashSha256ToHex(candidate.toString())
-        }
-        throw IllegalArgumentException("当前 OneBot 附件无法直接读取，请直接提供 SHA-256。")
     }
 
     private fun resolveTelegramFileUrl(fileId: String): String {

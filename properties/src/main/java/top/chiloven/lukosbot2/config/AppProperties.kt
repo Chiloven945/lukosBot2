@@ -18,7 +18,6 @@ data class AppProperties(
     var language: String = "zh-cn",
 
     var telegram: Telegram = Telegram(),
-    var onebot: OneBot = OneBot(),
     var discord: Discord = Discord(),
     var cli: Cli = Cli(),
     var image: Image = Image(),
@@ -41,23 +40,6 @@ data class AppProperties(
          * The bot username, can be empty to let the library fetch it, default is empty.
          */
         var botUsername: String = "",
-    )
-
-    data class OneBot(
-        /**
-         * Whether to enable the OneBot platform, default is false.
-         */
-        var enabled: Boolean = false,
-
-        /**
-         * The WebSocket URL of the OneBot server.
-         */
-        var wsUrl: String = "ws://127.0.0.1:6700",
-
-        /**
-         * The access token for authentication, default is empty.
-         */
-        var accessToken: String? = null,
     )
 
     data class Discord(
