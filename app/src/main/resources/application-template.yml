@@ -47,11 +47,6 @@ lukos:
     bot-token: "${TELEGRAM_BOT_TOKEN:}"
     bot-username: ""
 
-  onebot:
-    enabled: false
-    ws-url: "ws://127.0.0.1:6700"
-    access-token: "${ONEBOT_ACCESS_TOKEN:}"
-
   discord:
     enabled: false
     token: "${DISCORD_TOKEN:}"
@@ -60,7 +55,6 @@ lukos:
     bootstrap-bot-admins:
       telegram: [ ]
       discord: [ ]
-      onebot: [ ]
 
   policy:
     rules:
@@ -81,12 +75,6 @@ lukos:
         disable-commands: [ kemono ]
         allow-values:
           "[e621.rating]": [ s, q ]
-      # OneBot: disable commands on the entire platform
-      - id: onebot-disable-sensitive-commands
-        when:
-          platform: onebot
-        disable-commands: [ e621, kemono, wiki ]
-
   commands:
     control:
       weather: false
@@ -109,9 +97,3 @@ lukos:
 
     twenty-four:
       time-limit: 300000
-
-shiro:
-  ws:
-    client:
-      enable: false
-      url: "${lukos.onebot.ws-url}"

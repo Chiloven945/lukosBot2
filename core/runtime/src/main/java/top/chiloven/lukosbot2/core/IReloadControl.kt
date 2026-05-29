@@ -11,7 +11,7 @@ package top.chiloven.lukosbot2.core
  * ## Why does this interface exist?
  * Before modularization, `ReloadCliCommand` directly depended on `ReloadManager` in the `core`
  * package, which in turn depended on concrete lifecycle classes (`TelegramLifecycle`,
- * `DiscordLifecycle`, `OneBotLifecycle`, `ConfigLifecycle`) and `Main.restart()` — creating
+ * `DiscordLifecycle`, `ConfigLifecycle`) and `Main.restart()` — creating
  * a reverse dependency from `core` → `app`.
  *
  * By extracting `IReloadControl` into `:core:runtime`, CLI commands stay decoupled from the
@@ -28,7 +28,6 @@ package top.chiloven.lukosbot2.core
  * - `"config"`, `"conf"`, `"cf"` — reload the bot configuration layer.
  * - `"telegram"`, `"tg"` — restart the Telegram long-polling bot session.
  * - `"discord"`, `"dc"` — restart the Discord gateway connection.
- * - `"onebot"`, `"ob"`, `"qq"` — restart the OneBot WebSocket connection.
  * - `"bot"`, `"all"` — full process restart via [IApplicationControl.restart].
  *
  * Any unrecognized module name results in an [IllegalArgumentException].
@@ -52,7 +51,7 @@ interface IReloadControl {
     /**
      * Reloads one or more named modules without restarting the entire process.
      *
-     * Modules that map to individual platform adapters (`"telegram"`, `"discord"`, `"onebot"`)
+     * Modules that map to individual platform adapters (`"telegram"`, `"discord"`)
      * are hot-reloaded by stopping and restarting their lifecycle beans via [org.springframework.context.SmartLifecycle].
      * The corresponding platform sender is unregistered from [MessageSenderHub] before the
      * lifecycle restart, ensuring no stale outbound routes remain.

@@ -7,7 +7,7 @@ import top.chiloven.lukosbot2.core.command.CommandRuntime
 /**
  * Bot-specific wrapper around [CommandRuntime] that catches dispatch
  * errors and formats them with Chinese-language messages suitable for
- * chat-based platforms (Telegram, Discord, OneBot).
+ * chat-based platforms (Telegram, Discord).
  *
  * ## Error format
  *

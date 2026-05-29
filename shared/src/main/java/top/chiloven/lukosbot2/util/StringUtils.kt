@@ -1,5 +1,12 @@
 package top.chiloven.lukosbot2.util
 
+import top.chiloven.lukosbot2.util.StringUtils.CMD_TO_ANSI_MAP
+import top.chiloven.lukosbot2.util.StringUtils.fmtTimeSec
+import top.chiloven.lukosbot2.util.StringUtils.formatNum
+import top.chiloven.lukosbot2.util.StringUtils.formatStackTrace
+import top.chiloven.lukosbot2.util.StringUtils.normalizeLf
+import top.chiloven.lukosbot2.util.StringUtils.replaceWithMap
+import top.chiloven.lukosbot2.util.StringUtils.truncateText
 import java.net.URLEncoder
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
@@ -491,5 +498,30 @@ object StringUtils {
     fun indexOfWhitespace(s: String): Int {
         return s.indexOfFirst { it.isWhitespace() }
     }
+
+    /**
+     * Normalizes line breaks in the text by converting Windows CRLF sequences into Unix LF newlines,
+     * and trims leading and trailing whitespace from the final result.
+     *
+     * *Note: This operation affects the entire string, altering internal line endings to `\n`*
+     * *while stripping out accidental surrounding spaces or empty lines at the boundaries.*
+     *
+     * @param s The input string containing text to normalize.
+     * @return The cleaned string using consistent line feed (`\n`) line endings without surrounding whitespace.
+     */
+    @JvmStatic
+    fun normalizeLf(s: String): String {
+        return s.replace("\r\n", "\n").trim()
+    }
+
+    /**
+     * Extension variant of [normalizeLf] supporting fluent chaining layouts on [String] instances.
+     *
+     * Converts internal carriage return line feeds (`\r\n`) to standard line feeds (`\n`) and trims boundaries.
+     *
+     * @return A normalized and trimmed string layout.
+     * @see normalizeLf
+     */
+    fun String.crlfToLf(): String = normalizeLf(this)
 
 }

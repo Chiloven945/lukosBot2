@@ -12,9 +12,8 @@
 </div>
 
 lukosBot2 is a multifunctional and multiplatform chatbot, using
-the [TelegramBots](https://github.com/rubenlagus/TelegramBots) for Telegram platform,
-the [JDA](https://github.com/discord-jda/JDA) for Discord platform, and the [Shiro](https://github.com/MisakaTAT/Shiro)
-for QQ using [OneBot](https://github.com/botuniverse/onebot-11) protocol. The programme is powered
+the [TelegramBots](https://github.com/rubenlagus/TelegramBots) for Telegram platform and
+the [JDA](https://github.com/discord-jda/JDA) for Discord platform. The programme is powered
 by [SpringBoot](https://github.com/spring-projects/spring-boot).
 
 This is an experimental project. I'm using it to practice my skills, and it is not guaranteed to be stable or secure.
@@ -178,7 +177,6 @@ licences are respected:
 | Lombok                            | [projectlombok/lombok](https://github.com/projectlombok/lombok)                       | [MIT](https://github.com/projectlombok/lombok/blob/master/LICENSE)                 |
 | OkHttp                            | [square/okhttp](https://github.com/square/okhttp)                                     | [Apache-2.0](https://github.com/square/okhttp/blob/master/LICENSE.txt)             |
 | Selenium                          | [SeleniumHQ/selenium](https://github.com/SeleniumHQ/selenium)                         | [Apache-2.0](https://github.com/SeleniumHQ/selenium/blob/trunk/LICENSE)            |
-| Shiro (OneBot)                    | [MisakaTAT/Shiro](https://github.com/MisakaTAT/Shiro)                                 | [AGPL-3.0](https://github.com/MisakaTAT/Shiro/blob/main/LICENSE)                   |
 | SLF4J                             | [qos-ch/slf4j](https://github.com/qos-ch/slf4j)                                       | [MIT](https://github.com/qos-ch/slf4j/blob/master/slf4j-api/LICENSE.txt)           |
 | SnakeYAML                         | [snakeyaml/snakeyaml](https://github.com/snakeyaml/snakeyaml)                         | [Apache-2.0](https://github.com/snakeyaml/snakeyaml/blob/master/LICENSE.txt)       |
 | Spring Boot                       | [spring-projects/spring-boot](https://github.com/spring-projects/spring-boot)         | [Apache-2.0](https://github.com/spring-projects/spring-boot/blob/main/LICENSE.txt) |

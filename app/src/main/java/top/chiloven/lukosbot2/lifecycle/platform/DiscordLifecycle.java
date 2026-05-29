@@ -2,9 +2,8 @@ package top.chiloven.lukosbot2.lifecycle.platform;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
 import top.chiloven.lukosbot2.config.AppProperties;
 import top.chiloven.lukosbot2.config.ProxyConfigProp;
@@ -19,7 +18,7 @@ import java.util.List;
 @ConditionalOnProperty(prefix = "lukos.discord", name = "enabled", havingValue = "true")
 @RequiredArgsConstructor
 @Log4j2
-public class DiscordLifecycle implements SmartLifecycle, IPlatformAdapter {
+public class DiscordLifecycle implements IPlatformAdapter {
 
     private final MessageDispatcher md;
     private final MessageSenderHub msh;
@@ -42,8 +41,11 @@ public class DiscordLifecycle implements SmartLifecycle, IPlatformAdapter {
     }
 
     @Override
-    public List<AutoCloseable> start(MessageDispatcher md, MessageSenderHub msh) throws Exception {
-        DiscordReceiver dc = new DiscordReceiver(props.getDiscord().getToken(), proxyConfigProp);
+    public List<AutoCloseable> start(
+            @NonNull MessageDispatcher md,
+            @NonNull MessageSenderHub msh
+    ) throws Exception {
+        var dc = new DiscordReceiver(props.getDiscord().getToken(), proxyConfigProp);
         dc.bind(md::receive);
         dc.start();
         msh.register(ChatPlatform.DISCORD, dc.sender());
@@ -72,7 +74,7 @@ public class DiscordLifecycle implements SmartLifecycle, IPlatformAdapter {
     }
 
     @Override
-    public void stop(@NotNull Runnable callback) {
+    public void stop(@NonNull Runnable callback) {
         try {
             stop();
         } finally {

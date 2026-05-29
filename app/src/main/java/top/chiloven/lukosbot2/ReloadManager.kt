@@ -10,7 +10,6 @@ import top.chiloven.lukosbot2.core.IReloadControl
 import top.chiloven.lukosbot2.core.MessageSenderHub
 import top.chiloven.lukosbot2.lifecycle.ConfigLifecycle
 import top.chiloven.lukosbot2.lifecycle.platform.DiscordLifecycle
-import top.chiloven.lukosbot2.lifecycle.platform.OneBotLifecycle
 import top.chiloven.lukosbot2.lifecycle.platform.TelegramLifecycle
 import top.chiloven.lukosbot2.platform.ChatPlatform
 import top.chiloven.lukosbot2.util.StringUtils
@@ -25,14 +24,13 @@ class ReloadManager(
     private val senderHub: MessageSenderHub,
     private val telegramProvider: ObjectProvider<TelegramLifecycle>,
     private val discordProvider: ObjectProvider<DiscordLifecycle>,
-    private val onebotProvider: ObjectProvider<OneBotLifecycle>,
 ) : IReloadControl {
 
     private val log: Logger = LogManager.getLogger(ReloadManager::class.java)
     private val reloadLock = ReentrantLock()
 
     fun supportedModules(): Set<String> =
-        linkedSetOf("config", "telegram", "discord", "onebot", "bot", "all")
+        linkedSetOf("config", "telegram", "discord", "bot", "all")
 
     override fun reloadWholeBot() {
         reloadLock.withLock {
@@ -80,15 +78,6 @@ class ReloadManager(
                         lifecycle = discordProvider.getIfAvailable()
                     )
                     done += "discord"
-                }
-
-                "onebot", "ob", "qq" -> {
-                    reloadLifecycle(
-                        name = "onebot",
-                        platform = ChatPlatform.ONEBOT,
-                        lifecycle = onebotProvider.getIfAvailable()
-                    )
-                    done += "onebot"
                 }
 
                 else -> {

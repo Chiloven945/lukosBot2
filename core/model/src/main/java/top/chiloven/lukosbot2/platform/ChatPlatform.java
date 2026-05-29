@@ -8,7 +8,6 @@ import java.util.Arrays;
 public enum ChatPlatform {
 
     TELEGRAM,
-    ONEBOT,
     DISCORD;
 
     public static ChatPlatform fromString(String platform) throws IllegalArgumentException {

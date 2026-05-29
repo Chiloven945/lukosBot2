@@ -6,7 +6,7 @@ import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage;
  * Platform-specific sender for outbound rich messages.
  *
  * <p>Implementations are responsible for translating {@link OutboundMessage} into
- * native platform API calls (Telegram, Discord, OneBot, ...), including handling of mixed content (text + image/file)
+ * native platform API calls (Telegram, Discord, ...), including handling of mixed content (text + image/file)
  * and any platform limits.</p>
  */
 public interface ISender {

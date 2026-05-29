@@ -1,6 +1,7 @@
 package top.chiloven.lukosbot2.lifecycle.platform;
 
 import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
@@ -17,14 +18,16 @@ public class PlatformGuard implements SmartLifecycle {
     private final List<IPlatformAdapter> adapters;
     private volatile boolean running = false;
 
-    public PlatformGuard(ObjectProvider<List<IPlatformAdapter>> provider) {
+    public PlatformGuard(
+            @NonNull ObjectProvider<List<IPlatformAdapter>> provider
+    ) {
         this.adapters = provider.getIfAvailable(List::of);
     }
 
     @Override
     public void start() throws IllegalStateException {
         if (adapters.isEmpty()) {
-            throw new IllegalStateException("No platform enabled (set lukos.telegram/onebot/discord.enabled in application.yml)");
+            throw new IllegalStateException("No platform enabled (set lukos.telegram/discord.enabled in application.yml)");
         }
         running = true;
     }
