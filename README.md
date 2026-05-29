@@ -153,8 +153,7 @@ architectures and procedure designs that might be helpful for the development.
 
 ## License
 
-This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0). See the [LICENSE](LICENSE) file
-for details.
+This project is licensed under the Apache License Version 2.0 (Apache-2.0). See the [LICENSE](LICENSE) file for details.
 
 This project uses the following third-party libraries. All direct dependencies are listed alphabetically, and their
 licences are respected:
