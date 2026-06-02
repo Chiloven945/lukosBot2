@@ -67,12 +67,15 @@ class GitHubApi(token: String?) {
 
     @Throws(IOException::class)
     private fun get(path: String, query: Map<String, String>): ObjectNode {
-        val url = BASE + path + HttpJson.buildQuery(query)
         val headers = linkedMapOf("Accept" to "application/vnd.github.v3+json").apply {
             token?.let { put("Authorization", "Bearer $it") }
         }
 
-        return HttpJson.getObject(url, headers)
+        return HttpJson.getObject(
+            uri = BASE + path,
+            params = query,
+            headers = headers
+        )
     }
 
     private fun MutableMap<String, String>.putIfNotBlank(key: String, value: String?) {
