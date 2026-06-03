@@ -29,18 +29,21 @@ import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientImpl;
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
 import com.github.dockerjava.transport.DockerHttpClient;
+import okhttp3.FormBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
 import tools.jackson.databind.node.ObjectNode;
 import top.chiloven.lukosbot2.config.CommandConfigProp.Translate;
-import top.chiloven.lukosbot2.util.StringUtils;
+import top.chiloven.lukosbot2.util.HttpStatusException;
+import top.chiloven.lukosbot2.util.HttpText;
+import top.chiloven.lukosbot2.util.OkHttpUtils;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 import static top.chiloven.lukosbot2.util.JsonUtils.MAPPER;
 
@@ -54,7 +57,7 @@ public class TranslationService {
     private final String baseUrl;
     private final String defaultLang;
 
-    private final HttpClient httpClient;
+    private final OkHttpClient httpClient;
     private final DockerClient dockerClient;
 
     public TranslationService(Translate translate) {
@@ -71,8 +74,10 @@ public class TranslationService {
             ensureLibreTranslateContainer();
         }
 
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(5))
+        this.httpClient = OkHttpUtils.newBuilder()
+                .connectTimeout(5, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+                .callTimeout(30, TimeUnit.SECONDS)
                 .build();
     }
 
@@ -155,27 +160,25 @@ public class TranslationService {
         String tgt = (to == null || to.isBlank()) ? defaultLang : to;
 
         try {
-            String body = "q=" + StringUtils.encodeTo(text)
-                    + "&source=" + StringUtils.encodeTo(src)
-                    + "&target=" + StringUtils.encodeTo(tgt)
-                    + "&format=text";
-
-            HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create(baseUrl + "/translate"))
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .timeout(Duration.ofSeconds(30))
-                    .POST(HttpRequest.BodyPublishers.ofString(body))
+            FormBody body = new FormBody.Builder()
+                    .add("q", text)
+                    .add("source", src)
+                    .add("target", tgt)
+                    .add("format", "text")
                     .build();
 
-            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            Request req = new Request.Builder()
+                    .url(baseUrl + "/translate")
+                    .header("Accept", "application/json")
+                    .post(body)
+                    .build();
 
-            if (resp.statusCode() != 200) {
-                return "翻译失败（HTTP " + resp.statusCode() + "）：" + resp.body();
-            }
-
-            return extractTranslatedText(resp.body());
-        } catch (IOException | InterruptedException e) {
-            Thread.currentThread().interrupt();
+            String responseBody = HttpText.sendStringResponse(httpClient, req, 30_000).getBody();
+            return extractTranslatedText(responseBody);
+        } catch (HttpStatusException e) {
+            return "翻译失败（HTTP " + e.getStatusCode() + "）："
+                    + Objects.toString(e.getResponseBodySnippet(), "");
+        } catch (IOException e) {
             return "翻译失败：" + e.getMessage();
         }
     }

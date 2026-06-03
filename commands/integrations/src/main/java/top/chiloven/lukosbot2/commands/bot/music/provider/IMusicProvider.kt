@@ -19,7 +19,6 @@ package top.chiloven.lukosbot2.commands.bot.music.provider
 
 import top.chiloven.lukosbot2.commands.bot.music.MusicPlatform
 import top.chiloven.lukosbot2.commands.bot.music.TrackInfo
-import java.net.http.HttpClient
 
 interface IMusicProvider {
 
@@ -53,14 +52,5 @@ interface IMusicProvider {
      */
     @Throws(Exception::class)
     fun resolveLink(link: String): TrackInfo?
-
-    companion object {
-
-        /**
-         * HTTP client instance
-         */
-        @JvmField
-        val HTTP: HttpClient = HttpClient.newHttpClient()
-    }
 
 }

@@ -18,11 +18,11 @@
 package top.chiloven.lukosbot2.util.feature
 
 import com.vladsch.flexmark.html2md.converter.FlexmarkHtmlConverter
-import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.config.ProxyConfigProp
 import top.chiloven.lukosbot2.core.model.ContentData
+import top.chiloven.lukosbot2.util.JsoupHttp
 import top.chiloven.lukosbot2.util.PathUtils.sanitizeFileName
 import top.chiloven.lukosbot2.util.spring.SpringBeans
 import java.net.Proxy
@@ -46,16 +46,13 @@ object WebToMarkdown {
     ): ContentData {
         val proxy = SpringBeans.getBean(ProxyConfigProp::class.java)
 
-        val conn = Jsoup.connect(url)
-            .userAgent(USER_AGENT)
-            .timeout(TIMEOUT_MS)
-
         val javaProxy: Proxy = proxy.toJavaProxy()
-        if (proxy.enabled && javaProxy != Proxy.NO_PROXY) {
-            conn.proxy(javaProxy)
-        }
-
-        val doc = conn.get()
+        val doc = JsoupHttp.getDocument(
+            url = url,
+            userAgent = USER_AGENT,
+            timeoutMs = TIMEOUT_MS,
+            proxy = javaProxy.takeIf { proxy.enabled && it != Proxy.NO_PROXY },
+        )
 
         val title = resolveTitle(docTitleFallback = defaultTitleBase, doc = doc, titleSelector = titleSelector)
         val filename = "${sanitizeFileName(title, fallback = defaultTitleBase ?: "page")}.md"

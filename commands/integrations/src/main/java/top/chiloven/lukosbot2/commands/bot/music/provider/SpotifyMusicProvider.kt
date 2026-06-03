@@ -17,9 +17,13 @@
  */
 package top.chiloven.lukosbot2.commands.bot.music.provider
 
+import okhttp3.FormBody
+import okhttp3.Request
 import tools.jackson.databind.node.ObjectNode
 import top.chiloven.lukosbot2.commands.bot.music.MusicPlatform
 import top.chiloven.lukosbot2.commands.bot.music.TrackInfo
+import top.chiloven.lukosbot2.util.HttpJson
+import top.chiloven.lukosbot2.util.HttpText
 import top.chiloven.lukosbot2.util.JsonUtils.MAPPER
 import top.chiloven.lukosbot2.util.JsonUtils.arr
 import top.chiloven.lukosbot2.util.JsonUtils.int
@@ -27,11 +31,7 @@ import top.chiloven.lukosbot2.util.JsonUtils.long
 import top.chiloven.lukosbot2.util.JsonUtils.obj
 import top.chiloven.lukosbot2.util.JsonUtils.str
 import java.net.URI
-import java.net.URLEncoder
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
-import java.time.Duration
 import java.util.*
 
 class SpotifyMusicProvider(
@@ -44,11 +44,11 @@ class SpotifyMusicProvider(
         private const val TOKEN_URL = "https://accounts.spotify.com/api/token"
         private const val API_BASE = "https://api.spotify.com/v1"
         private val TRACK_ID_RE = Regex("""/track/([^?#\s/]+)""")
+
     }
 
     @Volatile
     private var accessToken: String? = null
-
     @Volatile
     private var tokenExpireAtMs: Long = 0L
 
@@ -57,21 +57,16 @@ class SpotifyMusicProvider(
     @Throws(Exception::class)
     override fun searchTrack(query: String): TrackInfo? {
         val token = ensureToken()
-        val encoded = URLEncoder.encode(query, StandardCharsets.UTF_8)
-        val url = "$API_BASE/search?q=$encoded&type=track&limit=1"
+        val root = HttpJson.getObjectResponse(
+            uri = URI("$API_BASE/search"),
+            params = mapOf(
+                "q" to query,
+                "type" to "track",
+                "limit" to "1",
+            ),
+            headers = bearerHeaders(token),
+        ).body
 
-        val req = HttpRequest.newBuilder()
-            .uri(URI.create(url))
-            .header("Authorization", "Bearer $token")
-            .GET()
-            .build()
-
-        val resp = IMusicProvider.HTTP.send(req, HttpResponse.BodyHandlers.ofString())
-        if (resp.statusCode() != 200) {
-            throw RuntimeException("Spotify search error: ${resp.body()}")
-        }
-
-        val root = MAPPER.readTree(resp.body()).asObject()
         val tracks = root.obj("tracks") ?: return null
         val items = tracks.arr("items") ?: return null
         if (items.size() == 0) return null
@@ -82,22 +77,12 @@ class SpotifyMusicProvider(
     @Throws(Exception::class)
     override fun resolveLink(link: String): TrackInfo? {
         val id = extractTrackIdFromLink(link)?.takeIf { it.isNotBlank() } ?: return null
-
         val token = ensureToken()
-        val url = "$API_BASE/tracks/$id"
 
-        val req = HttpRequest.newBuilder()
-            .uri(URI.create(url))
-            .header("Authorization", "Bearer $token")
-            .GET()
-            .build()
-
-        val resp = IMusicProvider.HTTP.send(req, HttpResponse.BodyHandlers.ofString())
-        if (resp.statusCode() != 200) {
-            throw RuntimeException("Spotify track error: ${resp.body()}")
-        }
-
-        val root = MAPPER.readTree(resp.body()).asObject()
+        val root = HttpJson.getObjectResponse(
+            uri = URI("$API_BASE/tracks/$id"),
+            headers = bearerHeaders(token),
+        ).body
         return toTrackInfo(root)
     }
 
@@ -114,20 +99,19 @@ class SpotifyMusicProvider(
             "$clientId:$clientSecret".toByteArray(StandardCharsets.UTF_8)
         )
 
-        val req = HttpRequest.newBuilder()
-            .uri(URI.create(TOKEN_URL))
-            .timeout(Duration.ofSeconds(10))
+        val req = Request.Builder()
+            .url(TOKEN_URL)
             .header("Authorization", "Basic $basic")
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .POST(HttpRequest.BodyPublishers.ofString("grant_type=client_credentials"))
+            .header("Accept", "application/json")
+            .post(
+                FormBody.Builder()
+                    .add("grant_type", "client_credentials")
+                    .build()
+            )
             .build()
 
-        val resp = IMusicProvider.HTTP.send(req, HttpResponse.BodyHandlers.ofString())
-        if (resp.statusCode() != 200) {
-            throw RuntimeException("Spotify token error: ${resp.body()}")
-        }
-
-        val root = MAPPER.readTree(resp.body()).asObject()
+        val body = HttpText.sendStringResponse(req, timeoutMs = 10_000).body
+        val root = MAPPER.readTree(body).asObject()
         val token = root.str("access_token").orEmpty()
         val expiresIn = root.int("expires_in") ?: 0
 
@@ -135,6 +119,12 @@ class SpotifyMusicProvider(
         tokenExpireAtMs = now + expiresIn * 1000L
         return token
     }
+
+    private fun bearerHeaders(token: String): Map<String, String> = mapOf(
+        "Accept" to "application/json",
+        "Accept-Encoding" to "identity",
+        "Authorization" to "Bearer $token",
+    )
 
     private fun toTrackInfo(t: ObjectNode): TrackInfo {
         val id = t.str("id").orEmpty()
