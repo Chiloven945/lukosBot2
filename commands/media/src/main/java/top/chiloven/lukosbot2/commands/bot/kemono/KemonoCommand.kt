@@ -481,7 +481,7 @@ class KemonoCommand(
 
     private fun createArchiveAndSend(
         archiveNameHint: String,
-        items: List<DownloadUtils.NamedUrl>,
+        items: List<DownloadClient.NamedUrl>,
         src: CommandSource,
     ): String = withTempDirectory("kemono-archive-") { workBase ->
         val downloadDir = Files.createDirectories(workBase.resolve("payload"))
@@ -505,18 +505,18 @@ class KemonoCommand(
         }
     }
 
-    private fun ResolvedPost.toArchiveItems(): List<DownloadUtils.NamedUrl> =
+    private fun ResolvedPost.toArchiveItems(): List<DownloadClient.NamedUrl> =
         post.attachments.map { item ->
-            DownloadUtils.NamedUrl(
+            DownloadClient.NamedUrl(
                 buildArchiveEntryName(service.id, creatorId, postId, item.name),
                 URI.create(item.resolvedUrl)
             )
         }
 
-    private fun Creator.toArchiveItems(): List<DownloadUtils.NamedUrl> =
+    private fun Creator.toArchiveItems(): List<DownloadClient.NamedUrl> =
         posts.flatMap { post ->
             post.attachments.map { item ->
-                DownloadUtils.NamedUrl(
+                DownloadClient.NamedUrl(
                     buildArchiveEntryName(service.id, id, post.id, item.name),
                     URI.create(item.resolvedUrl)
                 )
@@ -524,9 +524,9 @@ class KemonoCommand(
         }
 
     private fun downloadArchiveItems(
-        items: List<DownloadUtils.NamedUrl>,
+        items: List<DownloadClient.NamedUrl>,
         downloadDir: Path,
-    ): DownloadUtils.BatchResult = DownloadUtils.downloadNamedUrlsToDirConcurrent(
+    ): DownloadClient.BatchResult = DownloadClient.downloadNamedUrlsToDirConcurrent(
         items,
         downloadDir,
         ARCHIVE_HEADERS,

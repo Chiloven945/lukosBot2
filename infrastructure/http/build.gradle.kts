@@ -32,6 +32,10 @@ dependencies {
 
     implementation(libs.kotlinx.coroutines.core)
 
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.kotlin.test.junit)
+    testRuntimeOnly(libs.junit.platform.launcher)
+
     compileOnly(libs.lombok)
     annotationProcessor(platform(libs.spring.boot.dependencies.bom))
     annotationProcessor(libs.lombok)
