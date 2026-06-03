@@ -15,12 +15,14 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package top.chiloven.lukosbot2.util.download
+package top.chiloven.lukosbot2.util
 
-import java.io.IOException
-
-internal class HttpStatusException(
+/**
+ * Successful HTTP response wrapper that keeps the parsed body together with transport metadata.
+ */
+data class HttpCallResult<T>(
+    val body: T,
     val statusCode: Int,
-    val retryAfterMs: Long?,
-    message: String,
-) : IOException(message)
+    val url: String,
+    val headers: Map<String, List<String>>,
+)
