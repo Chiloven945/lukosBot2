@@ -20,7 +20,6 @@ package top.chiloven.lukosbot2.util
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
 import org.junit.jupiter.api.Test
-import top.chiloven.lukosbot2.util.download.RetryPolicy
 import java.net.InetSocketAddress
 import java.net.URI
 import java.nio.charset.StandardCharsets
@@ -77,10 +76,10 @@ class DownloadClientTest {
     }
 
     @Test
-    fun `retry after parser supports seconds and RFC date`() {
-        val seconds = RetryPolicy.parseRetryAfterMs("1")
+    fun `HTTP status exception supports seconds and RFC date Retry-After`() {
+        val seconds = HttpStatusException.fromStatus(429, retryAfterHeader = "1").retryAfterMs
         val date = ZonedDateTime.now().plusSeconds(2).format(DateTimeFormatter.RFC_1123_DATE_TIME)
-        val dateDelay = RetryPolicy.parseRetryAfterMs(date)
+        val dateDelay = HttpStatusException.fromStatus(429, retryAfterHeader = date).retryAfterMs
 
         assertEquals(1_000L, seconds)
         assertNotNull(dateDelay)
