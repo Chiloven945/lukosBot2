@@ -19,6 +19,7 @@ package top.chiloven.lukosbot2.util.download
 
 import okhttp3.Response
 import org.apache.logging.log4j.LogManager
+import top.chiloven.lukosbot2.util.HttpStatusException
 import top.chiloven.lukosbot2.util.PathUtils
 import top.chiloven.lukosbot2.util.concurrent.Coroutines
 import java.io.IOException
@@ -317,11 +318,7 @@ internal class RangeDownloader(
                     http.debugResponseSummary(url, code, response.headers, true, part.start)
 
                     if (code >= 400) {
-                        throw HttpStatusException(
-                            statusCode = code,
-                            retryAfterMs = RetryPolicy.parseRetryAfterMs(response.header("Retry-After")),
-                            message = "HTTP $code"
-                        )
+                        throw HttpStatusException.fromResponse(response)
                     }
                     if (code != 206) {
                         throw IOException("Expected HTTP 206, got HTTP $code")

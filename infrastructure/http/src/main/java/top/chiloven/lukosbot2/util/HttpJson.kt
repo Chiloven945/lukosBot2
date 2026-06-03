@@ -85,7 +85,7 @@ import java.util.zip.InflaterInputStream
  * ## Failure behavior
  *
  * - Transport problems raise [IOException].
- * - HTTP status codes `>= 400` raise [IOException].
+ * - HTTP status codes `>= 400` raise [HttpStatusException].
  * - If the error body is JSON and contains fields such as `message`, `error`, or `detail`, the
  *   extracted text is used as the exception message.
  * - If a method expects an object/array root but the parsed JSON root has another type,
@@ -233,7 +233,7 @@ object HttpJson {
      * - The body is decoded using [decodeByContentEncoding].
      * - Text decoding uses the charset extracted from `Content-Type`, or UTF-8 as fallback.
      * - The final text is parsed with [MAPPER.readTree].
-     * - HTTP status codes `>= 400` throw [IOException], using a best-effort message extracted from
+     * - HTTP status codes `>= 400` throw [HttpStatusException], using a best-effort message extracted from
      *   the JSON body when possible.
      *
      * @param uri base request URI
@@ -246,12 +246,36 @@ object HttpJson {
      */
     @Throws(IOException::class)
     @JvmOverloads
+    @Deprecated(
+        message = "Use getAnyResponse() when callers need HTTP status, headers, or final URL metadata.",
+        replaceWith = ReplaceWith("getAnyResponse(uri, params, headers, readTimeoutMs).body")
+    )
     fun getAny(
         uri: URI,
         params: Map<String, String?>? = null,
         headers: Map<String, String>? = DEFAULT_HEADERS,
         readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
-    ): JsonNode {
+    ): JsonNode = getAnyResponse(uri, params, headers, readTimeoutMs).body
+
+    /**
+     * Execute an HTTP GET request, parse the response as JSON, and keep HTTP response metadata.
+     *
+     * @param uri base request URI
+     * @param params optional query parameters; entries with `null` values are skipped
+     * @param headers optional additional request headers; defaults to [DEFAULT_HEADERS]
+     * @param readTimeoutMs per-call timeout in milliseconds
+     * @return parsed JSON root node plus status code, final URL, and response headers
+     * @throws IOException if the URL is invalid, the request fails, the response is not valid JSON,
+     * or the server returns an HTTP error status
+     */
+    @Throws(IOException::class)
+    @JvmOverloads
+    fun getAnyResponse(
+        uri: URI,
+        params: Map<String, String?>? = null,
+        headers: Map<String, String>? = DEFAULT_HEADERS,
+        readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
+    ): HttpCallResult<JsonNode> {
         val t0 = System.currentTimeMillis()
         log.debug("Passed in a JSON HTTP request. uri={} param={} headers={}", uri, params, headers)
 
@@ -292,21 +316,36 @@ object HttpJson {
                 String(plain, StandardCharsets.UTF_8)
             }
 
-            val root: JsonNode = try {
+            val root: JsonNode? = try {
                 MAPPER.readTree(body)
-            } catch (e: Exception) {
-                if (code >= 400) throw IOException("HTTP $code")
-                throw IOException("Response is not valid JSON", e)
+            } catch (_: Exception) {
+                null
             }
 
-            if (code >= 400) throw IOException(extractErrorMessage(root, code))
+            if (code >= 400) {
+                val extracted = extractErrorMessage(root, code)
+                val snippet = if (extracted == "HTTP $code") body.take(4096).ifBlank { extracted } else extracted
+                throw HttpStatusException.fromResponse(
+                    response = resp,
+                    responseBodySnippet = snippet,
+                )
+            }
+
+            if (root == null) {
+                throw IOException("Response is not valid JSON")
+            }
 
             log.debug(
                 "Result received after {} seconds: {}",
                 (System.currentTimeMillis() - t0) / 1000,
                 MAPPER.writeValueAsString(root).truncate()
             )
-            return root
+            return HttpCallResult(
+                body = root,
+                statusCode = code,
+                url = resp.request.url.toString(),
+                headers = resp.headers.toMultimap(),
+            )
         }
     }
 
@@ -323,12 +362,25 @@ object HttpJson {
      */
     @JvmOverloads
     @Throws(IOException::class)
+    @Deprecated(
+        message = "Use getAnyResponse() when callers need HTTP status, headers, or final URL metadata.",
+        replaceWith = ReplaceWith("getAnyResponse(uri, params, headers, readTimeoutMs).body")
+    )
     fun getAny(
         uri: String,
         params: Map<String, String?>? = null,
         headers: Map<String, String>? = DEFAULT_HEADERS,
         readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
-    ): JsonNode = getAny(URI(uri), params, headers, readTimeoutMs)
+    ): JsonNode = getAnyResponse(URI(uri), params, headers, readTimeoutMs).body
+
+    @JvmOverloads
+    @Throws(IOException::class)
+    fun getAnyResponse(
+        uri: String,
+        params: Map<String, String?>? = null,
+        headers: Map<String, String>? = DEFAULT_HEADERS,
+        readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
+    ): HttpCallResult<JsonNode> = getAnyResponse(URI(uri), params, headers, readTimeoutMs)
 
     /**
      * Execute an HTTP GET request and require the JSON root to be an object.
@@ -345,16 +397,35 @@ object HttpJson {
      * @throws IllegalArgumentException if the JSON root exists but is not an object
      */
     @Throws(IOException::class)
+    @Deprecated(
+        message = "Use getObjectResponse() when callers need HTTP status, headers, or final URL metadata.",
+        replaceWith = ReplaceWith("getObjectResponse(uri, params, headers, readTimeoutMs).body")
+    )
     fun getObject(
         uri: URI,
         params: Map<String, String?>? = null,
         headers: Map<String, String>? = DEFAULT_HEADERS,
         readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
-    ): ObjectNode {
-        val root = getAny(uri, params, headers, readTimeoutMs)
-        return root.asObjectOpt().orElseThrow {
+    ): ObjectNode = getObjectResponse(uri, params, headers, readTimeoutMs).body
+
+    @Throws(IOException::class)
+    fun getObjectResponse(
+        uri: URI,
+        params: Map<String, String?>? = null,
+        headers: Map<String, String>? = DEFAULT_HEADERS,
+        readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
+    ): HttpCallResult<ObjectNode> {
+        val result = getAnyResponse(uri, params, headers, readTimeoutMs)
+        val root = result.body
+        val obj = root.asObjectOpt().orElseThrow {
             IllegalArgumentException("Response JSON is not an object (it is ${typeOf(root)})")
         }
+        return HttpCallResult(
+            body = obj,
+            statusCode = result.statusCode,
+            url = result.url,
+            headers = result.headers,
+        )
     }
 
     /**
@@ -370,12 +441,25 @@ object HttpJson {
      */
     @JvmStatic
     @Throws(IOException::class)
+    @Deprecated(
+        message = "Use getObjectResponse() when callers need HTTP status, headers, or final URL metadata.",
+        replaceWith = ReplaceWith("getObjectResponse(uri, params, headers, readTimeoutMs).body")
+    )
     fun getObject(
         uri: String,
         params: Map<String, String?>? = null,
         headers: Map<String, String>? = DEFAULT_HEADERS,
         readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
-    ): ObjectNode = getObject(URI(uri), params, headers, readTimeoutMs)
+    ): ObjectNode = getObjectResponse(URI(uri), params, headers, readTimeoutMs).body
+
+    @JvmStatic
+    @Throws(IOException::class)
+    fun getObjectResponse(
+        uri: String,
+        params: Map<String, String?>? = null,
+        headers: Map<String, String>? = DEFAULT_HEADERS,
+        readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
+    ): HttpCallResult<ObjectNode> = getObjectResponse(URI(uri), params, headers, readTimeoutMs)
 
     /**
      * Execute an HTTP GET request and require the JSON root to be an array.
@@ -392,16 +476,35 @@ object HttpJson {
      * @throws IllegalArgumentException if the JSON root exists but is not an array
      */
     @Throws(IOException::class)
+    @Deprecated(
+        message = "Use getArrayResponse() when callers need HTTP status, headers, or final URL metadata.",
+        replaceWith = ReplaceWith("getArrayResponse(uri, params, headers, readTimeoutMs).body")
+    )
     fun getArray(
         uri: URI,
         params: Map<String, String?>? = null,
         headers: Map<String, String>? = DEFAULT_HEADERS,
         readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
-    ): ArrayNode {
-        val root = getAny(uri, params, headers, readTimeoutMs)
-        return root.asArrayOpt().orElseThrow {
+    ): ArrayNode = getArrayResponse(uri, params, headers, readTimeoutMs).body
+
+    @Throws(IOException::class)
+    fun getArrayResponse(
+        uri: URI,
+        params: Map<String, String?>? = null,
+        headers: Map<String, String>? = DEFAULT_HEADERS,
+        readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
+    ): HttpCallResult<ArrayNode> {
+        val result = getAnyResponse(uri, params, headers, readTimeoutMs)
+        val root = result.body
+        val arr = root.asArrayOpt().orElseThrow {
             IllegalArgumentException("Response JSON is not an array (it is ${typeOf(root)})")
         }
+        return HttpCallResult(
+            body = arr,
+            statusCode = result.statusCode,
+            url = result.url,
+            headers = result.headers,
+        )
     }
 
     /**
@@ -416,14 +519,24 @@ object HttpJson {
      * @throws IllegalArgumentException if the JSON root exists but is not an array
      */
     @Throws(IOException::class)
+    @Deprecated(
+        message = "Use getArrayResponse() when callers need HTTP status, headers, or final URL metadata.",
+        replaceWith = ReplaceWith("getArrayResponse(uri, params, headers, readTimeoutMs).body")
+    )
     fun getArray(
         uri: String,
         params: Map<String, String?>? = null,
         headers: Map<String, String>? = DEFAULT_HEADERS,
         readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
-    ): ArrayNode {
-        return getArray(URI(uri), params, headers, readTimeoutMs)
-    }
+    ): ArrayNode = getArrayResponse(URI(uri), params, headers, readTimeoutMs).body
+
+    @Throws(IOException::class)
+    fun getArrayResponse(
+        uri: String,
+        params: Map<String, String?>? = null,
+        headers: Map<String, String>? = DEFAULT_HEADERS,
+        readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
+    ): HttpCallResult<ArrayNode> = getArrayResponse(URI(uri), params, headers, readTimeoutMs)
 
     /**
      * Build a URL query string from a key/value map.
