@@ -24,6 +24,7 @@ import tools.jackson.databind.node.ObjectNode
 import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.commands.bot.bilibili.schema.VideoId
 import top.chiloven.lukosbot2.util.HttpJson
+import top.chiloven.lukosbot2.util.HttpStatusException
 import top.chiloven.lukosbot2.util.JsonUtils.int
 import top.chiloven.lukosbot2.util.JsonUtils.long
 import top.chiloven.lukosbot2.util.JsonUtils.obj
@@ -80,7 +81,7 @@ class BilibiliApi {
     }
 
     fun getViewData(id: VideoId): ObjectNode? {
-        val root = HttpJson.getObject(
+        val root = HttpJson.getObjectResponse(
             uri = VIEW_API_URL,
             params = when (id) {
                 is VideoId.Bv -> mapOf("bvid" to id.bvid)
@@ -88,18 +89,18 @@ class BilibiliApi {
             },
             headers = JSON_HEADERS,
             readTimeoutMs = API_CALL_TIMEOUT_MS.toInt(),
-        )
+        ).body
         if (root.int("code") != 0) return null
         return root.obj("data")
     }
 
     fun getFollowerCount(mid: Long): Long? = runCatching {
-        val root = HttpJson.getObject(
+        val root = HttpJson.getObjectResponse(
             uri = RELATION_API_URL,
             params = mapOf("vmid" to mid.toString()),
             headers = JSON_HEADERS,
             readTimeoutMs = RELATION_TIMEOUT_MS.toInt(),
-        )
+        ).body
         if (root.int("code") != 0) return@runCatching null
         root.obj("data")?.long("follower")
     }.getOrNull()
@@ -116,7 +117,12 @@ class BilibiliApi {
     }
 
     private fun resolveLocation(url: String): String? {
-        noRedirectHttp.newCall(htmlRequest(url)).execute().use { response ->
+        val request = htmlRequest(url)
+        noRedirectHttp.newCall(request).execute().use { response ->
+            if (response.code !in 300..399 && !response.isSuccessful) {
+                throw HttpStatusException.fromResponse(response)
+            }
+
             return firstNonBlank(
                 response.header("Location"),
                 response.header("location"),
@@ -127,7 +133,12 @@ class BilibiliApi {
     }
 
     private fun resolveFinalVideoId(url: String): VideoId? {
-        redirectingHttp.newCall(htmlRequest(url)).execute().use { response ->
+        val request = htmlRequest(url)
+        redirectingHttp.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw HttpStatusException.fromResponse(response)
+            }
+
             VideoId.parse(response.request.url.toString())?.let { return it }
             return VideoId.parse(response.body.string())
         }

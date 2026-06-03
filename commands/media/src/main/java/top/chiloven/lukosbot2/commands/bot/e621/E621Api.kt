@@ -66,11 +66,11 @@ object E621Api {
             "search[linked_user_name]" to searchLinkedUserName
         ).mapNotNull { (key, value) -> value?.let { key to it.toString() } }.toMap()
 
-        return HttpJson.getArray(API.resolve("artists.json"), params)
+        return HttpJson.getArrayResponse(API.resolve("artists.json"), params).body
     }
 
     fun getArtistsXIdOrName(idOrName: String): ObjectNode =
-        HttpJson.getObject(API.resolve("artists/$idOrName.json"))
+        HttpJson.getObjectResponse(API.resolve("artists/$idOrName.json")).body
 
     fun getPosts(
         limit: Int? = null,
@@ -87,7 +87,7 @@ object E621Api {
             "random" to random
         ).mapNotNull { (key, value) -> value?.let { key to it.toString() } }.toMap()
 
-        val root = HttpJson.getObject(API.resolve("posts.json"), params)
+        val root = HttpJson.getObjectResponse(API.resolve("posts.json"), params).body
         root.arr("posts")?.let { return it }
         root.obj("post")?.let { postObj ->
             return MAPPER.createArrayNode().add(postObj)
@@ -96,12 +96,12 @@ object E621Api {
     }
 
     fun getPostsXRandom(tags: String? = null): ObjectNode =
-        HttpJson.getObject(
+        HttpJson.getObjectResponse(
             API.resolve("posts/random.json"),
             mapOf("tags" to tags).filterValues { it != null }
-        ).obj("post")!!
+        ).body.obj("post")!!
 
     fun getPostsXId(id: String): ObjectNode =
-        HttpJson.getObject(API.resolve("posts/$id.json")).obj("post")!!
+        HttpJson.getObjectResponse(API.resolve("posts/$id.json")).body.obj("post")!!
 
 }

@@ -19,6 +19,7 @@ package top.chiloven.lukosbot2.commands.bot.e621
 
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.apache.logging.log4j.LogManager
 import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.commands.UsageImageUtils
 import top.chiloven.lukosbot2.commands.bot.e621.schema.Post
@@ -35,6 +36,8 @@ import kotlin.math.ceil
 import kotlin.math.sqrt
 
 object SearchGridRenderer {
+
+    private val log = LogManager.getLogger(SearchGridRenderer::class.java)
 
     private data class BadgeColors(
         val fg: Color,
@@ -67,11 +70,15 @@ object SearchGridRenderer {
 
         return try {
             http.newCall(req).execute().use { resp ->
-                if (!resp.isSuccessful) return null
+                if (!resp.isSuccessful) {
+                    log.debug("Thumbnail load failed: code={}, url={}", resp.code, url)
+                    return null
+                }
                 val body = resp.body
                 ImageIO.read(body.bytes().inputStream())
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            log.debug("Thumbnail load failed: url={}", url, e)
             null
         }
     }

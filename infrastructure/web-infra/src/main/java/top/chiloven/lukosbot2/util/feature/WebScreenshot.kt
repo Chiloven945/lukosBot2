@@ -18,7 +18,6 @@
 package top.chiloven.lukosbot2.util.feature
 
 import org.apache.logging.log4j.LogManager
-import org.jsoup.Jsoup
 import org.openqa.selenium.*
 import org.openqa.selenium.chrome.ChromeDriver
 import org.openqa.selenium.chrome.ChromeOptions
@@ -28,6 +27,7 @@ import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.config.ProxyConfigProp
 import top.chiloven.lukosbot2.core.model.ContentData
 import top.chiloven.lukosbot2.util.ImageUtils
+import top.chiloven.lukosbot2.util.JsoupHttp
 import top.chiloven.lukosbot2.util.PathUtils.sanitizeFileName
 import top.chiloven.lukosbot2.util.spring.SpringBeans
 import java.io.File
@@ -273,10 +273,11 @@ object WebScreenshot {
 
     private fun fetchMediaWikiTitle(url: String, fallback: String): String {
         return try {
-            val doc = Jsoup.connect(url)
-                .userAgent(USER_AGENT)
-                .timeout(10_000)
-                .get()
+            val doc = JsoupHttp.getDocument(
+                url = url,
+                userAgent = USER_AGENT,
+                timeoutMs = 10_000,
+            )
 
             doc.selectFirst("h1#firstHeading")
                 ?.text()

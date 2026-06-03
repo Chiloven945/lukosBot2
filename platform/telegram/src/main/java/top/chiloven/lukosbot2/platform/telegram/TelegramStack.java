@@ -25,8 +25,11 @@ import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import top.chiloven.lukosbot2.util.HttpStatusException;
 
 import java.io.Serializable;
+import java.io.UncheckedIOException;
+import java.util.Collections;
 
 final class TelegramStack implements AutoCloseable {
 
@@ -75,15 +78,68 @@ final class TelegramStack implements AutoCloseable {
         try {
             return client.execute(method);
         } catch (TelegramApiException e) {
-            throw new RuntimeException(e);
+            throw wrapTelegramApiException(e);
         }
+    }
+
+    private static RuntimeException wrapTelegramApiException(TelegramApiException e) {
+        Integer statusCode = reflectInt(e, "getErrorCode", "getStatusCode", "getStatus");
+        if (statusCode == null) {
+            return new RuntimeException(e);
+        }
+
+        String snippet = reflectString(e, "getApiResponse", "getResponse", "getMessage");
+        return new UncheckedIOException(new HttpStatusException(
+                statusCode,
+                "POST",
+                "Telegram Bot API",
+                snippet,
+                null,
+                Collections.emptyMap(),
+                "Telegram Bot API HTTP " + statusCode + (snippet == null || snippet.isBlank() ? "" : ": " + snippet),
+                e
+        ));
+    }
+
+    private static Integer reflectInt(TelegramApiException e, String... methodNames) {
+        for (String name : methodNames) {
+            try {
+                var method = e.getClass().getMethod(name);
+                Object value = method.invoke(e);
+                if (value instanceof Number number) {
+                    return number.intValue();
+                }
+                if (value instanceof String text && !text.isBlank()) {
+                    return Integer.parseInt(text.trim());
+                }
+            } catch (Exception _) {
+                // Try the next known TelegramApiException accessor.
+            }
+        }
+        return null;
+    }
+
+    private static String reflectString(TelegramApiException e, String... methodNames) {
+        for (String name : methodNames) {
+            try {
+                var method = e.getClass().getMethod(name);
+                Object value = method.invoke(e);
+                if (value != null) {
+                    String text = value.toString();
+                    if (!text.isBlank()) return text;
+                }
+            } catch (Exception _) {
+                // Try the next known TelegramApiException accessor.
+            }
+        }
+        return e.getMessage();
     }
 
     Message execute(SendPhoto method) {
         try {
             return client.execute(method);
         } catch (TelegramApiException e) {
-            throw new RuntimeException(e);
+            throw wrapTelegramApiException(e);
         }
     }
 
@@ -91,7 +147,7 @@ final class TelegramStack implements AutoCloseable {
         try {
             return client.execute(method);
         } catch (TelegramApiException e) {
-            throw new RuntimeException(e);
+            throw wrapTelegramApiException(e);
         }
     }
 

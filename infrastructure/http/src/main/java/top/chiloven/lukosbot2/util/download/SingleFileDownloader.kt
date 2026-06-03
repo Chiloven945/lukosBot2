@@ -19,6 +19,7 @@ package top.chiloven.lukosbot2.util.download
 
 import okhttp3.Response
 import org.apache.logging.log4j.LogManager
+import top.chiloven.lukosbot2.util.HttpStatusException
 import top.chiloven.lukosbot2.util.PathUtils
 import java.io.IOException
 import java.net.URI
@@ -126,11 +127,7 @@ internal class SingleFileDownloader(
                             }
 
                             if (code >= 400) {
-                                throw HttpStatusException(
-                                    statusCode = code,
-                                    retryAfterMs = RetryPolicy.parseRetryAfterMs(response.header("Retry-After")),
-                                    message = "HTTP $code"
-                                )
+                                throw HttpStatusException.fromResponse(response)
                             }
 
                             writeResponseBody(

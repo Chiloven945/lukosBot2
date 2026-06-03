@@ -184,6 +184,10 @@ data class ProxyConfigProp(
     /**
      * Apply proxy configuration to JDK [HttpClient].
      */
+    @Deprecated(
+        message = "Prefer OkHttpUtils.newBuilder() for project HTTP calls.",
+        replaceWith = ReplaceWith("OkHttpUtils.newBuilder(this)", "top.chiloven.lukosbot2.util.OkHttpUtils")
+    )
     fun applyTo(b: HttpClient.Builder?): HttpClient.Builder {
         val builder = b ?: HttpClient.newBuilder()
         if (!hasValidEndpoint()) return builder

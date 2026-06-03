@@ -41,15 +41,15 @@ class TelegramFileLoader(
             throw IOException("Telegram 配置不完整，无法读取图片。")
         }
 
-        val root = HttpJson.getObject(
+        val root = HttpJson.getObjectResponse(
             URI("https://api.telegram.org/bot$token/getFile"),
             mapOf("file_id" to ref.fileId())
-        )
+        ).body
         val filePath = root.path("result").path("file_path").asString(null)
             ?.takeIf { it.isNotBlank() }
             ?: throw IOException("Telegram 未返回文件路径。")
 
-        val remote = HttpBytes.get("https://api.telegram.org/file/bot$token/$filePath")
+        val remote = HttpBytes.getResponse("https://api.telegram.org/file/bot$token/$filePath").body
         return LoadedPlatformMedia(
             remote.bytes,
             remote.fileName ?: filePath.substringAfterLast('/').ifBlank { null },

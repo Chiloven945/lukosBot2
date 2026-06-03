@@ -68,7 +68,7 @@ import java.util.concurrent.TimeUnit
  * ## Failure behavior
  *
  * - Transport problems raise [IOException].
- * - HTTP status codes outside the success range raise [IOException].
+ * - HTTP status codes outside the success range raise [HttpStatusException].
  * - Missing filename or MIME information is represented as `null` instead of causing failure.
  *
  * @author Chiloven945
@@ -135,7 +135,25 @@ object HttpBytes {
     @JvmStatic
     @JvmOverloads
     @Throws(IOException::class)
-    fun get(url: String, timeoutMs: Int = DEFAULT_TIMEOUT_MS): BytePayload {
+    @Deprecated(
+        message = "Use getResponse() when callers need HTTP status, headers, or final URL metadata.",
+        replaceWith = ReplaceWith("getResponse(url, timeoutMs).body")
+    )
+    fun get(url: String, timeoutMs: Int = DEFAULT_TIMEOUT_MS): BytePayload =
+        getResponse(url, timeoutMs).body
+
+    /**
+     * Execute an HTTP GET request and return the response body plus HTTP metadata.
+     *
+     * @param url request URL
+     * @param timeoutMs per-call timeout in milliseconds
+     * @return buffered response payload, status code, final URL, and response headers
+     * @throws IOException if the request fails or the server returns a non-success HTTP status
+     */
+    @JvmStatic
+    @JvmOverloads
+    @Throws(IOException::class)
+    fun getResponse(url: String, timeoutMs: Int = DEFAULT_TIMEOUT_MS): HttpCallResult<BytePayload> {
         val callClient = if (timeoutMs == DEFAULT_TIMEOUT_MS) client else client.newBuilder()
             .callTimeout(timeoutMs.toLong(), TimeUnit.MILLISECONDS)
             .build()
@@ -148,16 +166,23 @@ object HttpBytes {
 
         callClient.newCall(req).execute().use { resp ->
             if (!resp.isSuccessful) {
-                throw IOException("HTTP ${resp.code} while fetching binary: $url")
+                throw HttpStatusException.fromResponse(resp)
             }
+
             val mime = resp.header("Content-Type")
                 ?.substringBefore(';')
                 ?.trim()
                 ?.ifBlank { null }
             val fileName = parseFileName(resp.header("Content-Disposition")) ?: PathUtils.inferFileNameFromUrl(url)
             val bytes = resp.body.bytes()
+
             log.debug("Fetched {} bytes from {}", bytes.size, url)
-            return BytePayload(bytes = bytes, mime = mime, fileName = fileName)
+            return HttpCallResult(
+                body = BytePayload(bytes = bytes, mime = mime, fileName = fileName),
+                statusCode = resp.code,
+                url = resp.request.url.toString(),
+                headers = resp.headers.toMultimap(),
+            )
         }
     }
 

@@ -206,11 +206,18 @@ class KemonoCommand(
     }
 
     private fun friendlyError(e: Throwable): String {
-        val msg = e.message?.trim() ?: ""
-        return when {
-            msg.startsWith("HTTP 404") -> "资源未找到，请检查链接、ID、SHA-256 或平台参数是否正确。"
-            msg.isNotEmpty() -> "处理失败：$msg"
-            else -> "处理失败，请稍后再试。"
+        return when (e) {
+            is HttpStatusException -> when (e.statusCode) {
+                404 -> "资源未找到，请检查链接、ID、SHA-256 或平台参数是否正确。"
+                429 -> "远端服务请求过于频繁，请稍后再试。"
+                in 500..599 -> "远端服务暂时不可用，请稍后再试。"
+                else -> "远端请求失败：HTTP ${e.statusCode}"
+            }
+
+            else -> {
+                val msg = e.message?.trim().orEmpty()
+                if (msg.isNotEmpty()) "处理失败：$msg" else "处理失败，请稍后再试。"
+            }
         }
     }
 
@@ -430,11 +437,11 @@ class KemonoCommand(
         val token = appProperties.telegram.botToken.trim()
         require(token.isNotEmpty()) { "当前无法读取 Telegram 上传文件，请直接提供 SHA-256。" }
 
-        val root = HttpJson.getObject(
+        val root = HttpJson.getObjectResponse(
             URI.create("https://api.telegram.org/bot$token/getFile"),
             mapOf("file_id" to fileId),
             null
-        )
+        ).body
         val filePath = root.obj("result")?.str("file_path")
             ?: throw IOException("无法读取 Telegram 上传文件路径")
         return "https://api.telegram.org/file/bot$token/$filePath"
@@ -449,7 +456,7 @@ class KemonoCommand(
 
         okHttp.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
-                throw IOException("下载上传文件失败，HTTP 状态码：${response.code}")
+                throw HttpStatusException.fromResponse(response)
             }
             response.body.byteStream().use { input ->
                 return ShaUtils.hashSha256ToHex(input.readAllBytes())

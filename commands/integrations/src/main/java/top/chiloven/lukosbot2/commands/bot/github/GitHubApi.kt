@@ -71,11 +71,11 @@ class GitHubApi(token: String?) {
             token?.let { put("Authorization", "Bearer $it") }
         }
 
-        return HttpJson.getObject(
+        return HttpJson.getObjectResponse(
             uri = BASE + path,
             params = query,
             headers = headers
-        )
+        ).body
     }
 
     private fun MutableMap<String, String>.putIfNotBlank(key: String, value: String?) {
