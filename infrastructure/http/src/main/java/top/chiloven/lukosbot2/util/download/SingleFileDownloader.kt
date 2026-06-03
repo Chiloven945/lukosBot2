@@ -15,9 +15,11 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package top.chiloven.lukosbot2.util
+package top.chiloven.lukosbot2.util.download
 
+import okhttp3.Response
 import org.apache.logging.log4j.LogManager
+import top.chiloven.lukosbot2.util.PathUtils
 import java.io.IOException
 import java.net.URI
 import java.nio.ByteBuffer
@@ -203,7 +205,7 @@ internal class SingleFileDownloader(
 
     @Throws(IOException::class)
     private fun writeResponseBody(
-        response: okhttp3.Response,
+        response: Response,
         code: Int,
         url: URI,
         targetFile: Path,

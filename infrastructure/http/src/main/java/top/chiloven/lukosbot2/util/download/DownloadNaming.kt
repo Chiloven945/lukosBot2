@@ -15,8 +15,9 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package top.chiloven.lukosbot2.util
+package top.chiloven.lukosbot2.util.download
 
+import top.chiloven.lukosbot2.util.PathUtils
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path

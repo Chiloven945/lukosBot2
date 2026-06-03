@@ -15,7 +15,9 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package top.chiloven.lukosbot2.util
+package top.chiloven.lukosbot2.util.download
+
+import top.chiloven.lukosbot2.util.StringUtils
 
 internal object DownloadFormatting {
 

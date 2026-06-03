@@ -15,9 +15,11 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package top.chiloven.lukosbot2.util
+package top.chiloven.lukosbot2.util.download
 
+import okhttp3.Response
 import org.apache.logging.log4j.LogManager
+import top.chiloven.lukosbot2.util.PathUtils
 import top.chiloven.lukosbot2.util.concurrent.Coroutines
 import java.io.IOException
 import java.io.RandomAccessFile
@@ -396,7 +398,7 @@ internal class RangeDownloader(
 
     @Throws(IOException::class)
     private fun writePartBody(
-        response: okhttp3.Response,
+        response: Response,
         tmpFile: Path,
         start: Long,
     ): Long {

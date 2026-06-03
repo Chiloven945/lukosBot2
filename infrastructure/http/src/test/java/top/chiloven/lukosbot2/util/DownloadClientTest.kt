@@ -20,6 +20,7 @@ package top.chiloven.lukosbot2.util
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
 import org.junit.jupiter.api.Test
+import top.chiloven.lukosbot2.util.download.RetryPolicy
 import java.net.InetSocketAddress
 import java.net.URI
 import java.nio.charset.StandardCharsets
@@ -43,7 +44,7 @@ class DownloadClientTest {
         val dir = Files.createTempDirectory("download-client-test-")
         try {
             val target = dir.resolve("hello.txt")
-            DownloadClient.downloadToFile(server.uri("/file"), target, null, 10_000, maxRetries = 0)
+            DownloadUtils.downloadToFile(server.uri("/file"), target, null, 10_000, maxRetries = 0)
 
             assertEquals("hello", target.readText())
             assertFalse(Files.exists(PathUtils.tempSiblingPath(target)))
@@ -66,7 +67,7 @@ class DownloadClientTest {
         val dir = Files.createTempDirectory("download-client-test-")
         try {
             val target = dir.resolve("flaky.txt")
-            DownloadClient.downloadToFile(server.uri("/flaky"), target, null, 10_000, maxRetries = 1)
+            DownloadUtils.downloadToFile(server.uri("/flaky"), target, null, 10_000, maxRetries = 1)
 
             assertEquals("ok", target.readText())
             assertEquals(2, calls.get())
@@ -114,7 +115,7 @@ class DownloadClientTest {
         val dir = Files.createTempDirectory("download-client-test-")
         try {
             val target = dir.resolve("range.bin")
-            DownloadClient.downloadToFileFast(
+            DownloadUtils.downloadToFileFast(
                 url = server.uri("/range"),
                 targetFile = target,
                 headers = null,
@@ -138,10 +139,10 @@ class DownloadClientTest {
 
         val dir = Files.createTempDirectory("download-client-test-")
         try {
-            val result = DownloadClient.downloadNamedUrlsToDirConcurrent(
+            val result = DownloadUtils.downloadNamedUrlsToDirConcurrent(
                 items = listOf(
-                    DownloadClient.NamedUrl("a/b/file.txt", server.uri("/ok")),
-                    DownloadClient.NamedUrl("a/b/file.txt", server.uri("/ok"))
+                    DownloadUtils.NamedUrl("a/b/file.txt", server.uri("/ok")),
+                    DownloadUtils.NamedUrl("a/b/file.txt", server.uri("/ok"))
                 ),
                 dir = dir,
                 headers = null,
@@ -166,8 +167,8 @@ class DownloadClientTest {
 
         val dir = Files.createTempDirectory("download-client-test-")
         try {
-            val result = DownloadClient.downloadNamedUrlsToDirConcurrent(
-                items = listOf(DownloadClient.NamedUrl("../evil.txt", server.uri("/ok"))),
+            val result = DownloadUtils.downloadNamedUrlsToDirConcurrent(
+                items = listOf(DownloadUtils.NamedUrl("../evil.txt", server.uri("/ok"))),
                 dir = dir,
                 headers = null,
                 timeoutMs = 10_000,

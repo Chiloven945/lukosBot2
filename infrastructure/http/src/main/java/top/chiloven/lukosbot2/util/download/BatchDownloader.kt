@@ -15,9 +15,10 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package top.chiloven.lukosbot2.util
+package top.chiloven.lukosbot2.util.download
 
 import org.apache.logging.log4j.LogManager
+import top.chiloven.lukosbot2.util.DownloadUtils
 import top.chiloven.lukosbot2.util.concurrent.Coroutines
 import java.io.IOException
 import java.nio.file.Files
@@ -34,17 +35,17 @@ internal class BatchDownloader(
 
     @Throws(IOException::class)
     fun download(
-        items: List<DownloadClient.NamedUrl?>?,
+        items: List<DownloadUtils.NamedUrl?>?,
         dir: Path,
         headers: Map<String, String>?,
         timeoutMs: Int,
         namingMode: BatchNamingMode,
         options: BatchDownloadOptions,
-    ): DownloadClient.BatchResult {
+    ): DownloadUtils.BatchResult {
         Files.createDirectories(dir)
 
         val actualItems = items.orEmpty().filterNotNull()
-        if (actualItems.isEmpty()) return DownloadClient.BatchResult(0, emptyList())
+        if (actualItems.isEmpty()) return DownloadUtils.BatchResult(0, emptyList())
 
         val usedNames = if (namingMode == BatchNamingMode.RELATIVE_PATHS) {
             Collections.synchronizedSet(mutableSetOf<String>())
@@ -83,11 +84,11 @@ internal class BatchDownloader(
             .map { it.name }
 
         log.debug("{} Done: ok={}, failed={}", namingMode.logTag, ok, failed.size)
-        return DownloadClient.BatchResult(ok, failed)
+        return DownloadUtils.BatchResult(ok, failed)
     }
 
     private fun downloadItem(
-        item: DownloadClient.NamedUrl,
+        item: DownloadUtils.NamedUrl,
         dir: Path,
         headers: Map<String, String>?,
         timeoutMs: Int,
@@ -152,7 +153,7 @@ internal class BatchDownloader(
 
     @Throws(IOException::class)
     private fun downloadItemToFlatDir(
-        item: DownloadClient.NamedUrl,
+        item: DownloadUtils.NamedUrl,
         dir: Path,
         headers: Map<String, String>?,
         timeoutMs: Int,
@@ -183,7 +184,7 @@ internal class BatchDownloader(
 
     @Throws(IOException::class)
     private fun downloadItemToNamedTarget(
-        item: DownloadClient.NamedUrl,
+        item: DownloadUtils.NamedUrl,
         dir: Path,
         entryName: String,
         headers: Map<String, String>?,
