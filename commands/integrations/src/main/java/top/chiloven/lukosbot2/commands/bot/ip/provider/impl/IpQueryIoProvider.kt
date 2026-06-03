@@ -43,7 +43,7 @@ class IpQueryIoProvider : IIpProvider {
     override fun priority(): Int = 100
 
     override fun query(ip: String): IpData {
-        val obj = HttpJson.getObject("$BASE/$ip")
+        val obj = HttpJson.getObjectResponse("$BASE/$ip").body
 
         val isp = obj.obj("isp")
         val location = obj.obj("location")

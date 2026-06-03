@@ -23,6 +23,7 @@ import org.apache.logging.log4j.LogManager
 import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.config.ProxyConfigProp
+import top.chiloven.lukosbot2.util.HttpStatusException
 import top.chiloven.lukosbot2.util.JsonUtils
 import top.chiloven.lukosbot2.util.OkHttpUtils
 import java.io.IOException
@@ -94,7 +95,10 @@ class MotdQueryService(
             val body = response.body.string().trim()
             if (!response.isSuccessful) {
                 val detail = body.ifBlank { response.message.ifBlank { "HTTP ${response.code}" } }
-                throw IOException("mcsrvstat.us 查询失败（HTTP ${response.code}）：$detail")
+                throw HttpStatusException.fromResponse(
+                    response = response,
+                    responseBodySnippet = detail,
+                )
             }
             if (body.isBlank()) {
                 throw IOException("mcsrvstat.us 没有返回可用内容")

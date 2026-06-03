@@ -18,7 +18,6 @@
 package top.chiloven.lukosbot2.commands.bot.wikis
 
 import org.apache.logging.log4j.LogManager
-import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
@@ -31,6 +30,7 @@ import top.chiloven.lukosbot2.core.model.message.media.BytesRef
 import top.chiloven.lukosbot2.core.model.message.outbound.OutFile
 import top.chiloven.lukosbot2.core.model.message.outbound.OutImage
 import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage
+import top.chiloven.lukosbot2.util.JsoupHttp
 import top.chiloven.lukosbot2.util.feature.WebScreenshot
 import top.chiloven.lukosbot2.util.feature.WebToMarkdown
 import java.time.Duration
@@ -161,10 +161,11 @@ class McWikiCommand : IWikiishCommand {
     )
 
     private fun fetchTitleAndLead(url: String): TitleLead {
-        val doc = Jsoup.connect(url)
-            .userAgent("Mozilla/5.0 (compatible; ${Constants.UA})")
-            .timeout(Duration.ofSeconds(15).toMillis().toInt())
-            .get()
+        val doc = JsoupHttp.getDocument(
+            url = url,
+            userAgent = "Mozilla/5.0 (compatible; ${Constants.UA})",
+            timeoutMs = Duration.ofSeconds(15).toMillis().toInt(),
+        )
 
         val title = doc.selectFirst("h1#firstHeading").textOrEmpty()
         val container =

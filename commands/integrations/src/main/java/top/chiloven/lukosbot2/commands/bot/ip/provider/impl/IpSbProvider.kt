@@ -40,7 +40,7 @@ class IpSbProvider : IIpProvider {
     override fun priority(): Int = 80
 
     override fun query(ip: String): IpData {
-        val obj = HttpJson.getObject("$BASE/geoip/$ip")
+        val obj = HttpJson.getObjectResponse("$BASE/geoip/$ip").body
 
         return IpData(
             ip = obj.str("ip") ?: ip,

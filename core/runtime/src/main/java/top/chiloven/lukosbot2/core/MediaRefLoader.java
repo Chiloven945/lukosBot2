@@ -39,7 +39,7 @@ public class MediaRefLoader {
             return new LoadedPlatformMedia(bytes, name, mime);
         }
         if (ref instanceof UrlRef(String url)) {
-            var remote = HttpBytes.get(url);
+            var remote = HttpBytes.getResponse(url).getBody();
             return new LoadedPlatformMedia(remote.getBytes(), remote.getFileName(), remote.getMime());
         }
         if (ref instanceof PlatformFileRef platformFileRef) {

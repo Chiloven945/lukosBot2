@@ -35,7 +35,7 @@ object MojangApi {
     @JvmStatic
     @Throws(IOException::class)
     fun getUuidFromName(name: String): String? =
-        HttpJson.getObject("https://api.mojang.com/users/profiles/minecraft/$name")
+        HttpJson.getObjectResponse("https://api.mojang.com/users/profiles/minecraft/$name").body
             .get("id")
             .asString()
 
@@ -46,7 +46,7 @@ object MojangApi {
     @JvmStatic
     @Throws(IOException::class)
     fun getNameFromUuid(uuid: String): String? =
-        HttpJson.getObject("https://api.minecraftservices.com/minecraft/profile/lookup/$uuid")
+        HttpJson.getObjectResponse("https://api.minecraftservices.com/minecraft/profile/lookup/$uuid").body
             .get("name")
             .asString()
 
@@ -59,7 +59,7 @@ object MojangApi {
     fun getMcPlayerInfo(data: String): McPlayer {
         val uuid = if (data.length <= 16) getUuidFromName(data) else data
         val info: ObjectNode =
-            HttpJson.getObject("https://sessionserver.mojang.com/session/minecraft/profile/$uuid")
+            HttpJson.getObjectResponse("https://sessionserver.mojang.com/session/minecraft/profile/$uuid").body
         val value: ObjectNode = b64.decodeToJsonObject(getStringByPath(info, "properties[0].value", ""))
 
         return McPlayer(

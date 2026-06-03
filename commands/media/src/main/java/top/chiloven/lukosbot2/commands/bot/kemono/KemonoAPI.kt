@@ -45,63 +45,63 @@ object KemonoAPI {
         service: Service,
         creatorId: String,
         postId: String
-    ): ObjectNode = HttpJson.getObject(
+    ): ObjectNode = HttpJson.getObjectResponse(
         resolve("v1/$service/user/$creatorId/post/$postId"),
         headers = HEADER
-    )
+    ).body
 
     @Throws(IOException::class)
     fun getCreatorProfile(
         service: Service,
         creatorId: String
-    ): ObjectNode = HttpJson.getObject(
+    ): ObjectNode = HttpJson.getObjectResponse(
         resolve("v1/$service/user/$creatorId/profile"),
         headers = HEADER
-    )
+    ).body
 
     @Throws(IOException::class)
     fun getCreatorLinks(
         service: Service,
         creatorId: String
-    ): ArrayNode = HttpJson.getArray(
+    ): ArrayNode = HttpJson.getArrayResponse(
         resolve("v1/$service/user/$creatorId/links"),
         headers = HEADER
-    )
+    ).body
 
     @Throws(IOException::class)
     fun getCreatorPosts(
         service: Service,
         creatorId: String
-    ): ArrayNode = HttpJson.getArray(
+    ): ArrayNode = HttpJson.getArrayResponse(
         resolve("v1/$service/user/$creatorId/posts"),
         headers = HEADER
-    )
+    ).body
 
     @Throws(IOException::class)
-    fun getDiscordChannelPost(channelId: String): ArrayNode = HttpJson.getArray(
+    fun getDiscordChannelPost(channelId: String): ArrayNode = HttpJson.getArrayResponse(
         resolve("v1/discord/channel/$channelId"),
         headers = HEADER
-    )
+    ).body
 
     @Throws(IOException::class)
-    fun getDiscordServerChannel(channelId: String): ArrayNode = HttpJson.getArray(
+    fun getDiscordServerChannel(channelId: String): ArrayNode = HttpJson.getArrayResponse(
         resolve("v1/discord/channel/lookup/$channelId"),
         headers = HEADER
-    )
+    ).body
 
     @Throws(IOException::class)
-    fun getFileFromHash(hash: String): ObjectNode = HttpJson.getObject(
+    fun getFileFromHash(hash: String): ObjectNode = HttpJson.getObjectResponse(
         resolve("v1/search_hash/$hash"),
         headers = HEADER
-    )
+    ).body
 
     @Throws(IOException::class)
     fun getPostFromServicePost(
         service: Service,
         servicePostId: String
-    ): ObjectNode = HttpJson.getObject(
+    ): ObjectNode = HttpJson.getObjectResponse(
         resolve("v1/$service/post/$servicePostId"),
         headers = HEADER
-    )
+    ).body
 
 }
