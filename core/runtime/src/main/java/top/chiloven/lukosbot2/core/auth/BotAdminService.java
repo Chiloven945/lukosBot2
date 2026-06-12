@@ -19,13 +19,14 @@ package top.chiloven.lukosbot2.core.auth;
 
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.json.JsonMapper;
 import top.chiloven.lukosbot2.config.AppProperties;
 import top.chiloven.lukosbot2.core.state.Scope;
 import top.chiloven.lukosbot2.core.state.store.IStateStore;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
 
 import java.util.*;
+
+import static top.chiloven.lukosbot2.util.JsonUtils.MAPPER;
 
 @Service
 public class BotAdminService {
@@ -34,12 +35,10 @@ public class BotAdminService {
     private static final String KEY_BOT_ADMINS = "bot_admins";
 
     private final IStateStore store;
-    private final JsonMapper mapper;
     private final AppProperties props;
 
-    public BotAdminService(IStateStore store, JsonMapper mapper, AppProperties props) {
+    public BotAdminService(IStateStore store, AppProperties props) {
         this.store = store;
-        this.mapper = mapper;
         this.props = props;
     }
 
@@ -93,7 +92,7 @@ public class BotAdminService {
     private Map<ChatPlatform, Set<Long>> parseAdminsJson(String json) {
         Map<ChatPlatform, Set<Long>> out = new EnumMap<>(ChatPlatform.class);
         try {
-            JsonNode root = mapper.readTree(json);
+            JsonNode root = MAPPER.readTree(json);
             if (root == null || !root.isObject()) return out;
 
             for (var entry : root.properties()) {
@@ -135,7 +134,7 @@ public class BotAdminService {
                 Scope.global(),
                 NS_AUTH,
                 KEY_BOT_ADMINS,
-                mapper.writeValueAsString(raw),
+                MAPPER.writeValueAsString(raw),
                 null
         );
     }

@@ -22,7 +22,6 @@ import jakarta.annotation.PreDestroy;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
-import tools.jackson.databind.json.JsonMapper;
 import top.chiloven.lukosbot2.config.ServiceConfigProp;
 import top.chiloven.lukosbot2.core.MessageSenderHub;
 import top.chiloven.lukosbot2.core.command.bot.CommandSource;
@@ -40,6 +39,8 @@ import top.chiloven.lukosbot2.services.IBotService;
 import java.util.*;
 import java.util.concurrent.*;
 
+import static top.chiloven.lukosbot2.util.JsonUtils.MAPPER;
+
 @Service
 @Log4j2
 public class ServiceManager {
@@ -51,7 +52,6 @@ public class ServiceManager {
     private final IStateStore store;
     private final MessageSenderHub senderHub;
     private final ServiceConfigProp props;
-    private final JsonMapper mapper;
 
     private final ConcurrentMap<String, ConcurrentMap<String, ServiceState>> chatStates = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, ScheduledFuture<?>> schedules = new ConcurrentHashMap<>();
@@ -68,14 +68,12 @@ public class ServiceManager {
             ServiceRegistry registry,
             IStateStore store,
             MessageSenderHub senderHub,
-            ServiceConfigProp props,
-            JsonMapper mapper
+            ServiceConfigProp props
     ) {
         this.registry = registry;
         this.store = store;
         this.senderHub = senderHub;
         this.props = props;
-        this.mapper = mapper;
     }
 
     @PostConstruct
@@ -96,7 +94,7 @@ public class ServiceManager {
         defaultStates.clear();
         store.getNamespaceJson(Scope.global(), NS_SERVICE).forEach((serviceName, json) -> {
             try {
-                ServiceState st = mapper.readValue(json, ServiceState.class);
+                ServiceState st = MAPPER.readValue(json, ServiceState.class);
                 if (st != null) defaultStates.put(serviceName, st);
             } catch (Exception _) {
             }
@@ -109,7 +107,7 @@ public class ServiceManager {
             if (kv != null) {
                 kv.forEach((serviceName, json) -> {
                     try {
-                        ServiceState st = mapper.readValue(json, ServiceState.class);
+                        ServiceState st = MAPPER.readValue(json, ServiceState.class);
                         if (st != null) cm.put(serviceName, st);
                     } catch (Exception _) {
                     }
@@ -267,7 +265,7 @@ public class ServiceManager {
                 new Scope(ScopeType.CHAT, chatKey),
                 NS_SERVICE,
                 serviceName,
-                mapper.writeValueAsString(st),
+                MAPPER.writeValueAsString(st),
                 null
         );
     }
@@ -392,7 +390,7 @@ public class ServiceManager {
                 Scope.global(),
                 NS_SERVICE,
                 serviceName,
-                mapper.writeValueAsString(st),
+                MAPPER.writeValueAsString(st),
                 null
         );
     }

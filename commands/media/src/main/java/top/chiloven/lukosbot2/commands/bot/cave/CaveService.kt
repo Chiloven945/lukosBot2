@@ -19,7 +19,6 @@ package top.chiloven.lukosbot2.commands.bot.cave
 
 import org.apache.logging.log4j.LogManager
 import org.springframework.stereotype.Service
-import tools.jackson.databind.json.JsonMapper
 import top.chiloven.lukosbot2.config.AppProperties
 import top.chiloven.lukosbot2.core.MediaRefLoader
 import top.chiloven.lukosbot2.core.command.bot.CommandSource
@@ -34,6 +33,7 @@ import top.chiloven.lukosbot2.core.model.message.outbound.OutText
 import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage
 import top.chiloven.lukosbot2.core.state.Scope
 import top.chiloven.lukosbot2.core.state.store.IStateStore
+import top.chiloven.lukosbot2.util.JsonUtils.MAPPER
 import top.chiloven.lukosbot2.util.TimeUtils
 import java.io.IOException
 import java.util.*
@@ -43,7 +43,6 @@ import kotlin.concurrent.withLock
 @Service
 class CaveService(
     private val store: IStateStore,
-    private val mapper: JsonMapper,
     private val mediaRefLoader: MediaRefLoader,
     appProperties: AppProperties
 ) {
@@ -318,7 +317,7 @@ class CaveService(
     private fun readMeta(): CaveMeta {
         val json = store.getJson(GLOBAL_SCOPE, NS_META, KEY_META).orElse(null) ?: return CaveMeta()
         return try {
-            mapper.readValue(json, CaveMeta::class.java)
+            MAPPER.readValue(json, CaveMeta::class.java)
         } catch (e: Exception) {
             log.warn("cave meta parse failed, using default", e)
             CaveMeta()
@@ -326,13 +325,13 @@ class CaveService(
     }
 
     private fun writeMeta(meta: CaveMeta) {
-        store.upsertJson(GLOBAL_SCOPE, NS_META, KEY_META, mapper.writeValueAsString(meta), null)
+        store.upsertJson(GLOBAL_SCOPE, NS_META, KEY_META, MAPPER.writeValueAsString(meta), null)
     }
 
     private fun readEntry(no: Int): CaveEntry? {
         val json = store.getJson(GLOBAL_SCOPE, NS_ENTRY, no.toString()).orElse(null) ?: return null
         return try {
-            mapper.readValue(json, CaveEntry::class.java)
+            MAPPER.readValue(json, CaveEntry::class.java)
         } catch (e: Exception) {
             log.warn("cave entry parse failed no={}", no, e)
             null
@@ -340,7 +339,7 @@ class CaveService(
     }
 
     private fun writeEntry(entry: CaveEntry) {
-        store.upsertJson(GLOBAL_SCOPE, NS_ENTRY, entry.no.toString(), mapper.writeValueAsString(entry), null)
+        store.upsertJson(GLOBAL_SCOPE, NS_ENTRY, entry.no.toString(), MAPPER.writeValueAsString(entry), null)
     }
 
     private fun rebuildMetaFromEntries(): CaveMeta = lock.withLock {

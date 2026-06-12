@@ -19,12 +19,13 @@ package top.chiloven.lukosbot2.core.state;
 
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
-import tools.jackson.databind.json.JsonMapper;
 import top.chiloven.lukosbot2.core.model.message.Address;
 import top.chiloven.lukosbot2.core.state.definition.IStateDefinition;
 import top.chiloven.lukosbot2.core.state.store.IStateStore;
 
 import java.time.Instant;
+
+import static top.chiloven.lukosbot2.util.JsonUtils.MAPPER;
 
 /**
  * High-level service for reading/writing {@link IStateDefinition} values.
@@ -34,11 +35,9 @@ import java.time.Instant;
 public class StateService {
 
     private final IStateStore store;
-    private final JsonMapper mapper;
 
-    public StateService(IStateStore store, JsonMapper mapper) {
+    public StateService(IStateStore store) {
         this.store = store;
-        this.mapper = mapper;
     }
 
     public <T> T resolve(IStateDefinition<T> def, Address addr, Long userId) {
@@ -72,7 +71,7 @@ public class StateService {
         if (v == null) return null;
 
         try {
-            return mapper.readValue(v, def.type());
+            return MAPPER.readValue(v, def.type());
         } catch (Exception e) {
             log.debug("Failed to parse state {}.{} at {}: {}", def.namespace(), def.name(), scope.type(), e.getMessage());
             return null;
@@ -112,7 +111,7 @@ public class StateService {
         def.validate(v);
 
         Instant exp = def.ttl() == null ? null : Instant.now().plus(def.ttl());
-        store.upsertJson(scope, def.namespace(), def.name(), mapper.writeValueAsString(v), exp);
+        store.upsertJson(scope, def.namespace(), def.name(), MAPPER.writeValueAsString(v), exp);
     }
 
     public void clear(IStateDefinition<?> def, Address addr, Long userId) {
