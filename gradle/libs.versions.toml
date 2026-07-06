@@ -8,7 +8,7 @@ spring-boot = "4.1.0"
 spring-dependency-management = "1.1.7"
 
 telegrambots = "10.0.0"
-jda = "6.4.2"
+jda = "6.5.0"
 
 commons-net = "3.13.0"
 lombok = "1.18.46"
