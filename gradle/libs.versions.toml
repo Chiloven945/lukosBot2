@@ -18,7 +18,7 @@ zip4j = "2.11.6"
 log4j2 = "2.26.1"
 slf4j = "2.0.18"
 jspecify = "1.0.0"
-jackson = "3.2.0"
+jackson = "3.2.1"
 
 docker-java = "3.7.1"
 flexmark = "0.64.8"
