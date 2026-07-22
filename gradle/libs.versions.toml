@@ -7,7 +7,7 @@ junit-jupiter = "6.1.2"
 spring-boot = "4.1.0"
 spring-dependency-management = "1.1.7"
 
-telegrambots = "10.0.0"
+telegrambots = "10.1.0"
 jda = "6.5.0"
 
 commons-net = "3.13.0"
