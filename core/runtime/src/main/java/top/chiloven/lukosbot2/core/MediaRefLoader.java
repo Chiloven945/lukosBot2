@@ -45,7 +45,7 @@ public class MediaRefLoader {
                     name,
                     mime
             );
-            case UrlRef(String url) -> urlMediaLoader.load(new UrlRef(url));
+            case UrlRef urlRef -> urlMediaLoader.load(urlRef);
             case PlatformFileRef platformFileRef -> loadPlatform(platformFileRef);
             case null -> throw new IOException("不支持的媒体类型，无法读取。");
         };
