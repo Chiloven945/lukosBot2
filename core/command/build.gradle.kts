@@ -25,8 +25,9 @@ plugins {
 dependencies {
     api(project(":core:model"))
     api(project(":platform:api"))
-    api(project(":shared"))
     api(project(":properties"))
+
+    implementation(project(":shared"))
 
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.kotlin.test.junit)

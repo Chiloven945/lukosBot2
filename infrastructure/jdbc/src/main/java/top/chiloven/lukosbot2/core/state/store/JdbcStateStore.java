@@ -48,8 +48,12 @@ public class JdbcStateStore implements IStateStore {
     }
 
     @Override
-    public Optional<String> getJson(Scope scope, String namespace, String key) {
-        String sql = """
+    public Optional<String> getJson(
+            Scope scope,
+            String namespace,
+            String key
+    ) {
+        var sql = """
                 SELECT v_json
                 FROM bot_state
                 WHERE scope_type=:st
@@ -64,13 +68,19 @@ public class JdbcStateStore implements IStateStore {
                 "ns", namespace,
                 "k", key
         );
-        var list = jdbc.query(sql, params, (rs, _) -> rs.getString(1));
-        return list.isEmpty() ? Optional.empty() : Optional.ofNullable(list.getFirst());
+        var list = jdbc.query(
+                sql,
+                params,
+                (rs, _) -> rs.getString(1)
+        );
+        return list.isEmpty()
+                ? Optional.empty()
+                : Optional.ofNullable(list.getFirst());
     }
 
     @Override
     public Map<String, String> getNamespaceJson(Scope scope, String namespace) {
-        String sql = """
+        var sql = """
                 SELECT k, v_json
                 FROM bot_state
                 WHERE scope_type=:st
@@ -84,68 +94,101 @@ public class JdbcStateStore implements IStateStore {
                 "sid", scope.id(),
                 "ns", namespace
         );
-        return jdbc.query(sql, params, rs -> {
-            Map<String, String> out = new LinkedHashMap<>();
-            while (rs.next()) {
-                out.put(rs.getString("k"), rs.getString("v_json"));
-            }
-            return out;
-        });
+        return jdbc.query(
+                sql,
+                params,
+                rs -> {
+                    Map<String, String> out = new LinkedHashMap<>();
+                    while (rs.next()) {
+                        out.put(
+                                rs.getString("k"),
+                                rs.getString("v_json")
+                        );
+                    }
+                    return out;
+                }
+        );
     }
 
     @Override
-    public void upsertJson(Scope scope, String namespace, String key, String json, Instant expiresAtOrNull) {
+    public void upsertJson(
+            Scope scope,
+            String namespace,
+            String key,
+            String json,
+            Instant expiresAtOrNull
+    ) {
         Map<String, Object> p = new HashMap<>();
         p.put("st", scope.type().name());
         p.put("sid", scope.id());
         p.put("ns", namespace);
         p.put("k", key);
         p.put("v", json);
-        p.put("exp", expiresAtOrNull == null ? null : Timestamp.from(expiresAtOrNull));
+        p.put(
+                "exp",
+                expiresAtOrNull == null
+                        ? null
+                        : Timestamp.from(expiresAtOrNull)
+        );
 
-        int updated = jdbc.update("""
-                UPDATE bot_state
-                   SET v_json=:v,
-                       expires_at=:exp,
-                       updated_at=CURRENT_TIMESTAMP,
-                       version=version+1
-                 WHERE scope_type=:st
-                   AND scope_id=:sid
-                   AND namespace=:ns
-                   AND k=:k
-                """, p);
+        int updated = jdbc.update(
+                """
+                        UPDATE bot_state
+                           SET v_json=:v,
+                               expires_at=:exp,
+                               updated_at=CURRENT_TIMESTAMP,
+                               version=version+1
+                         WHERE scope_type=:st
+                           AND scope_id=:sid
+                           AND namespace=:ns
+                           AND k=:k
+                        """,
+                p
+        );
 
-        if (updated != 0) return;
+        if (updated != 0) {
+            return;
+        }
 
         try {
-            jdbc.update("""
-                    INSERT INTO bot_state(
-                        scope_type, scope_id, namespace, k,
-                        v_json, expires_at, created_at, updated_at, version
-                    ) VALUES (
-                        :st, :sid, :ns, :k,
-                        :v, :exp, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0
-                    )
-                    """, p);
+            jdbc.update(
+                    """
+                            INSERT INTO bot_state(
+                                scope_type, scope_id, namespace, k,
+                                v_json, expires_at, created_at, updated_at, version
+                            ) VALUES (
+                                :st, :sid, :ns, :k,
+                                :v, :exp, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0
+                            )
+                            """,
+                    p
+            );
         } catch (DuplicateKeyException e) {
             // concurrent insert: retry update
-            jdbc.update("""
-                    UPDATE bot_state
-                       SET v_json=:v,
-                           expires_at=:exp,
-                           updated_at=CURRENT_TIMESTAMP,
-                           version=version+1
-                     WHERE scope_type=:st
-                       AND scope_id=:sid
-                       AND namespace=:ns
-                       AND k=:k
-                    """, p);
+            jdbc.update(
+                    """
+                            UPDATE bot_state
+                               SET v_json=:v,
+                                   expires_at=:exp,
+                                   updated_at=CURRENT_TIMESTAMP,
+                                   version=version+1
+                             WHERE scope_type=:st
+                               AND scope_id=:sid
+                               AND namespace=:ns
+                               AND k=:k
+                            """,
+                    p
+            );
         }
     }
 
     @Override
-    public void delete(Scope scope, String namespace, String key) {
-        String sql = """
+    public void delete(
+            Scope scope,
+            String namespace,
+            String key
+    ) {
+        var sql = """
                 DELETE FROM bot_state
                 WHERE scope_type=:st
                   AND scope_id=:sid
@@ -162,8 +205,11 @@ public class JdbcStateStore implements IStateStore {
     }
 
     @Override
-    public Map<String, Map<String, String>> scanByScopeTypeAndNamespace(ScopeType type, String namespace) {
-        String sql = """
+    public Map<String, Map<String, String>> scanByScopeTypeAndNamespace(
+            ScopeType type,
+            String namespace
+    ) {
+        var sql = """
                 SELECT scope_id, k, v_json
                 FROM bot_state
                 WHERE scope_type=:st
@@ -176,16 +222,20 @@ public class JdbcStateStore implements IStateStore {
                 "ns", namespace
         );
 
-        return jdbc.query(sql, params, rs -> {
-            Map<String, Map<String, String>> out = new LinkedHashMap<>();
-            while (rs.next()) {
-                String sid = rs.getString("scope_id");
-                String k = rs.getString("k");
-                String v = rs.getString("v_json");
-                out.computeIfAbsent(sid, _ -> new LinkedHashMap<>()).put(k, v);
-            }
-            return out;
-        });
+        return jdbc.query(
+                sql,
+                params,
+                rs -> {
+                    Map<String, Map<String, String>> out = new LinkedHashMap<>();
+                    while (rs.next()) {
+                        String sid = rs.getString("scope_id");
+                        String k = rs.getString("k");
+                        String v = rs.getString("v_json");
+                        out.computeIfAbsent(sid, _ -> new LinkedHashMap<>()).put(k, v);
+                    }
+                    return out;
+                }
+        );
     }
 
 }

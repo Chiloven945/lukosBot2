@@ -17,25 +17,11 @@
  */
 plugins {
     `java-library`
-    alias(libs.plugins.kotlin.jvm)
-    alias(libs.plugins.kotlin.spring)
-    alias(libs.plugins.kotlin.lombok)
 }
 
 dependencies {
-    implementation(project(":infrastructure:http"))
-
-    implementation(project(":shared"))
-    implementation(project(":core:model"))
-    implementation(project(":properties"))
-    implementation(project(":infrastructure:spring"))
-
-    api(libs.jsoup)
-    api(libs.selenium.java)
-
-    implementation(libs.flexmark.html2md.converter)
-    implementation(libs.webdrivermanager)
-
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
+    implementation(project(":core:runtime"))
+    implementation(platform(libs.spring.boot.dependencies.bom))
+    implementation(libs.spring.boot.starter.jdbc)
+    implementation("org.springframework:spring-context")
 }

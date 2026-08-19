@@ -24,14 +24,16 @@ plugins {
 
 dependencies {
     api(project(":core:command"))
-    api(project(":properties"))
     api(project(":core:model"))
-    api(project(":infrastructure:http"))
     api(project(":platform:api"))
-    api(project(":shared"))
 
+    implementation(project(":properties"))
+    implementation(project(":shared"))
     implementation(libs.slf4j.api)
-    implementation(libs.spring.boot.starter.jdbc)
+
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.kotlin.test.junit)
+    testRuntimeOnly(libs.junit.platform.launcher)
 
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
