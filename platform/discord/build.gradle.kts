@@ -33,6 +33,7 @@ dependencies {
     implementation(project(":shared"))
 
     implementation(libs.jda)
+    implementation(libs.kotlinx.coroutines.core)
 
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)

@@ -30,9 +30,11 @@ dependencies {
     implementation(project(":properties"))
     implementation(project(":shared"))
     implementation(libs.slf4j.api)
+    implementation(libs.kotlinx.coroutines.core)
 
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.kotlin.test.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
     testRuntimeOnly(libs.junit.platform.launcher)
 
     compileOnly(libs.lombok)

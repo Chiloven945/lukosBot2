@@ -15,27 +15,16 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package top.chiloven.lukosbot2.core;
-
-import top.chiloven.lukosbot2.core.model.message.inbound.InboundMessage;
-import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage;
-
-import java.util.List;
+package top.chiloven.lukosbot2.core
 
 /**
- * A message processor that consumes an inbound message and produces zero or more outbound messages.
+ * Cancellable handle for a background task submitted to [BotCoroutineRuntime].
  *
- * <p>Processors are typically chained by {@link PipelineProcessor}.</p>
+ * <p>Java-friendly counterpart of {@code kotlinx.coroutines.Job} for callers that do not need suspend APIs
+ * (for example [top.chiloven.lukosbot2.core.service.ServiceManager]).</p>
  */
-public interface IProcessor {
+interface ICancellableTask {
 
-    /**
-     * Handle an inbound message.
-     *
-     * @param in inbound message
-     *
-     * @return outbound messages to be sent (may be empty, never null)
-     */
-    List<OutboundMessage> handle(InboundMessage in);
+    fun cancel()
 
 }

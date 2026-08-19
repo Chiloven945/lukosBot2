@@ -17,10 +17,13 @@
  */
 package top.chiloven.lukosbot2.commands.bot
 
+import org.apache.logging.log4j.LogManager
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.config.CommandConfigProp
+import top.chiloven.lukosbot2.core.BotCoroutineRuntime
+import top.chiloven.lukosbot2.core.ICancellableTask
 import top.chiloven.lukosbot2.core.MessageSenderHub
 import top.chiloven.lukosbot2.core.command.bot.CommandSource
 import top.chiloven.lukosbot2.core.command.definition.dsl.arg
@@ -28,7 +31,9 @@ import top.chiloven.lukosbot2.core.command.definition.dsl.botCommand
 import top.chiloven.lukosbot2.core.model.message.Address
 import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage
 import java.util.*
-import java.util.concurrent.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
+import java.util.concurrent.ThreadLocalRandom
 import kotlin.math.abs
 
 @Service
@@ -40,12 +45,13 @@ import kotlin.math.abs
 )
 class TwentyFourCommand(
     private val senderHub: MessageSenderHub,
+    private val runtime: BotCoroutineRuntime,
     config: CommandConfigProp,
 ) : IBotCommand {
 
     companion object {
 
-        private val log = org.apache.logging.log4j.LogManager.getLogger(TwentyFourCommand::class.java)
+        private val log = LogManager.getLogger(TwentyFourCommand::class.java)
         private const val TARGET = 24.0
         private const val EPS = 1e-6
 
@@ -54,10 +60,6 @@ class TwentyFourCommand(
     private val timeLimit = config.twentyFour.timeLimit
 
     private val sessions: ConcurrentMap<Long, Session> = ConcurrentHashMap()
-
-    private val scheduler: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor {
-        Thread(it, "24-game-timeout").apply { isDaemon = true }
-    }
 
     private val commandDefinition = botCommand("24") {
         description = "玩 24 点游戏"
@@ -108,11 +110,12 @@ class TwentyFourCommand(
 
         sessions[userId] = session
 
-        session.timeoutFuture = scheduler.schedule(
-            { onTimeout(userId, session) },
-            timeLimit,
-            TimeUnit.MILLISECONDS,
-        )
+        session.timeoutTask = runtime.schedule(
+            "24-game-timeout-$userId",
+            timeLimit
+        ) {
+            onTimeout(userId, session)
+        }
 
         src.reply(
             """
@@ -128,7 +131,8 @@ class TwentyFourCommand(
 
     private fun onTimeout(userId: Long, session: Session) {
         val now = System.currentTimeMillis()
-        val current = sessions[userId] ?: return
+        val current = sessions[userId]
+            ?: return
         if (current !== session || !session.isExpired(now)) return
 
         sessions.remove(userId, session)
@@ -171,7 +175,11 @@ class TwentyFourCommand(
         }
     }
 
-    private fun giveUp(src: CommandSource, userId: Long, session: Session) {
+    private fun giveUp(
+        src: CommandSource,
+        userId: Long,
+        session: Session
+    ) {
         cancelSession(userId, session)
         src.reply(
             """
@@ -183,7 +191,12 @@ class TwentyFourCommand(
         )
     }
 
-    private fun checkAnswer(src: CommandSource, userId: Long, session: Session, expr: String) {
+    private fun checkAnswer(
+        src: CommandSource,
+        userId: Long,
+        session: Session,
+        expr: String
+    ) {
         val normalizedExpr = expr.stripBackslashes()
 
         val eval = try {
@@ -232,7 +245,7 @@ class TwentyFourCommand(
 
     private fun cancelSession(userId: Long, session: Session) {
         sessions.remove(userId, session)
-        session.timeoutFuture?.takeIf { !it.isDone }?.cancel(false)
+        session.timeoutTask?.cancel()
     }
 
     private fun generatePuzzle(): Puzzle {
@@ -268,17 +281,37 @@ class TwentyFourCommand(
                 val b = nums[j]
 
                 if (i < j) {
-                    dfsFind(nextBase + Node(a.value + b.value, "(${a.expr}+${b.expr})"))?.let { return it }
+                    dfsFind(
+                        nextBase + Node(
+                            a.value + b.value,
+                            "(${a.expr}+${b.expr})"
+                        )
+                    )?.let { return it }
                 }
 
-                dfsFind(nextBase + Node(a.value - b.value, "(${a.expr}-${b.expr})"))?.let { return it }
+                dfsFind(
+                    nextBase + Node(
+                        a.value - b.value,
+                        "(${a.expr}-${b.expr})"
+                    )
+                )?.let { return it }
 
                 if (i < j) {
-                    dfsFind(nextBase + Node(a.value * b.value, "(${a.expr}*${b.expr})"))?.let { return it }
+                    dfsFind(
+                        nextBase + Node(
+                            a.value * b.value,
+                            "(${a.expr}*${b.expr})"
+                        )
+                    )?.let { return it }
                 }
 
                 if (abs(b.value) > EPS) {
-                    dfsFind(nextBase + Node(a.value / b.value, "(${a.expr}/${b.expr})"))?.let { return it }
+                    dfsFind(
+                        nextBase + Node(
+                            a.value / b.value,
+                            "(${a.expr}/${b.expr})"
+                        )
+                    )?.let { return it }
                 }
             }
         }
@@ -307,13 +340,13 @@ class TwentyFourCommand(
                     while (ops.isNotEmpty() && ops.peek() != '(') {
                         applyOp(values, ops.pop())
                     }
-                    if (ops.isEmpty() || ops.pop() != '(') {
-                        throw IllegalArgumentException("括号不匹配")
-                    }
+                    require(!(ops.isEmpty() || ops.pop() != '(')) { "括号不匹配" }
                 }
 
                 c.isOperator() -> {
-                    while (ops.isNotEmpty() && ops.peek() != '(' && ops.peek().precedence() >= c.precedence()) {
+                    while (ops.isNotEmpty() && ops.peek() != '(' && ops.peek()
+                                .precedence() >= c.precedence()
+                    ) {
                         applyOp(values, ops.pop())
                     }
                     ops.push(c)
@@ -325,15 +358,11 @@ class TwentyFourCommand(
 
         while (ops.isNotEmpty()) {
             val op = ops.pop()
-            if (op == '(' || op == ')') {
-                throw IllegalArgumentException("括号不匹配")
-            }
+            require(!(op == '(' || op == ')')) { "括号不匹配" }
             applyOp(values, op)
         }
 
-        if (values.size != 1) {
-            throw IllegalArgumentException("表达式不完整")
-        }
+        require(values.size == 1) { "表达式不完整" }
 
         return EvalResult(values.pop(), numbers)
     }
@@ -368,9 +397,7 @@ class TwentyFourCommand(
     }
 
     private fun applyOp(values: ArrayDeque<Double>, op: Char) {
-        if (values.size < 2) {
-            throw IllegalArgumentException("运算符 $op 缺少数字")
-        }
+        require(values.size >= 2) { "运算符 $op 缺少数字" }
 
         val b = values.pop()
         val a = values.pop()
@@ -380,7 +407,7 @@ class TwentyFourCommand(
             '-' -> values.push(a - b)
             '*' -> values.push(a * b)
             '/' -> {
-                if (abs(b) < EPS) throw IllegalArgumentException("不能除以 0")
+                require(!(abs(b) < EPS)) { "不能除以 0" }
                 values.push(a / b)
             }
 
@@ -388,7 +415,8 @@ class TwentyFourCommand(
         }
     }
 
-    private fun Char.isOperator(): Boolean = this == '+' || this == '-' || this == '*' || this == '/'
+    private fun Char.isOperator(): Boolean =
+        this == '+' || this == '-' || this == '*' || this == '/'
 
     private fun Char.precedence(): Int = when (this) {
         '(' -> 0
@@ -421,7 +449,7 @@ class TwentyFourCommand(
         val nums: IntArray,
         val solution: String,
         val expiresAtMillis: Long,
-        @Volatile var timeoutFuture: ScheduledFuture<*>? = null,
+        @Volatile var timeoutTask: ICancellableTask? = null,
     ) {
 
         fun isExpired(now: Long): Boolean = now >= expiresAtMillis

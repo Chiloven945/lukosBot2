@@ -39,9 +39,7 @@ class ShutdownCliCommand(
         description = "Shutdown the bot process"
 
         execute {
-            Thread.ofVirtual()
-                .name("shutdown-trigger")
-                .start { appControl.shutdown() }
+            appControl.shutdown()
         }
     }
 

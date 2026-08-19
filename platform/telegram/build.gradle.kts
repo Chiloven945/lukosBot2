@@ -34,6 +34,7 @@ dependencies {
 
     implementation(libs.telegrambots.longpolling)
     implementation(libs.telegrambots.client)
+    implementation(libs.kotlinx.coroutines.core)
 
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)

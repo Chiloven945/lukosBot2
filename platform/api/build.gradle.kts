@@ -23,6 +23,7 @@ plugins {
 
 dependencies {
     api(project(":core:model"))
+    api(libs.kotlinx.coroutines.core)
 
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
