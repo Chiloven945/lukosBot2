@@ -28,6 +28,7 @@ dependencies {
     implementation(project(":properties"))
     implementation(project(":shared"))
     implementation(project(":core:runtime"))
+    implementation(libs.kotlinx.coroutines.core)
 
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)

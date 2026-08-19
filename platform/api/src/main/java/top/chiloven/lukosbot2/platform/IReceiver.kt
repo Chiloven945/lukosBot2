@@ -15,49 +15,37 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package top.chiloven.lukosbot2.platform;
+package top.chiloven.lukosbot2.platform
 
-import top.chiloven.lukosbot2.core.model.message.inbound.InboundMessage;
-
-import java.util.function.Consumer;
+import kotlinx.coroutines.flow.Flow
+import top.chiloven.lukosbot2.core.model.message.inbound.InboundMessage
 
 /**
- * Receiver interface: responsible for receiving messages from a specific platform and passing them to the message
- * handler.
+ * Receiver interface: responsible for receiving messages from a specific platform and exposing them as a
+ * [Flow] of inbound messages.
  */
-public interface IReceiver extends AutoCloseable {
+interface IReceiver {
 
-    ChatPlatform platform();
+    val platform: ChatPlatform
 
     /**
-     * Bind message handler.
-     *
-     * @param sink message handler, usually bound to MessageDispatcher::receive
+     * Inbound message stream. A collector (for example the platform lifecycle) forwards each message to
+     * `MessageDispatcher.receive`. The stream completes when the receiver is stopped.
      */
-    void bind(Consumer<InboundMessage> sink);
+    val messages: Flow<InboundMessage>
 
     /**
      * Start the receiver.
      *
      * @throws Exception throw exception if start failed
      */
-    void start() throws Exception;
-
-    /**
-     * Close the receiver, equivalent to stop().
-     *
-     * @throws Exception throw exception if stop failed
-     */
-    @Override
-    default void close() throws Exception {
-        stop();
-    }
+    suspend fun start()
 
     /**
      * Stop the receiver.
      *
      * @throws Exception throw exception if stop failed
      */
-    void stop() throws Exception;
+    suspend fun stop()
 
 }

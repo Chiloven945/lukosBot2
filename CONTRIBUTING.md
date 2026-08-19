@@ -1,11 +1,11 @@
 # Contribution Guide
 
-Thank you for contributing to this project. This document describes the conventions we expect contributors to follow
-when writing code, submitting changes, and reviewing pull requests.
+Thank you for contributing to this project. This document describes the conventions we expect
+contributors to follow when writing code, submitting changes, and reviewing pull requests.
 
-The goal of these rules is not to make code look “clever”. The goal is to make the project predictable: when someone
-opens a file, they should quickly understand what the code does, where shared utilities live, and how a change should be
-reviewed.
+The goal of these rules is not to make code look “clever”. The goal is to make the project
+predictable: when someone opens a file, they should quickly understand what the code does, where
+shared utilities live, and how a change should be reviewed.
 
 ## Commit Messages
 
@@ -68,7 +68,8 @@ val commandName = "help"
 var retryCount = 0
 ```
 
-Interfaces use the `I` + `Name` format. This is intentional and should be kept consistent across the project.
+Interfaces use the `I` + `Name` format. This is intentional and should be kept consistent across the
+project.
 
 Good examples:
 
@@ -84,15 +85,15 @@ public interface IStateDefinition {
 }
 ```
 
-Do not introduce interface names like `BotCommand`, `StateDefinition`, or `CommandLike` when the type is meant to be an
-interface in the existing project style.
+Do not introduce interface names like `BotCommand`, `StateDefinition`, or `CommandLike` when the
+type is meant to be an interface in the existing project style.
 
 ## Visibility and Encapsulation
 
 Private-purpose methods, variables, and fields should not be exposed.
 
-Use `private` for implementation details. Do not mark something `public` just because it is convenient during
-development.
+Use `private` for implementation details. Do not mark something `public` just because it is
+convenient during development.
 
 Good:
 
@@ -118,12 +119,14 @@ private String normalizeCommandName(String raw) {
 }
 ```
 
-Public APIs should be intentional. If another package needs a helper, first consider whether the helper belongs in
+Public APIs should be intentional. If another package needs a helper, first consider whether the
+helper belongs in
 `util`.
 
 ## Braces and Spacing
 
-Opening braces stay on the same line as the method, function, class, interface, enum, or control-flow header.
+Opening braces stay on the same line as the method, function, class, interface, enum, or
+control-flow header.
 
 Good:
 
@@ -148,8 +151,9 @@ public final class Example
 }
 ```
 
-After a class or interface header, leave an extra blank line before the first member. Also leave a blank line before the
-closing brace of the class or interface. This rule applies to type bodies, not method or function bodies.
+After a class or interface header, leave an extra blank line before the first member. Also leave a
+blank line before the closing brace of the class or interface. This rule applies to type bodies, not
+method or function bodies.
 
 Good Java class:
 
@@ -188,8 +192,8 @@ data class Color(
 }
 ```
 
-Methods and functions should **not** add extra blank lines immediately after the opening brace or immediately before the
-closing brace.
+Methods and functions should **not** add extra blank lines immediately after the opening brace or
+immediately before the closing brace.
 
 Good Java method:
 
@@ -227,12 +231,13 @@ fun trimText(input: String): String {
 }
 ```
 
-This rule intentionally creates breathing room around type bodies while keeping method and function bodies compact.
+This rule intentionally creates breathing room around type bodies while keeping method and function
+bodies compact.
 
 ## Kotlin Statement and Lambda Formatting
 
-Kotlin code should not use semicolons to place multiple statements on one line. Prefer one statement per line, especially
-inside lambdas and DSL blocks.
+Kotlin code should not use semicolons to place multiple statements on one line. Prefer one statement
+per line, especially inside lambdas and DSL blocks.
 
 Good:
 
@@ -249,9 +254,9 @@ Bad:
 positional("mode", ArgType.StringType) { required = false; description = "img 或 text" }
 ```
 
-This rule applies to similar DSL configuration blocks, command definitions, builders, and callbacks. If a lambda contains
-more than one statement, or if the single-line version becomes hard to scan, expand the lambda body across multiple
-lines.
+This rule applies to similar DSL configuration blocks, command definitions, builders, and callbacks.
+If a lambda contains more than one statement, or if the single-line version becomes hard to scan,
+expand the lambda body across multiple lines.
 
 Good:
 
@@ -266,7 +271,10 @@ option("limit", ArgType.IntType) {
 Bad:
 
 ```kotlin
-option("limit", ArgType.IntType) { required = false; description = "最大返回数量"; defaultValue = 3 }
+option("limit", ArgType.IntType) {
+    required = false; description = "最大返回数量"; defaultValue =
+    3
+}
 ```
 
 Short single-expression lambdas may stay on one line when they remain genuinely readable:
@@ -275,15 +283,18 @@ Short single-expression lambdas may stay on one line when they remain genuinely 
 items.map { it.name }
 ```
 
-Do not use this exception for DSL configuration blocks with assignments, side effects, or multiple logical steps.
+Do not use this exception for DSL configuration blocks with assignments, side effects, or multiple
+logical steps.
 
-Within longer functions, add blank lines between distinct logical groups to improve readability. Avoid dense blocks where
-validation, parsing, execution, and response formatting are all pressed together without separation.
+Within longer functions, add blank lines between distinct logical groups to improve readability.
+Avoid dense blocks where validation, parsing, execution, and response formatting are all pressed
+together without separation.
 
 Good:
 
 ```kotlin
-val mode = invocation.string("mode") ?: "img"
+val mode = invocation.string("mode")
+    ?: "img"
 val query = invocation.string("query")
 
 if (query.isNullOrBlank()) {
@@ -298,7 +309,8 @@ source.reply(result)
 Bad:
 
 ```kotlin
-val mode = invocation.string("mode") ?: "img"
+val mode = invocation.string("mode")
+    ?: "img"
 val query = invocation.string("query")
 if (query.isNullOrBlank()) {
     source.reply("请提供搜索内容")
@@ -450,8 +462,8 @@ For short annotations with one or two parameters, a single line is fine if it is
 
 ## Stream API Formatting
 
-When using Java Stream API, keep `.stream()` on the same line as the data source. After that, put every operation on its
-own line.
+When using Java Stream API, keep `.stream()` on the same line as the data source. After that, put
+every operation on its own line.
 
 Good:
 
@@ -475,17 +487,18 @@ This style makes stream pipelines easier to scan and easier to modify during rev
 
 ## Imports
 
-Use normal explicit imports by default. However, when imports become repetitive, prefer broader imports according to the
-following rules.
+Use normal explicit imports by default. However, when imports become repetitive, prefer broader
+imports according to the following rules.
 
-If more than four methods from the same class are used, consider importing all methods from that class.
+If more than four methods from the same class are used, consider importing all methods from that
+class.
 
 ```java
 import static java.util.Comparator.*;
 ```
 
-If one method from an external class is used more than four times, consider importing that method directly instead of
-repeatedly qualifying it.
+If one method from an external class is used more than four times, consider importing that method
+directly instead of repeatedly qualifying it.
 
 ```java
 import static java.util.Objects.requireNonNull;
@@ -497,11 +510,13 @@ If imports from the same package exceed four, consider importing the whole packa
 import java.util.*;
 ```
 
-This is not a license to use wildcard imports everywhere. Use it when it improves readability and reduces noise.
+This is not a license to use wildcard imports everywhere. Use it when it improves readability and
+reduces noise.
 
 ## Static Utility Classes
 
-If a Java class only contains static utility methods, it must prevent instantiation with a private constructor.
+If a Java class only contains static utility methods, it must prevent instantiation with a private
+constructor.
 
 Good:
 
@@ -512,7 +527,9 @@ public final class StringTools {
     }
 
     public static String normalize(String value) {
-        return value == null ? "" : value.trim();
+        return value == null
+                ? ""
+                : value.trim();
     }
 
 }
@@ -550,8 +567,8 @@ class StringTools private constructor() {
 
 ## Unused Lambda, Catch, and Pattern Variables
 
-For unused variables in lambda expressions, `catch` statements, and switch patterns, use `_` where the language supports
-it. This follows the intent of [JEP 456](https://openjdk.org/jeps/456).
+For unused variables in lambda expressions, `catch` statements, and switch patterns, use `_` where
+the language supports it. This follows the intent of [JEP 456](https://openjdk.org/jeps/456).
 
 Good Kotlin:
 
@@ -569,35 +586,44 @@ try {
 }
 ```
 
-For Java versions that support unnamed variables and patterns, prefer `_` for intentionally unused values.
+For Java versions that support unnamed variables and patterns, prefer `_` for intentionally unused
+values.
 
 Good:
 
 ```java
-try {
-    runTask();
-} catch (Exception _) {
-    fallback();
+try{
+runTask();
+}catch(
+Exception _){
+
+fallback();
 }
 ```
 
 ```java
-for (String _ : list) run();
+for(String _ :list)
+
+run();
 ```
 
 ```java
-return switch (text) {
-    case Point(int x, int _) -> "x: " + x;
-    default -> "unknown";
-};
+return switch(text){
+        case
+
+Point(int x, int _) ->"x: "+x;
+default ->"unknown";
+        };
 ```
 
 ```java
-(key, _) -> IO.println(key)
+(key,_)->IO.
+
+println(key)
 ```
 
-If the current language level or toolchain does not support unnamed variables in a specific context, use a clearly named
-ignored variable such as `ignored`, but do not use misleading names.
+If the current language level or toolchain does not support unnamed variables in a specific context,
+use a clearly named ignored variable such as `ignored`, but do not use misleading names.
 
 ## Kotlin and Java Boundaries
 
@@ -607,8 +633,8 @@ This project intentionally uses both Kotlin and Java. Do not migrate packages bl
 
 New code under `util` should be implemented in Kotlin unless compatibility requires Java.
 
-The `util` package is where reusable helpers belong. If you create a helper that is likely to be useful outside the
-current command or service, move it to `util`.
+The `util` package is where reusable helpers belong. If you create a helper that is likely to be
+useful outside the current command or service, move it to `util`.
 
 Good:
 
@@ -643,22 +669,20 @@ private fun sanitizeFileName(raw: String): String {
 }
 ```
 
-Before writing a helper, check whether the behavior already exists in `util`. Unless there is a specific reason not to,
-use the existing utility.
+Before writing a helper, check whether the behavior already exists in `util`. Unless there is a
+specific reason not to, use the existing utility.
 
 ### `core` Package
 
-The `core` package should remain Java unless there is a good reason to change it.
+Coroutine-native code in `core` should be written in Kotlin. `core` hosts the application-owned
+coroutine runtime and the structured concurrency primitives built on it (message dispatch, outbound
+send lanes, receivers, processors), and those components must be Kotlin so suspend APIs and
+structured scopes compose directly.
 
-Core code is usually more stable and often interacts with Java-heavy APIs or project-level abstractions. Keeping it Java
-reduces churn and preserves compatibility for central components.
-
-Good reasons to introduce Kotlin in `core` might include:
-
-- a new component is naturally coroutine-based;
-- Kotlin significantly simplifies a complex data transformation;
-- the surrounding code is already Kotlin;
-- the change is part of an approved refactor.
+Existing stable Java components in `core` (for example `ServiceManager`) may stay Java and should
+use the runtime's Java-friendly bridges (`ICancellableTask`, `Runnable`-based scheduling) instead of
+owning their own executors or threads. Do not migrate packages blindly: only convert a file when the
+current task requires suspend support or structured concurrency in it.
 
 Bad reasons include:
 
@@ -668,20 +692,21 @@ Bad reasons include:
 
 ## Shared Utilities and Reuse
 
-During development, if you write a method or function that has reusable value, **extract it** to `util`.
+During development, if you write a method or function that has reusable value, **extract it** to
+`util`.
 
 A helper has reusable value when:
 
 - it is not tied to one command’s business logic;
-- it handles formatting, parsing, encoding, HTTP setup, time, paths, text processing, compression, or similar
-  infrastructure concerns;
+- it handles formatting, parsing, encoding, HTTP setup, time, paths, text processing, compression,
+  or similar infrastructure concerns;
 - it is likely to be needed by another command or service;
 - it fixes a bug that could appear in more than one place.
 
-For example, HTTP JSON request helpers should not be reimplemented inside every command or service. The project already
-provides `HttpJson` for the common “GET a JSON API and parse the response” workflow, including query parameters, default
-JSON headers, proxy-aware `OkHttpClient` reuse, content decoding, charset handling, JSON parsing, and root-type
-validation.
+For example, HTTP JSON request helpers should not be reimplemented inside every command or service.
+The project already provides `HttpJson` for the common “GET a JSON API and parse the response”
+workflow, including query parameters, default JSON headers, proxy-aware `OkHttpClient` reuse,
+content decoding, charset handling, JSON parsing, and root-type validation.
 
 Good:
 
@@ -710,12 +735,12 @@ Bad:
 
 ```kotlin
 val request = Request.Builder()
-    .url("https://api.example.com/v1/search?q=$query&limit=20")
-    .get()
-    .header("Accept", "application/json")
-    .header("Accept-Encoding", "identity")
-    .header("User-Agent", Constants.UA)
-    .build()
+        .url("https://api.example.com/v1/search?q=$query&limit=20")
+        .get()
+        .header("Accept", "application/json")
+        .header("Accept-Encoding", "identity")
+        .header("User-Agent", Constants.UA)
+        .build()
 
 val response = client.newCall(request).execute().use { resp ->
     if (!resp.isSuccessful) {
@@ -726,13 +751,14 @@ val response = client.newCall(request).execute().use { resp ->
 }
 ```
 
-The bad example duplicates behavior that already exists in `HttpJson`: URL building, query encoding, default headers,
-proxy-aware client reuse, response decoding, charset handling, error extraction, and JSON root validation. Use
-`HttpJson.getAny`, `HttpJson.getObject`, or `HttpJson.getArray` unless the call genuinely needs lower-level HTTP
-behavior.
+The bad example duplicates behavior that already exists in `HttpJson`: URL building, query encoding,
+default headers, proxy-aware client reuse, response decoding, charset handling, error extraction,
+and JSON root validation. Use
+`HttpJson.getAny`, `HttpJson.getObject`, or `HttpJson.getArray` unless the call genuinely needs
+lower-level HTTP behavior.
 
-The same rule applies to path handling. The project already has `PathUtils` for safe file names, archive entry paths,
-temporary sibling paths, and quiet cleanup.
+The same rule applies to path handling. The project already has `PathUtils` for safe file names,
+archive entry paths, temporary sibling paths, and quiet cleanup.
 
 Good:
 
@@ -748,13 +774,14 @@ Bad:
 
 ```kotlin
 val safeName = remoteTitle
-    .replace("/", "_")
-    .replace("\\", "_")
-    .replace(":", "_")
-    .take(120)
+        .replace("/", "_")
+        .replace("\\", "_")
+        .replace(":", "_")
+        .take(120)
 ```
 
-If a suitable utility exists, use it. Do not write a second local version unless there is a documented reason.
+If a suitable utility exists, use it. Do not write a second local version unless there is a
+documented reason.
 
 ## Command and Feature Code
 
@@ -783,7 +810,13 @@ override fun definition() = botCommand("github") {
                 default = 3
             }
             execute { args ->
-                source.reply(handleSearch(args.get("keyword"), args.getOrNull("top") ?: 3))
+                source.reply(
+                    handleSearch(
+                        args.get("keyword"),
+                        args.getOrNull("top")
+                            ?: 3
+                    )
+                )
             }
         }
         example("github search lukosbot --top=5")
@@ -808,14 +841,20 @@ override fun definition() = botCommand("github") {
             positional("keyword", ArgType.StringType) { required = true; greedy = true }
             option("top") { names = listOf("--top"); type = ArgType.IntType; default = 3 }
             execute { args ->
-                source.reply(handleSearch(args.get("keyword"), args.getOrNull("top") ?: 3))
+                source.reply(
+                    handleSearch(
+                        args.get("keyword"),
+                        args.getOrNull("top")
+                            ?: 3
+                    )
+                )
             }
         }
     }
 }
 
 When sending messages, use the project’s outbound message model instead of directly depending on one platform’s SDK from
-command logic.
+command logic .
 
 Good:
 
@@ -829,8 +868,8 @@ Bad:
 telegramClient.execute(new SendMessage(chatId, "Done."));
 ```
 
-A command can decide *what* should happen. Shared conversion, protocol, platform, HTTP, path, and state-store behavior
-should stay in the appropriate `util`, `core`, `platform`, or service package.
+A command can decide *what* should happen. Shared conversion, protocol, platform, HTTP, path, and
+state-store behavior should stay in the appropriate `util`, `core`, `platform`, or service package.
 
 ## Configuration Classes
 
@@ -845,8 +884,8 @@ data class ImageConfig(
 )
 ```
 
-Prefer mutable `var` properties with defaults for Spring Boot configuration binding unless constructor binding is
-intentionally used and verified.
+Prefer mutable `var` properties with defaults for Spring Boot configuration binding unless
+constructor binding is intentionally used and verified.
 
 Nested config groups should also be data classes when they carry state:
 
@@ -857,8 +896,8 @@ data class Music(
 )
 ```
 
-If a config group is intentionally empty, use a Kotlin `object` or `data object` rather than adding meaningless fake
-fields.
+If a config group is intentionally empty, use a Kotlin `object` or `data object` rather than adding
+meaningless fake fields.
 
 ## Nullability
 
@@ -870,23 +909,24 @@ Use nullable types when a value may truly be absent from configuration or runtim
 var accessToken: String? = null
 ```
 
-Do not use nullable types simply to avoid initializing a property. Prefer defaults when a safe default exists:
+Do not use nullable types simply to avoid initializing a property. Prefer defaults when a safe
+default exists:
 
 ```kotlin
 var enabled: Boolean = false
 var token: String = ""
 ```
 
-When Java callers use Kotlin code, remember that Kotlin nullability affects generated method contracts. Keep public APIs
-conservative and predictable.
+When Java callers use Kotlin code, remember that Kotlin nullability affects generated method
+contracts. Keep public APIs conservative and predictable.
 
 ## Examples of Preferred Formatting
 
 ### Java Method
 
-This example follows the style used by the command DSL builder: the method has three parameters, so each
-parameter is placed on its own line. The stream source keeps `.stream()` on the same line as the data, and every stream
-operation after that gets its own line.
+This example follows the style used by the command DSL builder: the method has three parameters, so
+each parameter is placed on its own line. The stream source keeps `.stream()` on the same line as
+the data, and every stream operation after that gets its own line.
 
 ```java
 public static <S> void registerAliases(
@@ -911,9 +951,9 @@ public static <S> void registerAliases(
 
 ### Kotlin Function
 
-This example follows the shape of `HttpJson.getObject`: a utility function with multiple parameters should use one
-parameter per line, defaults should remain visible, and the function body should not have extra blank lines after the
-opening brace.
+This example follows the shape of `HttpJson.getObject`: a utility function with multiple parameters
+should use one parameter per line, defaults should remain visible, and the function body should not
+have extra blank lines after the opening brace.
 
 ```kotlin
 @Throws(IOException::class)
@@ -981,13 +1021,16 @@ Before opening a pull request, check the following:
 - Private helpers are marked `private`.
 - Reusable helpers are placed in `util`.
 - Existing `util` functions are reused instead of duplicated.
-- `core` remains Java unless a Kotlin migration is justified.
+- `core` uses Kotlin for coroutine-native code; existing stable Java stays Java unless the change
+  requires suspend support or structured concurrency.
 - Interface names follow the `IName` convention.
-- Parameters, records, data classes, annotations, streams, enums, and Kotlin DSL lambdas follow the formatting rules
-  above.
-- Kotlin code avoids semicolon-compressed lambda bodies and uses blank lines to separate distinct logical groups.
-- Feature code uses shared project utilities such as `HttpJson`, `PathUtils`, `OkHttpUtils`, and DSL builder
-  helpers instead of duplicating infrastructure logic.
+- Parameters, records, data classes, annotations, streams, enums, and Kotlin DSL lambdas follow the
+  formatting rules above.
+- Kotlin code avoids semicolon-compressed lambda bodies and uses blank lines to separate distinct
+  logical groups.
+- Feature code uses shared project utilities such as `HttpJson`, `PathUtils`, `OkHttpUtils`, and DSL
+  builder helpers instead of duplicating infrastructure logic.
 - Configuration models are readable and bind cleanly from `application.yml`.
 
-When in doubt, optimize for maintainability and review clarity. Code is read more often than it is written.
+When in doubt, optimize for maintainability and review clarity. Code is read more often than it is
+written.

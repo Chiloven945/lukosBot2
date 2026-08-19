@@ -20,6 +20,7 @@ plugins {
     alias(libs.plugins.kotlin.spring)
     alias(libs.plugins.kotlin.lombok)
     alias(libs.plugins.spring.boot)
+    kotlin("kapt")
 }
 
 springBoot {
@@ -65,6 +66,7 @@ dependencies {
 
     implementation(libs.kotlin.reflect)
     implementation(libs.snakeyaml)
+    implementation(libs.kotlinx.coroutines.core)
     implementation(libs.spring.boot.starter.log4j2)
 
     runtimeOnly(libs.h2)
@@ -73,4 +75,9 @@ dependencies {
     annotationProcessor(platform(libs.spring.boot.dependencies.bom))
     annotationProcessor(libs.lombok)
     annotationProcessor(libs.spring.boot.configuration.processor)
+    testImplementation(kotlin("test"))
+}
+
+kapt {
+    keepJavacAnnotationProcessors = true
 }

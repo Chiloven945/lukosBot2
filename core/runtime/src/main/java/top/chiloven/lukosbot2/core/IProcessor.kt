@@ -15,27 +15,25 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package top.chiloven.lukosbot2.platform;
+package top.chiloven.lukosbot2.core
 
-import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage;
+import top.chiloven.lukosbot2.core.model.message.inbound.InboundMessage
+import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage
 
 /**
- * Platform-specific sender for outbound rich messages.
+ * A message processor that consumes an inbound message and produces zero or more outbound messages.
  *
- * <p>Implementations are responsible for translating {@link OutboundMessage} into
- * native platform API calls (Telegram, Discord, ...), including handling of mixed content (text + image/file)
- * and any platform limits.</p>
+ * <p>Processors are typically chained by {@link PipelineProcessor}.</p>
  */
-public interface ISender {
+interface IProcessor {
 
     /**
-     * Send an outbound message.
+     * Handle an inbound message.
      *
-     * <p>This method should be thread-safe. Ordering guarantees (per chat) are handled
-     * by {@code MessageSenderHub}.</p>
+     * @param inbound inbound message
      *
-     * @param out outbound message (must not be null)
+     * @return outbound messages to be sent (may be empty, never null)
      */
-    void send(OutboundMessage out);
+    suspend fun handle(inbound: InboundMessage): List<OutboundMessage>
 
 }
