@@ -48,6 +48,7 @@ include(":platform:discord")
 
 include(":infrastructure:spring")
 include(":infrastructure:http")
+include(":infrastructure:jdbc")
 include(":infrastructure:web-infra")
 
 include(":commands:basic")

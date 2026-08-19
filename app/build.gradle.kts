@@ -49,6 +49,7 @@ dependencies {
     implementation(project(":core:command"))
     implementation(project(":platform:api"))
     implementation(project(":infrastructure:http"))
+    implementation(project(":infrastructure:jdbc"))
     implementation(project(":infrastructure:spring"))
 
     implementation(project(":platform:telegram"))

@@ -15,27 +15,15 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-plugins {
-    `java-library`
-    alias(libs.plugins.kotlin.jvm)
-    alias(libs.plugins.kotlin.spring)
-    alias(libs.plugins.kotlin.lombok)
-}
+package top.chiloven.lukosbot2.core;
 
-dependencies {
-    implementation(project(":infrastructure:http"))
+import top.chiloven.lukosbot2.core.model.message.media.LoadedPlatformMedia;
+import top.chiloven.lukosbot2.core.model.message.media.UrlRef;
 
-    implementation(project(":shared"))
-    implementation(project(":core:model"))
-    implementation(project(":properties"))
-    implementation(project(":infrastructure:spring"))
+import java.io.IOException;
 
-    api(libs.jsoup)
-    api(libs.selenium.java)
+public interface IUrlMediaLoader {
 
-    implementation(libs.flexmark.html2md.converter)
-    implementation(libs.webdrivermanager)
+    LoadedPlatformMedia load(UrlRef ref) throws IOException;
 
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
 }
