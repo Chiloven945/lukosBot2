@@ -26,7 +26,6 @@ data class CommandConfigProp(
     var control: Control = Control,
     var gitHub: GitHub = GitHub(),
     var music: Music = Music(),
-    var translate: Translate = Translate(),
     var twentyFour: TwentyFour = TwentyFour(),
 ) {
 
@@ -87,21 +86,6 @@ data class CommandConfigProp(
             var clientId: String = "",
         )
     }
-
-    /**
-     * Translate related configurations.
-     */
-    data class Translate(
-        /**
-         * The default language to translate, without a specific language code.
-         */
-        var defaultLang: String = "zh-CN",
-
-        /**
-         * The URL of the translating server.
-         */
-        var url: String = "",
-    )
 
     /**
      * TwentyFour game related configurations.
