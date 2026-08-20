@@ -61,7 +61,6 @@ dependencies {
     implementation(project(":commands:minecraft"))
     implementation(project(":commands:web"))
     implementation(project(":commands:media"))
-    implementation(project(":commands:translate"))
     implementation(project(":commands:cli"))
 
     implementation(libs.kotlin.reflect)

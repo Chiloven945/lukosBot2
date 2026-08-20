@@ -21,7 +21,6 @@ jspecify = "1.0.1"
 jackson = "3.2.2"
 ktor = "3.1.1"
 
-docker-java = "3.7.1"
 flexmark = "0.64.8"
 selenium = "4.47.0"
 jsoup = "1.23.1"
@@ -57,9 +56,6 @@ log4j-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4
 log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j2" }
 log4j-slf4j2-impl = { module = "org.apache.logging.log4j:log4j-slf4j2-impl", version.ref = "log4j2" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
-
-docker-java = { module = "com.github.docker-java:docker-java", version.ref = "docker-java" }
-docker-java-transport-httpclient5 = { module = "com.github.docker-java:docker-java-transport-httpclient5", version.ref = "docker-java" }
 
 flexmark-html2md-converter = { module = "com.vladsch.flexmark:flexmark-html2md-converter", version.ref = "flexmark" }
 selenium-java = { module = "org.seleniumhq.selenium:selenium-java", version.ref = "selenium" }

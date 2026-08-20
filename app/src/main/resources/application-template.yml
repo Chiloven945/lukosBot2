@@ -78,7 +78,6 @@ lukos:
   commands:
     control:
       weather: false
-      translate: false
 
     github:
       token: "${GITHUB_TOKEN:}"
@@ -91,9 +90,6 @@ lukos:
       soundcloud:
         enabled: true
         client-id: ""
-
-    translate:
-      default-lang: "zh-Hans"
 
     twenty-four:
       time-limit: 300000
