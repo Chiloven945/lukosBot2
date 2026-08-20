@@ -23,6 +23,7 @@ import okhttp3.Request
 import okhttp3.Response
 import org.apache.logging.log4j.LogManager
 import top.chiloven.lukosbot2.Constants
+import top.chiloven.lukosbot2.util.HttpStatusException
 import top.chiloven.lukosbot2.util.OkHttpUtils
 import java.io.IOException
 import java.net.URI
@@ -40,8 +41,8 @@ internal class DownloadHttp {
     @Throws(IOException::class)
     fun execute(request: Request, timeoutMs: Int): Response =
         clientFor(timeoutMs)
-            .newCall(request)
-            .execute()
+                .newCall(request)
+                .execute()
 
     fun buildGet(
         url: URI,
@@ -149,8 +150,8 @@ internal class DownloadHttp {
             }
 
             val client = baseClient.newBuilder()
-                .callTimeout(normalizedTimeout.toLong(), TimeUnit.MILLISECONDS)
-                .build()
+                    .callTimeout(normalizedTimeout.toLong(), TimeUnit.MILLISECONDS)
+                    .build()
             cache.clients[normalizedTimeout] = client
             timeoutClientCache = cache
             return client
@@ -167,10 +168,10 @@ internal class DownloadHttp {
         method: String,
     ): Request {
         val builder = Request.Builder()
-            .url(url.toString())
-            .header("User-Agent", Constants.UA)
-            .header("Accept", "*/*")
-            .method(method, null)
+                .url(url.toString())
+                .header("User-Agent", Constants.UA)
+                .header("Accept", "*/*")
+                .method(method, null)
 
         if (forceIdentityEncoding) {
             builder.header("Accept-Encoding", "identity")
@@ -201,4 +202,18 @@ internal class DownloadHttp {
 
     }
 
+}
+
+internal fun Response.toHttpStatusException(): HttpStatusException {
+    val method = request.method
+    val url = request.url.toString()
+    val snippet = runCatching { peekBody(4096).string() }.getOrNull()
+    return HttpStatusException.fromStatus(
+        statusCode = code,
+        method = method,
+        url = url,
+        responseBodySnippet = snippet,
+        retryAfterHeader = header("Retry-After"),
+        responseHeaders = headers.toMultimap()
+    )
 }

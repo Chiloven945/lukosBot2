@@ -17,43 +17,72 @@
  */
 package top.chiloven.lukosbot2.platform.telegram
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import io.ktor.client.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import org.springframework.stereotype.Component
 import top.chiloven.lukosbot2.config.AppProperties
 import top.chiloven.lukosbot2.core.model.message.media.LoadedPlatformMedia
 import top.chiloven.lukosbot2.core.model.message.media.PlatformFileRef
+import top.chiloven.lukosbot2.http.readBytePayload
+import top.chiloven.lukosbot2.http.requireSuccess
 import top.chiloven.lukosbot2.platform.PlatformFileLoader
-import top.chiloven.lukosbot2.util.HttpBytes
-import top.chiloven.lukosbot2.util.HttpJson
+import top.chiloven.lukosbot2.util.JsonUtils
 import java.io.IOException
-import java.net.URI
 
 @Component
 class TelegramFileLoader(
-    private val appProperties: AppProperties
+    private val appProperties: AppProperties,
+    private val http: HttpClient
 ) : PlatformFileLoader {
 
-    override fun supports(platform: String): Boolean = platform.equals("telegram", ignoreCase = true)
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private data class TelegramGetFileResponse(
+        val ok: Boolean = false,
+        val result: TelegramFileDto? = null,
+        val description: String? = null,
+    ) {
+
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        data class TelegramFileDto(
+            val fileId: String? = null,
+            val filePath: String? = null,
+            val fileSize: Long? = null,
+        )
+
+    }
+
+    override fun supports(platform: String): Boolean = platform.equals(
+        "telegram",
+        ignoreCase = true
+    )
 
     @Throws(IOException::class)
-    override fun load(ref: PlatformFileRef): LoadedPlatformMedia {
+    override suspend fun load(ref: PlatformFileRef): LoadedPlatformMedia {
         val token = appProperties.telegram.botToken.trim()
         if (token.isBlank()) {
             throw IOException("Telegram 配置不完整，无法读取图片。")
         }
 
-        val root = HttpJson.getObjectResponse(
-            URI("https://api.telegram.org/bot$token/getFile"),
-            mapOf("file_id" to ref.fileId())
-        ).body
-        val filePath = root.path("result").path("file_path").asString(null)
-            ?.takeIf { it.isNotBlank() }
-            ?: throw IOException("Telegram 未返回文件路径。")
+        val getFileResponse = http.get("https://api.telegram.org/bot$token/getFile") {
+            parameter("file_id", ref.fileId())
+        }.requireSuccess()
 
-        val remote = HttpBytes.getResponse("https://api.telegram.org/file/bot$token/$filePath").body
+        val text = getFileResponse.bodyAsText()
+        val getFileResult = JsonUtils.SNAKE_CASE_MAPPER.readValue(
+            text,
+            TelegramGetFileResponse::class.java
+        )
+        val filePath = getFileResult.result?.filePath?.takeIf { it.isNotBlank() }
+            ?: throw IOException("Telegram 未返回文件路径：${getFileResult.description ?: "未知错误"}")
+
+        val payload = http.get("https://api.telegram.org/file/bot$token/$filePath")
+                .readBytePayload()
         return LoadedPlatformMedia(
-            remote.bytes,
-            remote.fileName ?: filePath.substringAfterLast('/').ifBlank { null },
-            remote.mime
+            payload.bytes,
+            payload.fileName ?: filePath.substringAfterLast('/').ifBlank { null },
+            payload.mime
         )
     }
 

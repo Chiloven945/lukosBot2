@@ -17,21 +17,24 @@
  */
 package top.chiloven.lukosbot2.commands.bot.motd
 
-import okhttp3.HttpUrl.Companion.toHttpUrl
-import okhttp3.Request
+import io.ktor.client.*
+import io.ktor.client.plugins.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
 import org.apache.logging.log4j.LogManager
 import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.config.ProxyConfigProp
-import top.chiloven.lukosbot2.util.HttpStatusException
+import top.chiloven.lukosbot2.http.requireSuccess
 import top.chiloven.lukosbot2.util.JsonUtils
-import top.chiloven.lukosbot2.util.OkHttpUtils
 import java.io.IOException
 import java.util.*
 
 @Service
 class MotdQueryService(
     private val proxyConfigProp: ProxyConfigProp,
+    private val http: HttpClient,
 ) {
 
     companion object {
@@ -49,17 +52,7 @@ class MotdQueryService(
 
     private val log = LogManager.getLogger(MotdQueryService::class.java)
 
-    private val clientCache = OkHttpUtils.ProxyAwareOkHttpClientCache(
-        connectTimeoutMs = API_CONNECT_TIMEOUT_SECONDS * 1000,
-        readTimeoutMs = API_READ_TIMEOUT_SECONDS * 1000,
-        callTimeoutMs = API_CALL_TIMEOUT_SECONDS * 1000,
-        proxyProvider = { proxyConfigProp },
-    )
-
-    private val okHttp
-        get() = clientCache.client
-
-    fun query(rawAddress: String, mode: QueryMode = QueryMode.AUTO): MotdQueryResult {
+    suspend fun query(rawAddress: String, mode: QueryMode = QueryMode.AUTO): MotdQueryResult {
         val address = MinecraftServerAddress.parse(rawAddress)
 
         return when (mode) {
@@ -69,46 +62,43 @@ class MotdQueryService(
         }
     }
 
-    private fun queryAuto(address: MinecraftServerAddress): MotdQueryResult {
+    private suspend fun queryAuto(address: MinecraftServerAddress): MotdQueryResult {
         return try {
             queryByApi(address)
         } catch (apiError: Exception) {
-            log.warn("MOTD API query failed for {}: {}", address.normalized(), apiError.message)
-            queryByDirectPing(address, listOf("mcsrvstat.us：${apiError.message ?: "查询失败"}"))
+            log.warn(
+                "MOTD API query failed for {}: {}",
+                address.normalized(),
+                apiError.message
+            )
+            queryByDirectPing(
+                address,
+                listOf("mcsrvstat.us：${apiError.message ?: "查询失败"}")
+            )
         }
     }
 
-    private fun queryByApi(address: MinecraftServerAddress): MotdQueryResult {
-        val url = API_BASE_URL.toHttpUrl().newBuilder()
-            .addPathSegment("3")
-            .addPathSegment(address.apiAddress())
-            .build()
-
-        val request = Request.Builder()
-            .url(url)
-            .get()
-            .header("User-Agent", "${Constants.UA} motd")
-            .header("Accept", "application/json")
-            .build()
-
-        okHttp.newCall(request).execute().use { response ->
-            val body = response.body.string().trim()
-            if (!response.isSuccessful) {
-                val detail = body.ifBlank { response.message.ifBlank { "HTTP ${response.code}" } }
-                throw HttpStatusException.fromResponse(
-                    response = response,
-                    responseBodySnippet = detail,
-                )
+    private suspend fun queryByApi(address: MinecraftServerAddress): MotdQueryResult {
+        val response = http.get("$API_BASE_URL/3/${address.apiAddress()}") {
+            header(HttpHeaders.UserAgent, "${Constants.UA} motd")
+            header(HttpHeaders.Accept, "application/json")
+            timeout {
+                requestTimeoutMillis = API_CALL_TIMEOUT_SECONDS * 1000
+                connectTimeoutMillis = API_CONNECT_TIMEOUT_SECONDS * 1000
+                socketTimeoutMillis = API_READ_TIMEOUT_SECONDS * 1000
             }
-            if (body.isBlank()) {
-                throw IOException("mcsrvstat.us 没有返回可用内容")
-            }
+        }.requireSuccess()
 
-            val root = JsonUtils.MAPPER.readTree(body).asObjectOpt().orElseThrow {
-                IOException("mcsrvstat.us 返回的数据格式无法识别")
-            }
-            return McSrvStatusResponse.fromJsonObject(root).toQueryResult(address)
+        val body = response.bodyAsText().trim()
+        if (body.isBlank()) {
+            throw IOException("mcsrvstat.us 没有返回可用内容")
         }
+
+        val res = JsonUtils.SNAKE_CASE_MAPPER.readValue(
+            body,
+            McSrvStatusResponse::class.java
+        )
+        return res.toQueryResult(address)
     }
 
     private fun queryByDirectPing(
@@ -135,7 +125,7 @@ class MotdQueryService(
                     onlinePlayers = status.onlinePlayers,
                     maxPlayers = status.maxPlayers,
                     descriptionLines = status.description.lines().filter { it.isNotBlank() }
-                        .ifEmpty { listOf(DEFAULT_DESCRIPTION) },
+                            .ifEmpty { listOf(DEFAULT_DESCRIPTION) },
                     favicon = status.favicon,
                     software = null,
                     srvResolved = candidate.viaSrv,
@@ -151,8 +141,12 @@ class MotdQueryService(
     }
 
     private fun McSrvStatusResponse.toQueryResult(address: MinecraftServerAddress): MotdQueryResult {
-        val portText = port ?: address.port ?: DEFAULT_PORT
-        val resolvedHost = hostname?.takeIf { it.isNotBlank() } ?: address.hostForDisplay()
+        val portText = port
+            ?: address.port
+            ?: DEFAULT_PORT
+        val resolvedHost = hostname?.takeIf {
+            it.isNotBlank()
+        } ?: address.hostForDisplay()
 
         return MotdQueryResult(
             requestedAddress = address.normalized(),
@@ -175,12 +169,14 @@ class MotdQueryService(
     }
 
     private fun McSrvStatusResponse.descriptionLines(): List<String> {
-        val clean = motd?.clean.orEmpty().map { it.trimEnd() }.filter { it.isNotBlank() }
+        val clean = motd?.clean.orEmpty()
+                .map { it.trimEnd() }
+                .filter { it.isNotBlank() }
         if (clean.isNotEmpty()) return clean
 
         val raw = motd?.raw.orEmpty()
-            .map { it.replace(Regex("§."), "").trimEnd() }
-            .filter { it.isNotBlank() }
+                .map { it.replace(Regex("§."), "").trimEnd() }
+                .filter { it.isNotBlank() }
         if (raw.isNotEmpty()) return raw
 
         return listOf(DEFAULT_DESCRIPTION)
@@ -221,8 +217,10 @@ class MotdQueryService(
     }
 
     enum class DataSource {
+
         MCSRVSTAT,
         DIRECT,
+
     }
 
     data class MotdQueryResult(

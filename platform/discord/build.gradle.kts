@@ -33,6 +33,7 @@ dependencies {
     implementation(project(":shared"))
 
     implementation(libs.jda)
+    implementation(libs.okhttp)
     implementation(libs.kotlinx.coroutines.core)
 
     compileOnly(libs.lombok)

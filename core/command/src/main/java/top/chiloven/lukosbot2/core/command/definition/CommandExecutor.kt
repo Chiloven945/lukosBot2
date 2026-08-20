@@ -37,6 +37,6 @@ fun interface CommandExecutor<S> {
      * @param invocation the populated invocation context
      * @return 1 for success, 0 for failure
      */
-    fun execute(invocation: CommandInvocation<S>): Int
+    suspend fun execute(invocation: CommandInvocation<S>): Int
 
 }

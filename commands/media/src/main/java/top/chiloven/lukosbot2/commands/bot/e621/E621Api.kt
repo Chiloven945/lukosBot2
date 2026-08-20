@@ -17,19 +17,30 @@
  */
 package top.chiloven.lukosbot2.commands.bot.e621
 
-import tools.jackson.databind.node.ArrayNode
-import tools.jackson.databind.node.ObjectNode
-import top.chiloven.lukosbot2.util.HttpJson
-import top.chiloven.lukosbot2.util.JsonUtils.MAPPER
-import top.chiloven.lukosbot2.util.JsonUtils.arr
-import top.chiloven.lukosbot2.util.JsonUtils.obj
+import io.ktor.client.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import org.springframework.stereotype.Service
+import top.chiloven.lukosbot2.commands.bot.e621.schema.Artist
+import top.chiloven.lukosbot2.commands.bot.e621.schema.Post
+import top.chiloven.lukosbot2.http.requireSuccess
+import top.chiloven.lukosbot2.util.JsonUtils
+import java.io.IOException
 import java.net.URI
 
-object E621Api {
+@Service
+class E621Api(
+    private val http: HttpClient
+) {
 
-    val API: URI = URI("https://e621.net")
+    companion object {
 
-    fun getArtists(
+        val API: URI = URI.create("https://e621.net")
+
+    }
+
+    @Throws(IOException::class)
+    suspend fun getArtists(
         limit: Int? = null,
         page: Int? = null,
         searchId: Int? = null,
@@ -46,7 +57,7 @@ object E621Api {
         searchIsLinked: String? = null,
         searchLinkedUserId: Int? = null,
         searchLinkedUserName: String? = null
-    ): ArrayNode {
+    ): List<Artist> {
         val params = mapOf(
             "limit" to limit,
             "page" to page,
@@ -64,21 +75,43 @@ object E621Api {
             "search[is_linked]" to searchIsLinked,
             "search[linked_user_id]" to searchLinkedUserId,
             "search[linked_user_name]" to searchLinkedUserName
-        ).mapNotNull { (key, value) -> value?.let { key to it.toString() } }.toMap()
+        ).mapNotNull { (key, value) ->
+            value?.let {
+                key to it.toString()
+            }
+        }.toMap()
 
-        return HttpJson.getArrayResponse(API.resolve("artists.json"), params).body
+        val response = http.get(API.resolve("artists.json").toString()) {
+            params.forEach { (k, v) ->
+                parameter(k, v)
+            }
+        }.requireSuccess()
+
+        val text = response.bodyAsText()
+        val node = JsonUtils.MAPPER.readTree(text)
+        return if (node.isArray) {
+            Artist.fromJsonArray(node.asArray())
+        } else {
+            emptyList()
+        }
     }
 
-    fun getArtistsXIdOrName(idOrName: String): ObjectNode =
-        HttpJson.getObjectResponse(API.resolve("artists/$idOrName.json")).body
+    @Throws(IOException::class)
+    suspend fun getArtistsXIdOrName(idOrName: String): Artist {
+        val response = http.get(API.resolve("artists/$idOrName.json").toString()).requireSuccess()
+        val text = response.bodyAsText()
+        val node = JsonUtils.MAPPER.readTree(text).asObject()
+        return Artist.fromJsonObject(node)
+    }
 
-    fun getPosts(
+    @Throws(IOException::class)
+    suspend fun getPosts(
         limit: Int? = null,
         page: Int? = null,
         tags: String? = null,
         md5: String? = null,
         random: String? = null,
-    ): ArrayNode {
+    ): List<Post> {
         val params = mapOf(
             "limit" to limit,
             "page" to page,
@@ -87,21 +120,46 @@ object E621Api {
             "random" to random
         ).mapNotNull { (key, value) -> value?.let { key to it.toString() } }.toMap()
 
-        val root = HttpJson.getObjectResponse(API.resolve("posts.json"), params).body
-        root.arr("posts")?.let { return it }
-        root.obj("post")?.let { postObj ->
-            return MAPPER.createArrayNode().add(postObj)
+        val response = http.get(API.resolve("posts.json").toString()) {
+            params.forEach { (k, v) ->
+                parameter(k, v)
+            }
+        }.requireSuccess()
+
+        val text = response.bodyAsText()
+        val root = JsonUtils.MAPPER.readTree(text).asObject()
+        root.get("posts")?.let { postsNode ->
+            if (postsNode.isArray) {
+                return Post.fromJsonArray(postsNode.asArray())
+            }
         }
-        return MAPPER.createArrayNode()
+
+        root.get("post")?.let { postNode ->
+            if (postNode.isObject) {
+                return listOf(Post.fromJsonObject(postNode.asObject()))
+            }
+        }
+
+        return emptyList()
     }
 
-    fun getPostsXRandom(tags: String? = null): ObjectNode =
-        HttpJson.getObjectResponse(
-            API.resolve("posts/random.json"),
-            mapOf("tags" to tags).filterValues { it != null }
-        ).body.obj("post")!!
+    @Throws(IOException::class)
+    suspend fun getPostsXRandom(tags: String? = null): Post? {
+        val response = http.get(API.resolve("posts/random.json").toString()) {
+            tags?.let { parameter("tags", it) }
+        }.requireSuccess()
 
-    fun getPostsXId(id: String): ObjectNode =
-        HttpJson.getObjectResponse(API.resolve("posts/$id.json")).body.obj("post")!!
+        val text = response.bodyAsText()
+        val root = JsonUtils.MAPPER.readTree(text).asObject()
+        return root.get("post")?.asObjectOpt()?.orElse(null)?.let(Post::fromJsonObject)
+    }
+
+    @Throws(IOException::class)
+    suspend fun getPostsXId(id: String): Post? {
+        val response = http.get(API.resolve("posts/$id.json").toString()).requireSuccess()
+        val text = response.bodyAsText()
+        val root = JsonUtils.MAPPER.readTree(text).asObject()
+        return root.get("post")?.asObjectOpt()?.orElse(null)?.let(Post::fromJsonObject)
+    }
 
 }

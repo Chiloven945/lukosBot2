@@ -27,14 +27,18 @@ dependencies {
     implementation(project(":shared"))
     implementation(project(":infrastructure:spring"))
     implementation(project(":core:runtime"))
-    api(libs.jackson.core.databind)
-    api(libs.okhttp)
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.okhttp)
+    implementation(libs.jackson.core.databind)
+    implementation(libs.okhttp)
     implementation(libs.spring.boot.starter)
 
     implementation(libs.kotlinx.coroutines.core)
 
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.kotlin.test.junit)
+    testImplementation(libs.ktor.client.mock)
+    testImplementation(libs.kotlinx.coroutines.test)
     testRuntimeOnly(libs.junit.platform.launcher)
 
     compileOnly(libs.lombok)

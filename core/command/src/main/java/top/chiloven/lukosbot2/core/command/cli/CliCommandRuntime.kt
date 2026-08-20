@@ -47,7 +47,11 @@ object CliCommandRuntime {
      * @param rawCommandLine the full command line text
      * @return 1 on success, 0 on error (with a message printed to source)
      */
-    fun execute(command: ICliCommand, source: CliCmdContext, rawCommandLine: String): Int {
+    suspend fun execute(
+        command: ICliCommand,
+        source: CliCmdContext,
+        rawCommandLine: String
+    ): Int {
         val rootToken = CommandRuntime.firstToken(rawCommandLine.trim()) ?: return 0
         if (!command.matches(rootToken)) return 0
 

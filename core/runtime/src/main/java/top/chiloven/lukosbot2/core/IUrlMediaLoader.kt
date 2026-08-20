@@ -15,17 +15,15 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package top.chiloven.lukosbot2.platform;
+package top.chiloven.lukosbot2.core
 
-import top.chiloven.lukosbot2.core.model.message.media.LoadedPlatformMedia;
-import top.chiloven.lukosbot2.core.model.message.media.PlatformFileRef;
+import top.chiloven.lukosbot2.core.model.message.media.LoadedPlatformMedia
+import top.chiloven.lukosbot2.core.model.message.media.UrlRef
+import java.io.IOException
 
-import java.io.IOException;
+interface IUrlMediaLoader {
 
-public interface PlatformFileLoader {
-
-    boolean supports(String platform);
-
-    LoadedPlatformMedia load(PlatformFileRef ref) throws IOException;
+    @Throws(IOException::class)
+    suspend fun load(ref: UrlRef): LoadedPlatformMedia
 
 }

@@ -97,7 +97,7 @@ class MotdCommand(
 
     override fun definition() = commandDefinition
 
-    private fun executeQuery(
+    private suspend fun executeQuery(
         src: CommandSource,
         address: String,
         mode: MotdQueryService.QueryMode
@@ -128,6 +128,8 @@ class MotdCommand(
             }
 
             1
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: IllegalArgumentException) {
             src.reply(e.message ?: "地址格式不正确")
             0

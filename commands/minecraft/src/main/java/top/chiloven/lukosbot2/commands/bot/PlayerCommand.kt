@@ -17,6 +17,7 @@
  */
 package top.chiloven.lukosbot2.commands.bot
 
+import kotlinx.coroutines.CancellationException
 import org.apache.logging.log4j.LogManager
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
@@ -36,7 +37,9 @@ import java.io.IOException
     havingValue = "true",
     matchIfMissing = true
 )
-class PlayerCommand : IBotCommand {
+class PlayerCommand(
+    private val mojangApi: MojangApi
+) : IBotCommand {
 
     private val log = LogManager.getLogger(PlayerCommand::class.java)
 
@@ -58,12 +61,14 @@ class PlayerCommand : IBotCommand {
 
                 try {
                     val result: String = when (mode) {
-                        "-u" -> MojangApi.getUuidFromName(data) ?: "未找到用户"
-                        "-n" -> MojangApi.getNameFromUuid(data) ?: "未找到 UUID"
-                        else -> MojangApi.getMcPlayerInfo(data).toString()
+                        "-u" -> mojangApi.getUuidFromName(data) ?: "未找到用户"
+                        "-n" -> mojangApi.getNameFromUuid(data) ?: "未找到 UUID"
+                        else -> mojangApi.getMcPlayerInfo(data).toString()
                     }
 
                     source.reply(result)
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: IOException) {
                     log.warn("Failed to fetch player info: {}", e.message, e)
                     source.reply("获取玩家信息失败，请检查输入后重试。")

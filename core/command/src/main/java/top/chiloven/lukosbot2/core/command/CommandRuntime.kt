@@ -61,7 +61,7 @@ object CommandRuntime {
      * @throws CommandDispatchException on structure errors
      * @throws CommandParseException on argument parsing errors
      */
-    fun <S> execute(
+    suspend fun <S> execute(
         root: CommandNode<S>,
         rawTail: String,
         source: S,
@@ -92,7 +92,7 @@ object CommandRuntime {
         return executeLeaf(leaf, tail, source, path)
     }
 
-    private fun <S> executeLeaf(
+    private suspend fun <S> executeLeaf(
         leaf: CommandLeaf<S>,
         rawTail: String,
         source: S,

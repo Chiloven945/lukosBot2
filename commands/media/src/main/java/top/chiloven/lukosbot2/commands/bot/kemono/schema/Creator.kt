@@ -17,9 +17,6 @@
  */
 package top.chiloven.lukosbot2.commands.bot.kemono.schema
 
-import tools.jackson.databind.node.ArrayNode
-import tools.jackson.databind.node.ObjectNode
-import top.chiloven.lukosbot2.util.JsonUtils
 import top.chiloven.lukosbot2.util.JsonUtils.JsonLdt
 import top.chiloven.lukosbot2.util.TimeUtils.fmt
 import java.time.LocalDateTime
@@ -41,8 +38,7 @@ data class Creator(
 
     companion object {
 
-        fun fromProfileAndPosts(obj: ObjectNode, arr: ArrayNode): Creator {
-            val profile = JsonUtils.snakeTreeToValue(obj, Profile::class.java)
+        fun fromProfileAndPosts(profile: Profile, posts: List<PostSimple>): Creator {
             return Creator(
                 id = profile.id,
                 name = profile.name,
@@ -55,7 +51,7 @@ data class Creator(
                 dmCount = profile.dmCount,
                 shareCount = profile.shareCount,
                 chatCount = profile.chatCount,
-                posts = PostSimple.fromArraySimplePost(arr)
+                posts = posts
             )
         }
 
@@ -81,14 +77,12 @@ data class Creator(
         }.trim()
     }
 
-    private data class Profile(
+    data class Profile(
         val id: String = "",
         val name: String = "",
         val service: Service = Service.UNKNOWN,
-        @JsonLdt
-        val indexed: LocalDateTime = LocalDateTime.MIN,
-        @JsonLdt
-        val updated: LocalDateTime = LocalDateTime.MIN,
+        @JsonLdt val indexed: LocalDateTime = LocalDateTime.MIN,
+        @JsonLdt val updated: LocalDateTime = LocalDateTime.MIN,
         val publicId: String = "",
         val relationId: String? = null,
         val postCount: Int = 0,

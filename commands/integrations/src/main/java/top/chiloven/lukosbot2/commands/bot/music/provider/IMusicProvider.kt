@@ -37,7 +37,7 @@ interface IMusicProvider {
      * @throws Exception when remote API call fails
      */
     @Throws(Exception::class)
-    fun searchTrack(query: String): TrackInfo?
+    suspend fun searchTrack(query: String): TrackInfo?
 
     /**
      * Resolve track info from link, like:
@@ -51,6 +51,6 @@ interface IMusicProvider {
      * @throws Exception when remote API call fails
      */
     @Throws(Exception::class)
-    fun resolveLink(link: String): TrackInfo?
+    suspend fun resolveLink(link: String): TrackInfo?
 
 }

@@ -23,12 +23,12 @@ import top.chiloven.lukosbot2.core.command.definition.CommandDefinition
 import top.chiloven.lukosbot2.core.command.definition.CommandInvocation
 import top.chiloven.lukosbot2.core.command.definition.CommandNode
 import top.chiloven.lukosbot2.core.command.definition.CommandSyntax
+import top.chiloven.lukosbot2.core.command.definition.SyntaxItem as SpecSyntaxItem
 import top.chiloven.lukosbot2.core.command.definition.leaf.CommandLeaf
 import top.chiloven.lukosbot2.core.command.definition.leaf.EmptyLeaf
 import top.chiloven.lukosbot2.core.command.definition.leaf.RawLeaf
 import top.chiloven.lukosbot2.core.command.definition.meta.CommandOptionDoc
 import top.chiloven.lukosbot2.core.command.definition.meta.CommandParamDoc
-import top.chiloven.lukosbot2.core.command.definition.SyntaxItem as SpecSyntaxItem
 
 @CommandDsl
 class CommandDefinitionBuilder<S>(private val name: String) {
@@ -53,7 +53,7 @@ class CommandDefinitionBuilder<S>(private val name: String) {
         children += NodeBuilder<S>(childName).apply(block).build()
     }
 
-    fun execute(block: CommandInvocation<S>.() -> Unit) {
+    fun execute(block: suspend CommandInvocation<S>.() -> Unit) {
         leaf = EmptyLeaf { inv ->
             inv.block()
             inv.code()
@@ -63,7 +63,7 @@ class CommandDefinitionBuilder<S>(private val name: String) {
     fun raw(
         argName: String = "text",
         required: Boolean = true,
-        block: CommandInvocation<S>.(String) -> Unit
+        block: suspend CommandInvocation<S>.(String) -> Unit
     ) {
         leaf = RawLeaf(
             name = argName,

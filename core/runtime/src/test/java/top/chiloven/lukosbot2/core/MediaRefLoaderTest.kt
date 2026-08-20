@@ -17,6 +17,7 @@
  */
 package top.chiloven.lukosbot2.core
 
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import top.chiloven.lukosbot2.core.model.message.media.BytesRef
@@ -35,7 +36,7 @@ class MediaRefLoaderTest {
         var loadedUrl: String? = null
             private set
 
-        override fun load(ref: UrlRef): LoadedPlatformMedia {
+        override suspend fun load(ref: UrlRef): LoadedPlatformMedia {
             loadedUrl = ref.url()
             return result
         }
@@ -50,12 +51,12 @@ class MediaRefLoaderTest {
         override fun supports(platform: String): Boolean =
             platform.equals(supportedPlatform, ignoreCase = true)
 
-        override fun load(ref: PlatformFileRef): LoadedPlatformMedia = result
+        override suspend fun load(ref: PlatformFileRef): LoadedPlatformMedia = result
 
     }
 
     @Test
-    fun `url ref delegates to url media loader`() {
+    fun `url ref delegates to url media loader`() = runTest {
         val remote = LoadedPlatformMedia(
             byteArrayOf(1, 2, 3),
             "a.png",
@@ -71,7 +72,7 @@ class MediaRefLoaderTest {
     }
 
     @Test
-    fun `bytes ref returns bytes directly`() {
+    fun `bytes ref returns bytes directly`() = runTest {
         val loader = MediaRefLoader(
             listOf(),
             StubUrlMediaLoader(
@@ -97,7 +98,7 @@ class MediaRefLoaderTest {
     }
 
     @Test
-    fun `platform file ref delegates to matching platform file loader`() {
+    fun `platform file ref delegates to matching platform file loader`() = runTest {
         val expected = LoadedPlatformMedia(
             byteArrayOf(9, 9),
             "c.png",
@@ -125,7 +126,7 @@ class MediaRefLoaderTest {
     }
 
     @Test
-    fun `platform file ref without matching loader throws`() {
+    fun `platform file ref without matching loader throws`() = runTest {
         val loader = MediaRefLoader(
             listOf(
                 StubPlatformFileLoader(
@@ -146,7 +147,7 @@ class MediaRefLoaderTest {
             )
         )
 
-        assertThrows(IOException::class.java) {
+        kotlin.test.assertFailsWith<IOException> {
             loader.load(PlatformFileRef("telegram", "file-1"))
         }
     }

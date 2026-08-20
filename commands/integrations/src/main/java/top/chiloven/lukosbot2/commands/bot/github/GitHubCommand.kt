@@ -17,13 +17,12 @@
  */
 package top.chiloven.lukosbot2.commands.bot.github
 
+import io.ktor.client.*
+import kotlinx.coroutines.CancellationException
 import org.apache.logging.log4j.LogManager
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
-import top.chiloven.lukosbot2.commands.bot.github.data.GitHubRepo
-import top.chiloven.lukosbot2.commands.bot.github.data.GitHubSearchResult
-import top.chiloven.lukosbot2.commands.bot.github.data.GitHubUser
 import top.chiloven.lukosbot2.commands.bot.github.data.SearchParams
 import top.chiloven.lukosbot2.config.CommandConfigProp
 import top.chiloven.lukosbot2.core.command.definition.ArgType
@@ -38,11 +37,12 @@ import top.chiloven.lukosbot2.core.command.definition.parser.ArgvParseResult
     matchIfMissing = true
 )
 class GitHubCommand(
-    ccp: CommandConfigProp
+    ccp: CommandConfigProp,
+    httpClient: HttpClient
 ) : IBotCommand {
 
     private val log = LogManager.getLogger(GitHubCommand::class.java)
-    private val api = GitHubApi(ccp.gitHub.token)
+    private val api = GitHubApi(httpClient, ccp.gitHub.token)
 
     private val commandDefinition = botCommand("github") {
         alias("gh")
@@ -122,36 +122,42 @@ class GitHubCommand(
 
     override fun definition() = commandDefinition
 
-    private fun handleUser(username: String): String {
-        return runCatching {
-            val obj = api.getUser(username)
-            GitHubUser.from(obj).toReadableText()
-        }.getOrElse { e ->
+    private suspend fun handleUser(username: String): String {
+        return try {
+            val user = api.getUser(username)
+            user.toReadableText()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
             log.warn("github user query failed: {}", username, e)
             "未找到用户，或请求失败：$username"
         }
     }
 
-    private fun handleRepo(repoArg: String): String {
+    private suspend fun handleRepo(repoArg: String): String {
         val parts = repoArg.split("/", limit = 2)
-        if (parts.size != 2) return "仓库格式应为：owner/repo"
+        if (parts.size != 2) {
+            return "仓库格式应为：owner/repo"
+        }
 
-        return runCatching {
-            val obj = api.getRepo(parts[0], parts[1])
-            GitHubRepo.from(obj).toReadableText()
-        }.getOrElse { e ->
+        return try {
+            val repo = api.getRepo(parts[0], parts[1])
+            repo.toReadableText()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
             log.warn("github repo query failed: {}", repoArg, e)
             "未找到仓库，或请求失败：$repoArg"
         }
     }
 
-    private fun handleSearch(params: SearchParams): String {
-        return runCatching {
-            val json = api.searchRepos(
-                params.keywords, params.sort, params.order, params.language, params.top
-            )
-            GitHubSearchResult.from(json, top = params.top).toReadableText()
-        }.getOrElse { e ->
+    private suspend fun handleSearch(params: SearchParams): String {
+        return try {
+            val result = api.searchRepos(params)
+            result.toReadableText()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
             log.warn("github search failed: {}", params.keywords, e)
             "搜索失败：${e.message ?: "未知错误"}"
         }

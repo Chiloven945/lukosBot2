@@ -17,9 +17,6 @@
  */
 package top.chiloven.lukosbot2.commands.bot.github.data
 
-import tools.jackson.databind.node.ObjectNode
-import top.chiloven.lukosbot2.util.JsonUtils
-
 data class GitHubUser(
     val login: String = "",
     val name: String? = null,
@@ -37,13 +34,6 @@ data class GitHubUser(
             主页：$url
             公开仓库：$publicRepos | 粉丝：$followers | 关注：$following
         """.trimIndent()
-    }
-
-    companion object {
-
-        fun from(obj: ObjectNode): GitHubUser =
-            JsonUtils.snakeTreeToValue(obj, GitHubUser::class.java)
-
     }
 
 }

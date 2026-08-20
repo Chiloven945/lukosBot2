@@ -674,21 +674,9 @@ specific reason not to, use the existing utility.
 
 ### `core` Package
 
-Coroutine-native code in `core` should be written in Kotlin. `core` hosts the application-owned
-coroutine runtime and the structured concurrency primitives built on it (message dispatch, outbound
-send lanes, receivers, processors), and those components must be Kotlin so suspend APIs and
-structured scopes compose directly.
-
-Existing stable Java components in `core` (for example `ServiceManager`) may stay Java and should
-use the runtime's Java-friendly bridges (`ICancellableTask`, `Runnable`-based scheduling) instead of
-owning their own executors or threads. Do not migrate packages blindly: only convert a file when the
-current task requires suspend support or structured concurrency in it.
-
-Bad reasons include:
-
-- “Kotlin looks nicer”;
-- “I touched the file anyway”;
-- “I want all packages to be Kotlin”.
+Choose Java or Kotlin based on the abstraction and interoperability needs. Coroutine-native APIs
+should use Kotlin when suspend/Flow/structured concurrency is part of the contract. Do not migrate
+unrelated code only for language consistency.
 
 ## Shared Utilities and Reuse
 
@@ -698,67 +686,20 @@ During development, if you write a method or function that has reusable value, *
 A helper has reusable value when:
 
 - it is not tied to one command’s business logic;
-- it handles formatting, parsing, encoding, HTTP setup, time, paths, text processing, compression,
-  or similar infrastructure concerns;
+- it handles formatting, parsing, encoding, time, paths, text processing, compression, or similar
+  infrastructure concerns;
 - it is likely to be needed by another command or service;
 - it fixes a bug that could appear in more than one place.
 
-For example, HTTP JSON request helpers should not be reimplemented inside every command or service.
-The project already provides `HttpJson` for the common “GET a JSON API and parse the response”
-workflow, including query parameters, default JSON headers, proxy-aware `OkHttpClient` reuse,
-content decoding, charset handling, JSON parsing, and root-type validation.
+External HTTP APIs should be accessed through feature-specific typed clients using the shared
+application Ktor `HttpClient` configuration instead of generic utility tools or constructing raw
+HTTP clients per command. Do not expose `JsonNode`, `ObjectNode`, or `ArrayNode` outside an adapter
+when the remote schema is stable. Do not create generic `KtorUtils`-style wrappers that combine
+endpoint construction, transport, and JSON parsing. Low-level OkHttp may remain for third-party SDK
+integration (such as JDA) or specialized concurrent range downloaders.
 
-Good:
-
-```kotlin
-val root = HttpJson.getObject(
-    uri = "https://api.example.com/v1/search",
-    params = mapOf(
-        "q" to query,
-        "limit" to "20"
-    )
-)
-```
-
-Good, when the API returns an array root:
-
-```kotlin
-val items = HttpJson.getArray(
-    uri = "https://api.example.com/v1/items",
-    params = mapOf(
-        "page" to page.toString()
-    )
-)
-```
-
-Bad:
-
-```kotlin
-val request = Request.Builder()
-        .url("https://api.example.com/v1/search?q=$query&limit=20")
-        .get()
-        .header("Accept", "application/json")
-        .header("Accept-Encoding", "identity")
-        .header("User-Agent", Constants.UA)
-        .build()
-
-val response = client.newCall(request).execute().use { resp ->
-    if (!resp.isSuccessful) {
-        throw IOException("HTTP ${resp.code}")
-    }
-
-    MAPPER.readTree(resp.body.string()).asObject()
-}
-```
-
-The bad example duplicates behavior that already exists in `HttpJson`: URL building, query encoding,
-default headers, proxy-aware client reuse, response decoding, charset handling, error extraction,
-and JSON root validation. Use
-`HttpJson.getAny`, `HttpJson.getObject`, or `HttpJson.getArray` unless the call genuinely needs
-lower-level HTTP behavior.
-
-The same rule applies to path handling. The project already has `PathUtils` for safe file names,
-archive entry paths, temporary sibling paths, and quiet cleanup.
+The same reuse rule applies to path handling. The project already has `PathUtils` for safe file
+names, archive entry paths, temporary sibling paths, and quiet cleanup.
 
 Good:
 
@@ -951,27 +892,24 @@ public static <S> void registerAliases(
 
 ### Kotlin Function
 
-This example follows the shape of `HttpJson.getObject`: a utility function with multiple parameters
-should use one parameter per line, defaults should remain visible, and the function body should not
-have extra blank lines after the opening brace.
+This example follows the shape of a multi-parameter function or API method: a function with multiple
+parameters should use one parameter per line, defaults should remain visible, and the function body
+should not have extra blank lines after the opening brace.
 
 ```kotlin
 @Throws(IOException::class)
-fun getObject(
-    uri: URI,
-    params: Map<String, String?>? = null,
-    headers: Map<String, String>? = DEFAULT_HEADERS,
-    readTimeoutMs: Int = DEFAULT_READ_TIMEOUT
-): ObjectNode {
-    val root = getAny(
-        uri = uri,
-        params = params,
-        headers = headers,
-        readTimeoutMs = readTimeoutMs
-    )
-    return root.asObjectOpt().orElseThrow {
-        IllegalArgumentException("Response JSON is not an object")
+suspend fun searchRepos(
+    keywords: String,
+    sort: String? = null,
+    order: String? = null,
+    language: String? = null,
+    perPage: Int = 3
+): GitHubSearchResult {
+    val fullQ = buildString {
+        append(keywords)
+        language?.takeIf { it.isNotBlank() }?.let { append(" language:").append(it) }
     }
+    ...
 }
 ```
 
@@ -1028,7 +966,7 @@ Before opening a pull request, check the following:
   formatting rules above.
 - Kotlin code avoids semicolon-compressed lambda bodies and uses blank lines to separate distinct
   logical groups.
-- Feature code uses shared project utilities such as `HttpJson`, `PathUtils`, `OkHttpUtils`, and DSL
+- Feature code uses typed external clients, shared project utilities such as `PathUtils`, and DSL
   builder helpers instead of duplicating infrastructure logic.
 - Configuration models are readable and bind cleanly from `application.yml`.
 

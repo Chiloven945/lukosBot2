@@ -17,22 +17,35 @@
  */
 package top.chiloven.lukosbot2.commands.bot.kemono
 
+import io.ktor.client.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import org.apache.logging.log4j.LogManager
-import tools.jackson.databind.node.ArrayNode
-import tools.jackson.databind.node.ObjectNode
-import top.chiloven.lukosbot2.commands.bot.kemono.schema.Service
-import top.chiloven.lukosbot2.util.HttpJson
+import top.chiloven.lukosbot2.commands.bot.kemono.schema.*
+import top.chiloven.lukosbot2.http.requireSuccess
+import top.chiloven.lukosbot2.util.JsonUtils
 import java.io.IOException
 import java.net.URI
 
-object KemonoAPI {
+@org.springframework.stereotype.Service
+class KemonoAPI(
+    private val http: HttpClient
+) {
 
     private val log = LogManager.getLogger(KemonoAPI::class.java)
 
-    private val API = URI.create("https://kemono.cr/api/")
+    data class KemonoServicePostMapping(
+        val artistId: String,
+        val postId: String
+    )
 
-    /** Kemono only accept "text/css"*/
-    private val HEADER = mapOf("Accept" to "text/css")
+    private companion object {
+
+        private val API = URI.create("https://kemono.cr/api/")
+        /** Kemono only accept "text/css"*/
+        private val HEADER = mapOf("Accept" to "text/css")
+
+    }
 
     private fun resolve(path: String): URI {
         val uri: URI = API.resolve(path)
@@ -41,67 +54,73 @@ object KemonoAPI {
     }
 
     @Throws(IOException::class)
-    fun getSpecificPost(
+    suspend fun getSpecificPost(
         service: Service,
         creatorId: String,
         postId: String
-    ): ObjectNode = HttpJson.getObjectResponse(
-        resolve("v1/$service/user/$creatorId/post/$postId"),
-        headers = HEADER
-    ).body
+    ): Post {
+        val response = http.get(resolve("v1/$service/user/$creatorId/post/$postId").toString()) {
+            HEADER.forEach { (k, v) -> header(k, v) }
+        }.requireSuccess()
+        val text = response.bodyAsText()
+        val node = JsonUtils.MAPPER.readTree(text).asObject()
+        return Post.fromSpecificPost(node)
+    }
 
     @Throws(IOException::class)
-    fun getCreatorProfile(
+    suspend fun getCreatorProfile(
         service: Service,
         creatorId: String
-    ): ObjectNode = HttpJson.getObjectResponse(
-        resolve("v1/$service/user/$creatorId/profile"),
-        headers = HEADER
-    ).body
+    ): Creator.Profile {
+        val response = http.get(resolve("v1/$service/user/$creatorId/profile").toString()) {
+            HEADER.forEach { (k, v) -> header(k, v) }
+        }.requireSuccess()
+        val text = response.bodyAsText()
+        val node = JsonUtils.MAPPER.readTree(text).asObject()
+        return JsonUtils.snakeTreeToValue(node, Creator.Profile::class.java)
+    }
 
     @Throws(IOException::class)
-    fun getCreatorLinks(
+    suspend fun getCreatorPosts(
         service: Service,
         creatorId: String
-    ): ArrayNode = HttpJson.getArrayResponse(
-        resolve("v1/$service/user/$creatorId/links"),
-        headers = HEADER
-    ).body
+    ): List<PostSimple> {
+        val response = http.get(resolve("v1/$service/user/$creatorId/posts").toString()) {
+            HEADER.forEach { (k, v) -> header(k, v) }
+        }.requireSuccess()
+        val text = response.bodyAsText()
+        val node = JsonUtils.MAPPER.readTree(text)
+
+        return if (node.isArray) {
+            PostSimple.fromArraySimplePost(node.asArray())
+        } else {
+            emptyList()
+        }
+    }
 
     @Throws(IOException::class)
-    fun getCreatorPosts(
-        service: Service,
-        creatorId: String
-    ): ArrayNode = HttpJson.getArrayResponse(
-        resolve("v1/$service/user/$creatorId/posts"),
-        headers = HEADER
-    ).body
+    suspend fun getFileFromHash(hash: String): HashSearchFile {
+        val response = http.get(resolve("v1/search_hash/$hash").toString()) {
+            HEADER.forEach { (k, v) -> header(k, v) }
+        }.requireSuccess()
+        val text = response.bodyAsText()
+        val node = JsonUtils.MAPPER.readTree(text).asObject()
+        return HashSearchFile.fromJsonObject(node)
+    }
 
     @Throws(IOException::class)
-    fun getDiscordChannelPost(channelId: String): ArrayNode = HttpJson.getArrayResponse(
-        resolve("v1/discord/channel/$channelId"),
-        headers = HEADER
-    ).body
-
-    @Throws(IOException::class)
-    fun getDiscordServerChannel(channelId: String): ArrayNode = HttpJson.getArrayResponse(
-        resolve("v1/discord/channel/lookup/$channelId"),
-        headers = HEADER
-    ).body
-
-    @Throws(IOException::class)
-    fun getFileFromHash(hash: String): ObjectNode = HttpJson.getObjectResponse(
-        resolve("v1/search_hash/$hash"),
-        headers = HEADER
-    ).body
-
-    @Throws(IOException::class)
-    fun getPostFromServicePost(
+    suspend fun getPostFromServicePost(
         service: Service,
         servicePostId: String
-    ): ObjectNode = HttpJson.getObjectResponse(
-        resolve("v1/$service/post/$servicePostId"),
-        headers = HEADER
-    ).body
+    ): KemonoServicePostMapping {
+        val response = http.get(resolve("v1/$service/post/$servicePostId").toString()) {
+            HEADER.forEach { (k, v) -> header(k, v) }
+        }.requireSuccess()
+        val text = response.bodyAsText()
+        val node = JsonUtils.MAPPER.readTree(text).asObject()
+        val artistId = node.get("artist_id")?.asString().orEmpty()
+        val postId = node.get("post_id")?.asString().orEmpty()
+        return KemonoServicePostMapping(artistId, postId)
+    }
 
 }

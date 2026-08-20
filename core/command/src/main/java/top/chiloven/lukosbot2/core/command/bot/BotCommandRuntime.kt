@@ -49,7 +49,11 @@ object BotCommandRuntime {
      * @param rawCommandLine the command text without the prefix
      * @return 1 on success, 0 on error (with a reply sent to source)
      */
-    fun execute(command: IBotCommand, source: CommandSource, rawCommandLine: String): Int {
+    suspend fun execute(
+        command: IBotCommand,
+        source: CommandSource,
+        rawCommandLine: String
+    ): Int {
         val rootToken = CommandRuntime.firstToken(rawCommandLine.trim()) ?: return 0
         if (!command.matches(rootToken)) return 0
 

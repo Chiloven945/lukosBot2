@@ -105,10 +105,12 @@ class CaveCommand(
         src.reply(caveService.toOutbound(src, entry, includeMeta = true))
     }
 
-    private fun add(src: CommandSource) {
+    private suspend fun add(src: CommandSource) {
         if (!authz.ensureBotAdmin(src, "添加回声洞条目")) return
         try {
             src.reply("已添加回声洞条目 #${caveService.add(src).no}。")
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             src.reply("添加失败：${e.message ?: "请稍后再试。"}")
         }

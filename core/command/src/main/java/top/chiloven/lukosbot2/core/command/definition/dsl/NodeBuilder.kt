@@ -45,7 +45,7 @@ open class NodeBuilder<S>(
         children += NodeBuilder<S>(childName).apply(block).build()
     }
 
-    fun execute(block: CommandInvocation<S>.() -> Unit) {
+    fun execute(block: suspend CommandInvocation<S>.() -> Unit) {
         leaf = EmptyLeaf { inv ->
             inv.block()
             inv.code()
@@ -55,7 +55,7 @@ open class NodeBuilder<S>(
     fun raw(
         argName: String = "text",
         required: Boolean = true,
-        block: CommandInvocation<S>.(String) -> Unit
+        block: suspend CommandInvocation<S>.(String) -> Unit
     ) {
         leaf = RawLeaf(
             name = argName,

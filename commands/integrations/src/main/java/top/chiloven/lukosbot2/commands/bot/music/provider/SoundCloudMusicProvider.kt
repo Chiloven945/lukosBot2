@@ -17,19 +17,18 @@
  */
 package top.chiloven.lukosbot2.commands.bot.music.provider
 
+import io.ktor.client.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import org.jspecify.annotations.NonNull
-import tools.jackson.databind.node.ObjectNode
 import top.chiloven.lukosbot2.commands.bot.music.MusicPlatform
 import top.chiloven.lukosbot2.commands.bot.music.TrackInfo
-import top.chiloven.lukosbot2.util.HttpJson
-import top.chiloven.lukosbot2.util.JsonUtils.arr
-import top.chiloven.lukosbot2.util.JsonUtils.long
-import top.chiloven.lukosbot2.util.JsonUtils.obj
-import top.chiloven.lukosbot2.util.JsonUtils.str
+import top.chiloven.lukosbot2.http.requireSuccess
+import top.chiloven.lukosbot2.util.JsonUtils
 import top.chiloven.lukosbot2.util.StringUtils.firstNonBlank
-import java.net.URI
 
 class SoundCloudMusicProvider(
+    private val http: HttpClient,
     private val clientId: String
 ) : IMusicProvider {
 
@@ -39,67 +38,98 @@ class SoundCloudMusicProvider(
 
     }
 
+    private data class SoundCloudSearchResponse(
+        val collection: List<SoundCloudTrackDto> = emptyList()
+    )
+
+    private data class SoundCloudTrackDto(
+        val id: String? = null,
+        val title: String? = null,
+        val publisherMetadata: PublisherMetadataDto? = null,
+        val user: UserDto? = null,
+        val sets: List<String>? = null,
+        val playlist: String? = null,
+        val artworkUrl: String? = null,
+        val permalinkUrl: String? = null,
+        val fullDuration: Long? = null
+    ) {
+
+        data class PublisherMetadataDto(
+            val artist: String? = null,
+            val albumTitle: String? = null,
+            val releaseTitle: String? = null
+        )
+
+        data class UserDto(
+            val username: String? = null
+        )
+
+    }
+
     override fun platform(): @NonNull MusicPlatform = MusicPlatform.SOUNDCLOUD
 
     @Throws(Exception::class)
-    override fun searchTrack(query: String): TrackInfo? {
-        val root = HttpJson.getObjectResponse(
-            uri = URI("$API_BASE_V2/search/tracks"),
-            params = mapOf(
-                "q" to query,
-                "client_id" to clientId,
-                "limit" to "1",
-            ),
-        ).body
-        val collection = root.arr("collection")
-        if (collection == null || collection.size() == 0) return null
+    override suspend fun searchTrack(query: String): TrackInfo? {
+        val response = http.get("$API_BASE_V2/search/tracks") {
+            parameter("q", query)
+            parameter("client_id", clientId)
+            parameter("limit", "1")
+        }.requireSuccess()
 
-        val t = collection[0].asObject()
+        val text = response.bodyAsText()
+        val dto = JsonUtils.SNAKE_CASE_MAPPER.readValue(
+            text,
+            SoundCloudSearchResponse::class.java
+        )
+        val t = dto.collection.firstOrNull() ?: return null
         return toTrackInfo(t)
     }
 
     @Throws(Exception::class)
-    override fun resolveLink(link: String): TrackInfo {
-        val t = HttpJson.getObjectResponse(
-            uri = URI("$API_BASE_V2/resolve"),
-            params = mapOf(
-                "url" to link,
-                "client_id" to clientId,
-            ),
-        ).body
+    override suspend fun resolveLink(link: String): TrackInfo {
+        val response = http.get("$API_BASE_V2/resolve") {
+            parameter("url", link)
+            parameter("client_id", clientId)
+        }.requireSuccess()
+
+        val text = response.bodyAsText()
+        val t = JsonUtils.SNAKE_CASE_MAPPER.readValue(
+            text,
+            SoundCloudTrackDto::class.java
+        )
         return toTrackInfo(t)
     }
 
-    private fun toTrackInfo(t: ObjectNode): TrackInfo {
-        val id = t.str("id").orEmpty()
-        val title = t.str("title").orEmpty()
-
-        val pub = t.obj("publisher_metadata")
-        val user = t.obj("user")
+    private fun toTrackInfo(t: SoundCloudTrackDto): TrackInfo {
+        val id = t.id.orEmpty()
+        val title = t.title.orEmpty()
 
         val artist = firstNonBlank(
-            pub?.str("artist"),
-            user?.str("username")
+            t.publisherMetadata?.artist,
+            t.user?.username
         )
-
-        val fromSets = t.arr("sets")
-            ?.takeIf { it.size() > 0 && it[0].isValueNode }
-            ?.get(0)?.asString()
-            ?.takeIf { it.isNotBlank() }
 
         val album = firstNonBlank(
-            pub?.str("album_title"),
-            pub?.str("release_title"),
-            t.str("playlist"),
-            fromSets
+            t.publisherMetadata?.albumTitle,
+            t.publisherMetadata?.releaseTitle,
+            t.playlist,
+            t.sets?.firstOrNull()
         )
 
-        val cover = t.str("artwork_url")
-        val url = t.str("permalink_url")
+        val cover = t.artworkUrl
+        val url = t.permalinkUrl
+        val duration = t.fullDuration ?: 0L
 
-        val duration = t.long("full_duration")!!
-
-        return TrackInfo(platform(), id, title, artist, album, cover, url, duration)
+        return TrackInfo(
+            platform(),
+            id,
+            title,
+            artist,
+            album,
+            cover,
+            url,
+            duration
+        )
     }
 
 }

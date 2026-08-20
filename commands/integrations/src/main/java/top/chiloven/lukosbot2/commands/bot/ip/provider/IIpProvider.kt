@@ -28,6 +28,6 @@ interface IIpProvider {
     fun priority(): Int
 
     @Throws(Exception::class)
-    fun query(ip: String): IpData
+    suspend fun query(ip: String): IpData
 
 }

@@ -19,7 +19,6 @@ package top.chiloven.lukosbot2.util.download
 
 import okhttp3.Response
 import org.apache.logging.log4j.LogManager
-import top.chiloven.lukosbot2.util.HttpStatusException
 import top.chiloven.lukosbot2.util.PathUtils
 import java.io.IOException
 import java.net.URI
@@ -127,7 +126,7 @@ internal class SingleFileDownloader(
                             }
 
                             if (code >= 400) {
-                                throw HttpStatusException.fromResponse(response)
+                                throw response.toHttpStatusException()
                             }
 
                             writeResponseBody(
@@ -171,7 +170,12 @@ internal class SingleFileDownloader(
                         continue
                     }
 
-                    log.warn("[DL] failed (no more retries): url={}, target={}, err={}", url, targetFile, e.toString())
+                    log.warn(
+                        "[DL] failed (no more retries): url={}, target={}, err={}",
+                        url,
+                        targetFile,
+                        e.toString()
+                    )
                     throw e
                 }
             }
