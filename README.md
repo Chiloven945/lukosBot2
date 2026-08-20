@@ -136,7 +136,7 @@ When reporting a bug, include your lukosBot2 version, your configuration files, 
 console logs so the issue can be reproduced.
 
 Feature proposing may be slow to respond. We may not have enough time and patient to implement some
-feature, but we still welcome you to tell us what can be added or improved.
+features, but we still welcome you to tell us what can be added or improved.
 
 ## Contributing
 
