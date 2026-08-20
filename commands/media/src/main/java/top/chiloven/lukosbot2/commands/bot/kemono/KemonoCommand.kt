@@ -17,7 +17,12 @@
  */
 package top.chiloven.lukosbot2.commands.bot.kemono
 
-import okhttp3.Request
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import io.ktor.client.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
+import kotlinx.coroutines.CancellationException
 import org.apache.logging.log4j.LogManager
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import top.chiloven.lukosbot2.Constants
@@ -27,7 +32,6 @@ import top.chiloven.lukosbot2.commands.bot.kemono.schema.HashSearchFile
 import top.chiloven.lukosbot2.commands.bot.kemono.schema.Post
 import top.chiloven.lukosbot2.commands.bot.kemono.schema.Service
 import top.chiloven.lukosbot2.config.AppProperties
-import top.chiloven.lukosbot2.config.ProxyConfigProp
 import top.chiloven.lukosbot2.core.command.bot.CommandSource
 import top.chiloven.lukosbot2.core.command.definition.ArgType
 import top.chiloven.lukosbot2.core.command.definition.dsl.botCommand
@@ -37,9 +41,8 @@ import top.chiloven.lukosbot2.core.model.message.media.BytesRef
 import top.chiloven.lukosbot2.core.model.message.media.MediaRef
 import top.chiloven.lukosbot2.core.model.message.media.PlatformFileRef
 import top.chiloven.lukosbot2.core.model.message.media.UrlRef
+import top.chiloven.lukosbot2.http.requireSuccess
 import top.chiloven.lukosbot2.util.*
-import top.chiloven.lukosbot2.util.JsonUtils.obj
-import top.chiloven.lukosbot2.util.JsonUtils.str
 import top.chiloven.lukosbot2.util.PathUtils.sanitizeFileName
 import top.chiloven.lukosbot2.util.PathUtils.sanitizePathSegment
 import top.chiloven.lukosbot2.util.PathUtils.withTempDirectory
@@ -51,7 +54,6 @@ import java.nio.file.Path
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 /**
  * Command for fetching information from kemono.cr.
@@ -67,7 +69,8 @@ import java.util.concurrent.TimeUnit
 )
 class KemonoCommand(
     private val appProperties: AppProperties,
-    private val proxyConfigProp: ProxyConfigProp,
+    private val kemonoApi: KemonoAPI,
+    private val http: HttpClient,
 ) : IBotCommand {
 
     private companion object {
@@ -78,17 +81,23 @@ class KemonoCommand(
 
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private data class TelegramGetFileResult(
+        val ok: Boolean = false,
+        val result: TelegramFileDto? = null,
+        val description: String? = null,
+    ) {
+
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        data class TelegramFileDto(
+            val fileId: String? = null,
+            val filePath: String? = null,
+            val fileSize: Long? = null,
+        )
+
+    }
+
     private val log = LogManager.getLogger(KemonoCommand::class.java)
-
-    private val clientCache = OkHttpUtils.ProxyAwareOkHttpClientCache(
-        connectTimeoutMs = TimeUnit.SECONDS.toMillis(20),
-        readTimeoutMs = TimeUnit.MINUTES.toMillis(5),
-        callTimeoutMs = TimeUnit.MINUTES.toMillis(10),
-        proxyProvider = { proxyConfigProp },
-    )
-
-    private val okHttp
-        get() = clientCache.client
 
     private val commandDefinition = botCommand("kemono") {
         description = "从 kemono.cr 查询帖子/创作者信息，并支持打包下载附件"
@@ -197,12 +206,15 @@ class KemonoCommand(
 
     override fun definition() = commandDefinition
 
-    private fun executeSafely(src: CommandSource, block: () -> Unit) {
-        runCatching { block() }
-            .onFailure { e ->
-                log.warn("Kemono command failed: {}", e.message, e)
-                src.reply(friendlyError(e))
-            }
+    private suspend fun executeSafely(src: CommandSource, block: suspend () -> Unit) {
+        try {
+            block()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            log.warn("Kemono command failed: {}", e.message, e)
+            src.reply(friendlyError(e))
+        }
     }
 
     private fun friendlyError(e: Throwable): String {
@@ -221,7 +233,7 @@ class KemonoCommand(
         }
     }
 
-    private fun handlePost(
+    private suspend fun handlePost(
         positionals: List<String>,
         showAllAttachments: Boolean,
         archive: Boolean,
@@ -230,7 +242,7 @@ class KemonoCommand(
         val target = parsePostTarget(positionals, src)
 
         if (target is PostTarget.ByHash) {
-            val hit = HashSearchFile.fromJsonObject(KemonoAPI.getFileFromHash(target.sha256))
+            val hit = kemonoApi.getFileFromHash(target.sha256)
 
             val text = buildString {
                 if (target.fromUpload) {
@@ -273,16 +285,15 @@ class KemonoCommand(
         src.reply(text)
     }
 
-    private fun handleCreator(
+    private suspend fun handleCreator(
         positionals: List<String>,
         archive: Boolean,
         src: CommandSource
     ) {
         val parsed = parseCreatorTarget(positionals)
-        val creator = Creator.fromProfileAndPosts(
-            KemonoAPI.getCreatorProfile(parsed.service, parsed.creatorId),
-            KemonoAPI.getCreatorPosts(parsed.service, parsed.creatorId)
-        )
+        val profile = kemonoApi.getCreatorProfile(parsed.service, parsed.creatorId)
+        val posts = kemonoApi.getCreatorPosts(parsed.service, parsed.creatorId)
+        val creator = Creator.fromProfileAndPosts(profile, posts)
 
         if (archive) {
             src.reply(archiveCreator(creator, src))
@@ -292,7 +303,7 @@ class KemonoCommand(
         src.reply(creator.getString())
     }
 
-    private fun parsePostTarget(positionals: List<String>, src: CommandSource): PostTarget {
+    private suspend fun parsePostTarget(positionals: List<String>, src: CommandSource): PostTarget {
         if (positionals.isEmpty()) {
             val upload = resolveUploadedHash(src)
                 ?: throw IllegalArgumentException("参数为空。请提供帖子链接、ID、SHA-256，或在发送命令时附带一个文件。")
@@ -365,35 +376,31 @@ class KemonoCommand(
 
     private fun parseService(raw: String): Service {
         return runCatching { Service.getService(raw) }
-            .getOrElse { throw IllegalArgumentException("未知平台：$raw") }
+                .getOrElse { throw IllegalArgumentException("未知平台：$raw") }
     }
 
-    private fun resolvePostTarget(target: PostTarget): ResolvedPost {
+    private suspend fun resolvePostTarget(target: PostTarget): ResolvedPost {
         return when (target) {
             is PostTarget.Direct -> {
-                val post = Post.fromSpecificPost(
-                    KemonoAPI.getSpecificPost(target.service, target.creatorId, target.postId)
-                )
+                val post =
+                    kemonoApi.getSpecificPost(target.service, target.creatorId, target.postId)
                 ResolvedPost(target.service, target.creatorId, target.postId, post)
             }
 
             is PostTarget.ByServicePost -> {
-                val mapping = KemonoAPI.getPostFromServicePost(target.service, target.servicePostId)
-                val creatorId = mapping.str("artist_id")!!
-                val postId = mapping.str("post_id")!!
-                val post = Post.fromSpecificPost(
-                    KemonoAPI.getSpecificPost(target.service, creatorId, postId)
-                )
+                val mapping = kemonoApi.getPostFromServicePost(target.service, target.servicePostId)
+                val creatorId = mapping.artistId
+                val postId = mapping.postId
+                val post = kemonoApi.getSpecificPost(target.service, creatorId, postId)
                 ResolvedPost(target.service, creatorId, postId, post)
             }
 
             is PostTarget.ByHash -> {
-                val hit = HashSearchFile.fromJsonObject(KemonoAPI.getFileFromHash(target.sha256))
+                val hit = kemonoApi.getFileFromHash(target.sha256)
                 val matchedPost = hit.posts.firstOrNull()
                     ?: throw IllegalArgumentException("这个文件没有关联到任何帖子。")
-                val fullPost = Post.fromSpecificPost(
-                    KemonoAPI.getSpecificPost(matchedPost.service, matchedPost.user, matchedPost.id)
-                )
+                val fullPost =
+                    kemonoApi.getSpecificPost(matchedPost.service, matchedPost.user, matchedPost.id)
                 ResolvedPost(
                     service = fullPost.service,
                     creatorId = fullPost.user,
@@ -407,7 +414,7 @@ class KemonoCommand(
         }
     }
 
-    private fun resolveUploadedHash(src: CommandSource): UploadedHash? {
+    private suspend fun resolveUploadedHash(src: CommandSource): UploadedHash? {
         val part = src.parts().firstOrNull { it is InFile || it is InImage } ?: return null
 
         return when (part) {
@@ -417,7 +424,7 @@ class KemonoCommand(
         }
     }
 
-    private fun sha256OfMedia(ref: MediaRef): String {
+    private suspend fun sha256OfMedia(ref: MediaRef): String {
         val sha256 = when (ref) {
             is BytesRef -> ShaUtils.hashSha256ToHex(ref.bytes())
             is UrlRef -> sha256OfRemote(ref.url())
@@ -433,35 +440,28 @@ class KemonoCommand(
         return sha256
     }
 
-    private fun resolveTelegramFileUrl(fileId: String): String {
+    private suspend fun resolveTelegramFileUrl(fileId: String): String {
         val token = appProperties.telegram.botToken.trim()
         require(token.isNotEmpty()) { "当前无法读取 Telegram 上传文件，请直接提供 SHA-256。" }
 
-        val root = HttpJson.getObjectResponse(
-            URI.create("https://api.telegram.org/bot$token/getFile"),
-            mapOf("file_id" to fileId),
-            null
-        ).body
-        val filePath = root.obj("result")?.str("file_path")
+        val response = http.get("https://api.telegram.org/bot$token/getFile") {
+            parameter("file_id", fileId)
+        }.requireSuccess()
+
+        val text = response.bodyAsText()
+        val getFileResult =
+            JsonUtils.SNAKE_CASE_MAPPER.readValue(text, TelegramGetFileResult::class.java)
+        val filePath = getFileResult.result?.filePath?.takeIf { it.isNotBlank() }
             ?: throw IOException("无法读取 Telegram 上传文件路径")
         return "https://api.telegram.org/file/bot$token/$filePath"
     }
 
-    private fun sha256OfRemote(url: String): String {
-        val request = Request.Builder()
-            .url(url)
-            .get()
-            .header("User-Agent", Constants.UA)
-            .build()
-
-        okHttp.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                throw HttpStatusException.fromResponse(response)
-            }
-            response.body.byteStream().use { input ->
-                return ShaUtils.hashSha256ToHex(input.readAllBytes())
-            }
-        }
+    private suspend fun sha256OfRemote(url: String): String {
+        val response = http.get(url) {
+            header(HttpHeaders.UserAgent, Constants.UA)
+        }.requireSuccess()
+        val bytes = response.bodyAsBytes()
+        return ShaUtils.hashSha256ToHex(bytes)
     }
 
     private fun archivePost(resolved: ResolvedPost, src: CommandSource): String {
@@ -515,7 +515,12 @@ class KemonoCommand(
     private fun ResolvedPost.toArchiveItems(): List<DownloadUtils.NamedUrl> =
         post.attachments.map { item ->
             DownloadUtils.NamedUrl(
-                buildArchiveEntryName(service.id, creatorId, postId, item.name),
+                buildArchiveEntryName(
+                    service.id,
+                    creatorId,
+                    postId,
+                    item.name
+                ),
                 URI.create(item.resolvedUrl)
             )
         }
@@ -524,7 +529,12 @@ class KemonoCommand(
         posts.flatMap { post ->
             post.attachments.map { item ->
                 DownloadUtils.NamedUrl(
-                    buildArchiveEntryName(service.id, id, post.id, item.name),
+                    buildArchiveEntryName(
+                        service.id,
+                        id,
+                        post.id,
+                        item.name
+                    ),
                     URI.create(item.resolvedUrl)
                 )
             }

@@ -17,95 +17,111 @@
  */
 package top.chiloven.lukosbot2.commands.bot.bilibili
 
-import okhttp3.OkHttpClient
-import okhttp3.Request
+import io.ktor.client.*
+import io.ktor.client.plugins.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
 import org.springframework.stereotype.Service
-import tools.jackson.databind.node.ObjectNode
 import top.chiloven.lukosbot2.Constants
+import top.chiloven.lukosbot2.commands.bot.bilibili.schema.BilibiliViewDataDto
 import top.chiloven.lukosbot2.commands.bot.bilibili.schema.VideoId
-import top.chiloven.lukosbot2.util.HttpJson
-import top.chiloven.lukosbot2.util.HttpStatusException
-import top.chiloven.lukosbot2.util.JsonUtils.int
-import top.chiloven.lukosbot2.util.JsonUtils.long
-import top.chiloven.lukosbot2.util.JsonUtils.obj
-import top.chiloven.lukosbot2.util.OkHttpUtils
+import top.chiloven.lukosbot2.http.requireSuccess
+import top.chiloven.lukosbot2.http.toHttpStatusException
+import top.chiloven.lukosbot2.util.JsonUtils
 import top.chiloven.lukosbot2.util.StringUtils.firstNonBlank
 
 @Service
-class BilibiliApi {
+class BilibiliApi(
+    private val http: HttpClient
+) {
 
-    companion object {
+    private companion object {
 
-        private const val API_CONNECT_TIMEOUT_MS = 8_000L
         private const val API_CALL_TIMEOUT_MS = 8_000L
         private const val RELATION_TIMEOUT_MS = 6_000L
         private const val SHORT_LINK_TIMEOUT_MS = 6_000L
 
         private const val VIEW_API_URL = "https://api.bilibili.com/x/web-interface/view"
         private const val RELATION_API_URL = "https://api.bilibili.com/x/relation/stat"
-        private const val HTML_ACCEPT = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+        private const val HTML_ACCEPT =
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
         private val UA = "Mozilla/5.0 (compatible; ${Constants.UA}; +https://bilibili.com)"
 
-        private val JSON_HEADERS = mapOf(
-            "User-Agent" to UA,
-            "Accept" to "application/json",
-            "Accept-Encoding" to "identity",
+    }
+
+    private data class BilibiliViewResponse(
+        val code: Int = 0,
+        val message: String? = null,
+        val data: BilibiliViewDataDto? = null
+    )
+
+    private data class BilibiliRelationResponse(
+        val code: Int = 0,
+        val data: RelationDataDto? = null
+    ) {
+
+        data class RelationDataDto(
+            val mid: Long? = null,
+            val follower: Long? = null
         )
 
     }
 
-    private val noRedirectClientCache = OkHttpUtils.ProxyAwareOkHttpClientCache(
-        connectTimeoutMs = API_CONNECT_TIMEOUT_MS,
-        callTimeoutMs = SHORT_LINK_TIMEOUT_MS,
-        followRedirects = false,
-        followSslRedirects = false,
-    )
+    private val noRedirectHttp: HttpClient = http.config {
+        followRedirects = false
+    }
 
-    private val redirectingClientCache = OkHttpUtils.ProxyAwareOkHttpClientCache(
-        connectTimeoutMs = API_CONNECT_TIMEOUT_MS,
-        callTimeoutMs = SHORT_LINK_TIMEOUT_MS,
-        followRedirects = true,
-        followSslRedirects = true,
-    )
-
-    private val noRedirectHttp: OkHttpClient
-        get() = noRedirectClientCache.client
-
-    private val redirectingHttp: OkHttpClient
-        get() = redirectingClientCache.client
-
-    fun resolveVideoId(input: String): VideoId? {
+    suspend fun resolveVideoId(input: String): VideoId? {
         VideoId.parse(input)?.let { return it }
-        if (!input.startsWith("http", ignoreCase = true)) return null
+        if (!input.startsWith("http", ignoreCase = true)) {
+            return null
+        }
         return resolveShortLink(input)
     }
 
-    fun getViewData(id: VideoId): ObjectNode? {
-        val root = HttpJson.getObjectResponse(
-            uri = VIEW_API_URL,
-            params = when (id) {
-                is VideoId.Bv -> mapOf("bvid" to id.bvid)
-                is VideoId.Av -> mapOf("aid" to id.aid.toString())
-            },
-            headers = JSON_HEADERS,
-            readTimeoutMs = API_CALL_TIMEOUT_MS.toInt(),
-        ).body
-        if (root.int("code") != 0) return null
-        return root.obj("data")
+    suspend fun getViewData(id: VideoId): BilibiliViewDataDto? {
+        val response = http.get(VIEW_API_URL) {
+            header(HttpHeaders.UserAgent, UA)
+            header(HttpHeaders.Accept, "application/json")
+            when (id) {
+                is VideoId.Bv -> parameter("bvid", id.bvid)
+                is VideoId.Av -> parameter("aid", id.aid.toString())
+            }
+
+            timeout {
+                requestTimeoutMillis = API_CALL_TIMEOUT_MS
+            }
+        }.requireSuccess()
+
+        val text = response.bodyAsText()
+        val res = JsonUtils.SNAKE_CASE_MAPPER.readValue(
+            text,
+            BilibiliViewResponse::class.java
+        )
+        return if (res.code != 0) null else res.data
     }
 
-    fun getFollowerCount(mid: Long): Long? = runCatching {
-        val root = HttpJson.getObjectResponse(
-            uri = RELATION_API_URL,
-            params = mapOf("vmid" to mid.toString()),
-            headers = JSON_HEADERS,
-            readTimeoutMs = RELATION_TIMEOUT_MS.toInt(),
-        ).body
-        if (root.int("code") != 0) return@runCatching null
-        root.obj("data")?.long("follower")
+    suspend fun getFollowerCount(mid: Long): Long? = runCatching {
+        val response = http.get(RELATION_API_URL) {
+            header(HttpHeaders.UserAgent, UA)
+            header(HttpHeaders.Accept, "application/json")
+            parameter("vmid", mid.toString())
+            timeout {
+                requestTimeoutMillis = RELATION_TIMEOUT_MS
+            }
+        }.requireSuccess()
+
+        val text = response.bodyAsText()
+        val res = JsonUtils.SNAKE_CASE_MAPPER.readValue(
+            text,
+            BilibiliRelationResponse::class.java
+        )
+        if (res.code != 0) return@runCatching null
+        res.data?.follower
     }.getOrNull()
 
-    private fun resolveShortLink(url: String): VideoId? {
+    private suspend fun resolveShortLink(url: String): VideoId? {
         VideoId.parse(url)?.let { return it }
 
         resolveLocation(url)?.let { location ->
@@ -116,40 +132,38 @@ class BilibiliApi {
         return resolveFinalVideoId(url)
     }
 
-    private fun resolveLocation(url: String): String? {
-        val request = htmlRequest(url)
-        noRedirectHttp.newCall(request).execute().use { response ->
-            if (response.code !in 300..399 && !response.isSuccessful) {
-                throw HttpStatusException.fromResponse(response)
+    private suspend fun resolveLocation(url: String): String? {
+        val response = noRedirectHttp.get(url) {
+            header(HttpHeaders.UserAgent, UA)
+            header(HttpHeaders.Accept, HTML_ACCEPT)
+            timeout {
+                requestTimeoutMillis = SHORT_LINK_TIMEOUT_MS
             }
-
-            return firstNonBlank(
-                response.header("Location"),
-                response.header("location"),
-                response.header("Content-Location"),
-                response.header("content-location"),
-            ).ifBlank { null }
         }
+
+        if (response.status.value !in 300..399 && !response.status.isSuccess()) {
+            throw response.toHttpStatusException()
+        }
+
+        return firstNonBlank(
+            response.headers[HttpHeaders.Location],
+            response.headers["location"],
+            response.headers[HttpHeaders.ContentLocation],
+            response.headers["content-location"],
+        ).ifBlank { null }
     }
 
-    private fun resolveFinalVideoId(url: String): VideoId? {
-        val request = htmlRequest(url)
-        redirectingHttp.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                throw HttpStatusException.fromResponse(response)
+    private suspend fun resolveFinalVideoId(url: String): VideoId? {
+        val response = http.get(url) {
+            header(HttpHeaders.UserAgent, UA)
+            header(HttpHeaders.Accept, HTML_ACCEPT)
+            timeout {
+                requestTimeoutMillis = SHORT_LINK_TIMEOUT_MS
             }
+        }.requireSuccess()
 
-            VideoId.parse(response.request.url.toString())?.let { return it }
-            return VideoId.parse(response.body.string())
-        }
+        VideoId.parse(response.request.url.toString())?.let { return it }
+        return VideoId.parse(response.bodyAsText())
     }
-
-    private fun htmlRequest(url: String): Request =
-        Request.Builder()
-            .url(url)
-            .get()
-            .header("User-Agent", UA)
-            .header("Accept", HTML_ACCEPT)
-            .build()
 
 }

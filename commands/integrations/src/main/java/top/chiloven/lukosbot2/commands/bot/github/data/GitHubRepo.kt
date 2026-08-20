@@ -17,9 +17,6 @@
  */
 package top.chiloven.lukosbot2.commands.bot.github.data
 
-import tools.jackson.databind.node.ObjectNode
-import top.chiloven.lukosbot2.util.JsonUtils
-
 data class GitHubRepo(
     val fullName: String? = null,
     val htmlUrl: String? = null,
@@ -40,13 +37,6 @@ data class GitHubRepo(
             语言：$lang | 收藏：$stargazersCount | 分叉：$forksCount
             描述：$desc
         """.trimIndent()
-    }
-
-    companion object {
-
-        fun from(obj: ObjectNode): GitHubRepo =
-            JsonUtils.snakeTreeToValue(obj, GitHubRepo::class.java)
-
     }
 
 }

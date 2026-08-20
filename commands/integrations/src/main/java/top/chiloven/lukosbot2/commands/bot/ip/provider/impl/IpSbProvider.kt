@@ -17,15 +17,34 @@
  */
 package top.chiloven.lukosbot2.commands.bot.ip.provider.impl
 
+import io.ktor.client.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import org.springframework.stereotype.Component
 import top.chiloven.lukosbot2.commands.bot.ip.IpData
 import top.chiloven.lukosbot2.commands.bot.ip.provider.IIpProvider
-import top.chiloven.lukosbot2.util.HttpJson
-import top.chiloven.lukosbot2.util.JsonUtils.elm
-import top.chiloven.lukosbot2.util.JsonUtils.str
+import top.chiloven.lukosbot2.http.requireSuccess
+import top.chiloven.lukosbot2.util.JsonUtils
 
 @Component
-class IpSbProvider : IIpProvider {
+class IpSbProvider(
+    private val http: HttpClient
+) : IIpProvider {
+
+    private data class IpSbResponse(
+        val ip: String? = null,
+        val country: String? = null,
+        val countryCode: String? = null,
+        val region: String? = null,
+        val regionCode: String? = null,
+        val city: String? = null,
+        val postalCode: String? = null,
+        val latitude: Double? = null,
+        val longitude: Double? = null,
+        val timezone: String? = null,
+        val asn: String? = null,
+        val organization: String? = null
+    )
 
     private companion object {
 
@@ -39,22 +58,26 @@ class IpSbProvider : IIpProvider {
 
     override fun priority(): Int = 80
 
-    override fun query(ip: String): IpData {
-        val obj = HttpJson.getObjectResponse("$BASE/geoip/$ip").body
+    override suspend fun query(ip: String): IpData {
+        val text = http.get("$BASE/geoip/$ip").requireSuccess().bodyAsText()
+        val dto = JsonUtils.SNAKE_CASE_MAPPER.readValue(
+            text,
+            IpSbResponse::class.java
+        )
 
         return IpData(
-            ip = obj.str("ip") ?: ip,
-            country = obj.str("country"),
-            countryCode = obj.str("country_code"),
-            region = obj.str("region"),
-            regionCode = obj.str("region_code"),
-            city = obj.str("city"),
-            postalCode = obj.str("postal_code"),
-            latitude = obj.elm("latitude")?.asDouble(),
-            longitude = obj.elm("longitude")?.asDouble(),
-            timezone = obj.str("timezone"),
-            asn = obj.str("asn"),
-            org = obj.str("organization")
+            ip = dto.ip ?: ip,
+            country = dto.country,
+            countryCode = dto.countryCode,
+            region = dto.region,
+            regionCode = dto.regionCode,
+            city = dto.city,
+            postalCode = dto.postalCode,
+            latitude = dto.latitude,
+            longitude = dto.longitude,
+            timezone = dto.timezone,
+            asn = dto.asn,
+            org = dto.organization
         )
     }
 

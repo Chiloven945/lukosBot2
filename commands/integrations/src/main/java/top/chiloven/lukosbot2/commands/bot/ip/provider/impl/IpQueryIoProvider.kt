@@ -17,18 +17,54 @@
  */
 package top.chiloven.lukosbot2.commands.bot.ip.provider.impl
 
+import io.ktor.client.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import org.springframework.stereotype.Component
 import top.chiloven.lukosbot2.commands.bot.ip.IpData
 import top.chiloven.lukosbot2.commands.bot.ip.provider.IIpProvider
-import top.chiloven.lukosbot2.util.HttpJson
-import top.chiloven.lukosbot2.util.JsonUtils.bool
-import top.chiloven.lukosbot2.util.JsonUtils.elm
-import top.chiloven.lukosbot2.util.JsonUtils.int
-import top.chiloven.lukosbot2.util.JsonUtils.obj
-import top.chiloven.lukosbot2.util.JsonUtils.str
+import top.chiloven.lukosbot2.http.requireSuccess
+import top.chiloven.lukosbot2.util.JsonUtils
 
 @Component
-class IpQueryIoProvider : IIpProvider {
+class IpQueryIoProvider(
+    private val http: HttpClient
+) : IIpProvider {
+
+    private data class IpQueryIoResponse(
+        val ip: String? = null,
+        val isp: IspDto? = null,
+        val location: LocationDto? = null,
+        val risk: RiskDto? = null
+    ) {
+
+        data class IspDto(
+            val asn: String? = null,
+            val org: String? = null,
+            val isp: String? = null
+        )
+
+        data class LocationDto(
+            val country: String? = null,
+            val countryCode: String? = null,
+            val state: String? = null,
+            val city: String? = null,
+            val zipcode: String? = null,
+            val latitude: Double? = null,
+            val longitude: Double? = null,
+            val timezone: String? = null
+        )
+
+        data class RiskDto(
+            val isMobile: Boolean? = null,
+            val isVpn: Boolean? = null,
+            val isTor: Boolean? = null,
+            val isProxy: Boolean? = null,
+            val isDatacenter: Boolean? = null,
+            val riskScore: Int? = null
+        )
+
+    }
 
     private companion object {
 
@@ -42,34 +78,34 @@ class IpQueryIoProvider : IIpProvider {
 
     override fun priority(): Int = 100
 
-    override fun query(ip: String): IpData {
-        val obj = HttpJson.getObjectResponse("$BASE/$ip").body
-
-        val isp = obj.obj("isp")
-        val location = obj.obj("location")
-        val risk = obj.obj("risk")
+    override suspend fun query(ip: String): IpData {
+        val text = http.get("$BASE/$ip").requireSuccess().bodyAsText()
+        val dto = JsonUtils.SNAKE_CASE_MAPPER.readValue(
+            text,
+            IpQueryIoResponse::class.java
+        )
 
         return IpData(
-            ip = obj.str("ip") ?: ip,
-            country = location?.str("country"),
-            countryCode = location?.str("country_code"),
-            region = location?.str("state"),
-            city = location?.str("city"),
-            postalCode = location?.str("zipcode"),
-            latitude = location?.elm("latitude")?.asDouble(),
-            longitude = location?.elm("longitude")?.asDouble(),
-            timezone = location?.str("timezone"),
-            asn = isp?.str("asn"),
-            org = isp?.str("org"),
-            isp = isp?.str("isp"),
-            risk = risk?.let {
+            ip = dto.ip ?: ip,
+            country = dto.location?.country,
+            countryCode = dto.location?.countryCode,
+            region = dto.location?.state,
+            city = dto.location?.city,
+            postalCode = dto.location?.zipcode,
+            latitude = dto.location?.latitude,
+            longitude = dto.location?.longitude,
+            timezone = dto.location?.timezone,
+            asn = dto.isp?.asn,
+            org = dto.isp?.org,
+            isp = dto.isp?.isp,
+            risk = dto.risk?.let {
                 IpData.IpRisk(
-                    isMobile = it.bool("is_mobile"),
-                    isVpn = it.bool("is_vpn"),
-                    isTor = it.bool("is_tor"),
-                    isProxy = it.bool("is_proxy"),
-                    isDatacenter = it.bool("is_datacenter"),
-                    riskScore = it.int("risk_score")
+                    isMobile = it.isMobile,
+                    isVpn = it.isVpn,
+                    isTor = it.isTor,
+                    isProxy = it.isProxy,
+                    isDatacenter = it.isDatacenter,
+                    riskScore = it.riskScore
                 )
             }
         )

@@ -33,11 +33,12 @@ class IpQueryService(
     private val orderedProviders: List<IIpProvider> = providers.sortedByDescending { it.priority() }
 
     private val providerIndex: Map<String, IIpProvider> = orderedProviders
-        .flatMap { provider ->
-            (setOf(provider.id()) + provider.aliases())
-                .map { it.lowercase() to provider }
-        }
-        .toMap()
+            .flatMap { provider ->
+                (setOf(provider.id()) + provider.aliases()).map {
+                    it.lowercase() to provider
+                }
+            }
+            .toMap()
 
     fun availableProvidersText(): String {
         if (orderedProviders.isEmpty()) return "暂无可用数据源"
@@ -47,7 +48,7 @@ class IpQueryService(
         }
     }
 
-    fun query(
+    suspend fun query(
         ip: String,
         requestedProviders: List<String> = emptyList()
     ): IpQueryResult {
@@ -71,6 +72,8 @@ class IpQueryService(
                     data = data,
                     failures = failures.toList()
                 )
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 val reason = e.message ?: e.javaClass.simpleName
                 failures += IpProviderFailure(provider.id(), reason)

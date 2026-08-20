@@ -65,12 +65,20 @@ class CaveService(
 
     fun random(): CaveEntry? {
         val meta = readMeta()
-        log.debug("cave random start activeCount={} nextNo={}", meta.activeNumbers.size, meta.nextNo)
+        log.debug(
+            "cave random start activeCount={} nextNo={}",
+            meta.activeNumbers.size,
+            meta.nextNo
+        )
 
         if (meta.activeNumbers.isEmpty()) {
             val rebuilt = rebuildMetaFromEntries()
             val pickedNo = rebuilt.activeNumbers.randomOrNull()
-            log.debug("cave random rebuilt activeCount={} pickedNo={}", rebuilt.activeNumbers.size, pickedNo)
+            log.debug(
+                "cave random rebuilt activeCount={} pickedNo={}",
+                rebuilt.activeNumbers.size,
+                pickedNo
+            )
             return pickedNo?.let(::readEntry)
         }
 
@@ -85,11 +93,15 @@ class CaveService(
         log.warn("cave random found stale activeNumbers, rebuilding metadata")
         val rebuilt = rebuildMetaFromEntries()
         val pickedNo = rebuilt.activeNumbers.randomOrNull()
-        log.debug("cave random after rebuild activeCount={} pickedNo={}", rebuilt.activeNumbers.size, pickedNo)
+        log.debug(
+            "cave random after rebuild activeCount={} pickedNo={}",
+            rebuilt.activeNumbers.size,
+            pickedNo
+        )
         return pickedNo?.let(::readEntry)
     }
 
-    fun add(src: CommandSource): CaveEntry {
+    suspend fun add(src: CommandSource): CaveEntry {
         log.debug(
             "cave add start platform={} userId={} messageId={} quotedMessageId={}",
             src.platform().name,
@@ -107,7 +119,8 @@ class CaveService(
             val meta = readMeta()
             val no = meta.nextNo.coerceAtLeast(1)
             val usedQuoted = src.quoted()?.let { hasSupportedContent(it.partsSafe()) } == true
-            val sourceMessageId = if (usedQuoted) src.quoted()?.messageId() else src.meta().messageId()
+            val sourceMessageId =
+                if (usedQuoted) src.quoted()?.messageId() else src.meta().messageId()
 
             val entry = CaveEntry(
                 no = no,
@@ -122,7 +135,11 @@ class CaveService(
             )
 
             writeEntry(entry)
-            val newMeta = CaveMeta(nextNo = no + 1, activeNumbers = (meta.activeNumbers + no).distinct().sorted())
+            val newMeta =
+                CaveMeta(
+                    nextNo = no + 1,
+                    activeNumbers = (meta.activeNumbers + no).distinct().sorted()
+                )
             writeMeta(newMeta)
 
             log.debug(
@@ -150,11 +167,20 @@ class CaveService(
             nextNo = meta.nextNo.coerceAtLeast(no + 1),
             activeNumbers = meta.activeNumbers.filterNot { it == no })
         writeMeta(newMeta)
-        log.debug("cave delete success no={} nextNo={} activeCount={}", no, newMeta.nextNo, newMeta.activeNumbers.size)
+        log.debug(
+            "cave delete success no={} nextNo={} activeCount={}",
+            no,
+            newMeta.nextNo,
+            newMeta.activeNumbers.size
+        )
         true
     }
 
-    fun toOutbound(src: CommandSource, entry: CaveEntry, includeMeta: Boolean = false): OutboundMessage {
+    fun toOutbound(
+        src: CommandSource,
+        entry: CaveEntry,
+        includeMeta: Boolean = false
+    ): OutboundMessage {
         val parts = mutableListOf<OutPart>()
         val metaLine = if (includeMeta) buildMetaLine(entry) else null
         val textLine = entry.text?.takeIf { it.isNotBlank() }
@@ -162,7 +188,12 @@ class CaveService(
         entry.image?.let {
             val bytes = Base64.getDecoder().decode(it.base64)
             val caption = listOfNotNull(metaLine, textLine).joinToString("\n").ifBlank { null }
-            log.debug("cave outbound image no={} bytes={} caption={}", entry.no, bytes.size, !caption.isNullOrBlank())
+            log.debug(
+                "cave outbound image no={} bytes={} caption={}",
+                entry.no,
+                bytes.size,
+                !caption.isNullOrBlank()
+            )
             parts += OutImage(BytesRef(it.name, bytes, it.mime), caption, it.name, it.mime)
             return OutboundMessage(src.addr(), parts)
         }
@@ -178,7 +209,7 @@ class CaveService(
         return "#${entry.no} - $createdAt"
     }
 
-    private fun extractPayload(src: CommandSource): CavePayload? {
+    private suspend fun extractPayload(src: CommandSource): CavePayload? {
         src.quoted()?.let { quoted ->
             val payload = payloadFromParts(quoted.partsSafe())
             if (payload != null) {
@@ -202,14 +233,14 @@ class CaveService(
         return payload
     }
 
-    private fun payloadFromCurrentParts(parts: List<InPart>): CavePayload? {
+    private suspend fun payloadFromCurrentParts(parts: List<InPart>): CavePayload? {
         if (parts.isEmpty()) return null
         val text = extractCurrentText(parts)
         val image = extractFirstImage(parts)
         return if (text == null && image == null) null else CavePayload(text, image)
     }
 
-    private fun payloadFromParts(parts: List<InPart>): CavePayload? {
+    private suspend fun payloadFromParts(parts: List<InPart>): CavePayload? {
         if (parts.isEmpty()) return null
         val text = extractVisibleText(parts)
         val image = extractFirstImage(parts)
@@ -219,7 +250,11 @@ class CaveService(
     private fun extractCurrentText(parts: List<InPart>): String? {
         if (parts.isEmpty()) return null
 
-        val prefixRegex = Regex("^\\s*${Regex.escape(prefix)}(?:cave|c)\\s+add\\b", setOf(RegexOption.IGNORE_CASE))
+        val prefixRegex =
+            Regex(
+                "^\\s*${Regex.escape(prefix)}(?:cave|c)\\s+add\\b",
+                setOf(RegexOption.IGNORE_CASE)
+            )
         var commandStripped = false
         val chunks = mutableListOf<String>()
 
@@ -267,7 +302,7 @@ class CaveService(
     }
 
     @Throws(IOException::class)
-    private fun extractFirstImage(parts: List<InPart>): CaveImageBlob? {
+    private suspend fun extractFirstImage(parts: List<InPart>): CaveImageBlob? {
         for (part in parts) {
             if (part is InImage) return normalizeImage(part)
         }
@@ -275,7 +310,7 @@ class CaveService(
     }
 
     @Throws(IOException::class)
-    private fun normalizeImage(image: InImage): CaveImageBlob {
+    private suspend fun normalizeImage(image: InImage): CaveImageBlob {
         val source = image.ref() ?: throw IOException("未找到图片内容，无法保存。")
         val loaded = mediaRefLoader.load(source)
         val name = image.name()?.takeIf { it.isNotBlank() } ?: loaded.name()
@@ -304,8 +339,7 @@ class CaveService(
     }
 
     private fun hasSupportedContent(parts: List<InPart>): Boolean {
-        if (parts.isEmpty()) return false
-        return parts.any { part ->
+        return parts.isNotEmpty() && parts.any { part ->
             when (part) {
                 is InText -> !part.text().isNullOrBlank()
                 is InImage -> true
@@ -315,7 +349,12 @@ class CaveService(
     }
 
     private fun readMeta(): CaveMeta {
-        val json = store.getJson(GLOBAL_SCOPE, NS_META, KEY_META).orElse(null) ?: return CaveMeta()
+        val json = store.getJson(
+            GLOBAL_SCOPE,
+            NS_META,
+            KEY_META
+        ).orElse(null)
+            ?: return CaveMeta()
         return try {
             MAPPER.readValue(json, CaveMeta::class.java)
         } catch (e: Exception) {
@@ -325,11 +364,21 @@ class CaveService(
     }
 
     private fun writeMeta(meta: CaveMeta) {
-        store.upsertJson(GLOBAL_SCOPE, NS_META, KEY_META, MAPPER.writeValueAsString(meta), null)
+        store.upsertJson(
+            GLOBAL_SCOPE,
+            NS_META,
+            KEY_META,
+            MAPPER.writeValueAsString(meta),
+            null
+        )
     }
 
     private fun readEntry(no: Int): CaveEntry? {
-        val json = store.getJson(GLOBAL_SCOPE, NS_ENTRY, no.toString()).orElse(null) ?: return null
+        val json = store.getJson(
+            GLOBAL_SCOPE,
+            NS_ENTRY,
+            no.toString()
+        ).orElse(null) ?: return null
         return try {
             MAPPER.readValue(json, CaveEntry::class.java)
         } catch (e: Exception) {
@@ -339,14 +388,32 @@ class CaveService(
     }
 
     private fun writeEntry(entry: CaveEntry) {
-        store.upsertJson(GLOBAL_SCOPE, NS_ENTRY, entry.no.toString(), MAPPER.writeValueAsString(entry), null)
+        store.upsertJson(
+            GLOBAL_SCOPE,
+            NS_ENTRY,
+            entry.no.toString(),
+            MAPPER.writeValueAsString(entry),
+            null
+        )
     }
 
     private fun rebuildMetaFromEntries(): CaveMeta = lock.withLock {
-        val keys = store.getNamespaceJson(GLOBAL_SCOPE, NS_ENTRY).keys.mapNotNull { it.toIntOrNull() }.sorted()
-        val meta = CaveMeta(nextNo = ((keys.maxOrNull() ?: 0) + 1).coerceAtLeast(1), activeNumbers = keys)
+        val keys = store.getNamespaceJson(
+            GLOBAL_SCOPE,
+            NS_ENTRY
+        ).keys.mapNotNull {
+            it.toIntOrNull()
+        }.sorted()
+        val meta = CaveMeta(
+            nextNo = ((keys.maxOrNull() ?: 0) + 1).coerceAtLeast(1),
+            activeNumbers = keys
+        )
         writeMeta(meta)
-        log.debug("cave meta rebuilt nextNo={} activeCount={}", meta.nextNo, meta.activeNumbers.size)
+        log.debug(
+            "cave meta rebuilt nextNo={} activeCount={}",
+            meta.nextNo,
+            meta.activeNumbers.size
+        )
         meta
     }
 

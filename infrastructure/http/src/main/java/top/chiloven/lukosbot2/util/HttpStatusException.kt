@@ -17,7 +17,6 @@
  */
 package top.chiloven.lukosbot2.util
 
-import okhttp3.Response
 import java.io.IOException
 import java.time.Duration
 import java.time.Instant
@@ -47,28 +46,6 @@ open class HttpStatusException @JvmOverloads constructor(
         get() = isRetryableStatus(statusCode)
 
     companion object {
-
-        @JvmStatic
-        @JvmOverloads
-        fun fromResponse(
-            response: Response,
-            responseBodySnippet: String? = runCatching { response.peekBody(4096).string() }.getOrNull(),
-            message: String? = null,
-            cause: Throwable? = null,
-        ): HttpStatusException {
-            val method = response.request.method
-            val url = response.request.url.toString()
-            return HttpStatusException(
-                statusCode = response.code,
-                method = method,
-                url = url,
-                responseBodySnippet = responseBodySnippet,
-                retryAfterMs = parseRetryAfterMs(response.header("Retry-After")),
-                responseHeaders = response.headers.toMultimap(),
-                message = message ?: buildMessage(response.code, method, url, responseBodySnippet),
-                cause = cause,
-            )
-        }
 
         @JvmStatic
         @JvmOverloads

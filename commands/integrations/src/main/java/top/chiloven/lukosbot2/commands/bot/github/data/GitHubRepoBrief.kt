@@ -17,9 +17,6 @@
  */
 package top.chiloven.lukosbot2.commands.bot.github.data
 
-import tools.jackson.databind.node.ObjectNode
-import top.chiloven.lukosbot2.util.JsonUtils
-
 data class GitHubRepoBrief(
     val fullName: String? = null,
     val htmlUrl: String? = null,
@@ -29,13 +26,6 @@ data class GitHubRepoBrief(
     fun toReadableLine(): String {
         val name = fullName ?: "未知仓库"
         return "$name - ${stargazersCount}★"
-    }
-
-    companion object {
-
-        fun from(obj: ObjectNode): GitHubRepoBrief =
-            JsonUtils.snakeTreeToValue(obj, GitHubRepoBrief::class.java)
-
     }
 
 }

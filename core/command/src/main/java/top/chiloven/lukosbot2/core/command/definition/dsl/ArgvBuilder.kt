@@ -28,7 +28,7 @@ class ArgvBuilder<S> {
 
     internal val positionals = mutableListOf<CommandArg>()
     internal val optionSpecs = mutableListOf<CommandOption>()
-    internal var executorBlock: (CommandInvocation<S>.(ArgvParseResult) -> Int)? = null
+    internal var executorBlock: (suspend CommandInvocation<S>.(ArgvParseResult) -> Int)? = null
 
     fun positional(
         name: String,
@@ -64,7 +64,7 @@ class ArgvBuilder<S> {
         )
     }
 
-    fun execute(block: CommandInvocation<S>.(ArgvParseResult) -> Unit) {
+    fun execute(block: suspend CommandInvocation<S>.(ArgvParseResult) -> Unit) {
         executorBlock = { argv ->
             block(argv)
             code()

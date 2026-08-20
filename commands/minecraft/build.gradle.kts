@@ -28,8 +28,16 @@ dependencies {
     implementation(project(":properties"))
     implementation(project(":shared"))
     implementation(project(":infrastructure:http"))
+    implementation(libs.ktor.client.core)
+    implementation(libs.kotlinx.coroutines.core)
 
     implementation(libs.commons.net)
+
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.kotlin.test.junit)
+    testImplementation(libs.ktor.client.mock)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testRuntimeOnly(libs.junit.platform.launcher)
 
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)

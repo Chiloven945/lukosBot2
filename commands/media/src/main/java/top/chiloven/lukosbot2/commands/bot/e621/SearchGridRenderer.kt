@@ -17,15 +17,19 @@
  */
 package top.chiloven.lukosbot2.commands.bot.e621
 
-import okhttp3.OkHttpClient
-import okhttp3.Request
+import io.ktor.client.*
+import io.ktor.client.plugins.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.apache.logging.log4j.LogManager
 import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.commands.UsageImageUtils
 import top.chiloven.lukosbot2.commands.bot.e621.schema.Post
 import top.chiloven.lukosbot2.util.ImageTextUtils
 import top.chiloven.lukosbot2.util.ModernImageDraw
-import top.chiloven.lukosbot2.util.OkHttpUtils
 import java.awt.Color
 import java.awt.Font
 import java.awt.Graphics2D
@@ -50,32 +54,26 @@ object SearchGridRenderer {
     private val palette: ModernImageDraw.Palette
         get() = style.palette
 
-    private val clientCache = OkHttpUtils.ProxyAwareOkHttpClientCache(
-        connectTimeoutMs = 8000,
-        callTimeoutMs = 12000,
-        followRedirects = true,
-        followSslRedirects = true
-    )
-
-    val http: OkHttpClient
-        get() = clientCache.client
-
-    private fun loadImage(url: String?): BufferedImage? {
+    private suspend fun loadImage(url: String?, http: HttpClient): BufferedImage? {
         if (url.isNullOrBlank()) return null
-        val req = Request.Builder()
-            .url(url)
-            .get()
-            .header("User-Agent", Constants.UA)
-            .build()
 
         return try {
-            http.newCall(req).execute().use { resp ->
-                if (!resp.isSuccessful) {
-                    log.debug("Thumbnail load failed: code={}, url={}", resp.code, url)
-                    return null
+            val response = http.get(url) {
+                header(HttpHeaders.UserAgent, Constants.UA)
+                timeout {
+                    connectTimeoutMillis = 8000
+                    requestTimeoutMillis = 12000
                 }
-                val body = resp.body
-                ImageIO.read(body.bytes().inputStream())
+            }
+
+            if (!response.status.isSuccess()) {
+                log.debug("Thumbnail load failed: code={}, url={}", response.status.value, url)
+                return null
+            }
+
+            val bytes = response.bodyAsBytes()
+            withContext(Dispatchers.IO) {
+                ImageIO.read(bytes.inputStream())
             }
         } catch (e: Exception) {
             log.debug("Thumbnail load failed: url={}", url, e)
@@ -83,7 +81,12 @@ object SearchGridRenderer {
         }
     }
 
-    fun render(search: String, page: Int, posts: List<Post>): ByteArray {
+    suspend fun render(
+        search: String,
+        page: Int,
+        posts: List<Post>,
+        http: HttpClient
+    ): ByteArray {
         val cache = ImageTextUtils.GlyphRunCache()
 
         val n = posts.size.coerceAtLeast(1)
@@ -110,7 +113,16 @@ object SearchGridRenderer {
         ModernImageDraw.quality(g)
         ModernImageDraw.background(g, w, h, palette)
 
-        drawHeader(g, search, page, posts.size, pad, pad, w - pad * 2, cache)
+        drawHeader(
+            g,
+            search,
+            page,
+            posts.size,
+            pad,
+            pad,
+            w - pad * 2,
+            cache
+        )
 
         val baseY = pad + headerH
 
@@ -136,7 +148,8 @@ object SearchGridRenderer {
                     cardPad = cardPad,
                     cardRadius = cardRadius,
                     imageRadius = imageRadius,
-                    cache = cache
+                    cache = cache,
+                    http = http
                 )
             }
         }
@@ -144,7 +157,9 @@ object SearchGridRenderer {
         g.dispose()
 
         val bos = ByteArrayOutputStream()
-        ImageIO.write(out, "png", bos)
+        withContext(Dispatchers.IO) {
+            ImageIO.write(out, "png", bos)
+        }
         return bos.toByteArray()
     }
 
@@ -197,7 +212,7 @@ object SearchGridRenderer {
         )
     }
 
-    private fun drawPostCard(
+    private suspend fun drawPostCard(
         g: Graphics2D,
         post: Post,
         x: Int,
@@ -208,19 +223,44 @@ object SearchGridRenderer {
         cardPad: Int,
         cardRadius: Int,
         imageRadius: Int,
-        cache: ImageTextUtils.GlyphRunCache
+        cache: ImageTextUtils.GlyphRunCache,
+        http: HttpClient
     ) {
         ModernImageDraw.card(g, x, y, cellW, cellH, cardRadius, palette)
 
         val imgX = x + cardPad
         val imgY = y + cardPad
-        val img = loadImage(post.preview.url ?: post.sample.url ?: post.file.url)
+        val img = loadImage(post.preview.url ?: post.sample.url ?: post.file.url, http)
 
         if (img == null) {
-            drawNoPreview(g, imgX, imgY, thumb, thumb, imageRadius, cache)
+            drawNoPreview(
+                g,
+                imgX,
+                imgY,
+                thumb,
+                thumb,
+                imageRadius,
+                cache
+            )
         } else {
-            ModernImageDraw.imageCoverRounded(g, img, imgX, imgY, thumb, thumb, imageRadius)
-            ModernImageDraw.roundedBorder(g, imgX, imgY, thumb, thumb, imageRadius, palette.border)
+            ModernImageDraw.imageCoverRounded(
+                g,
+                img,
+                imgX,
+                imgY,
+                thumb,
+                thumb,
+                imageRadius
+            )
+            ModernImageDraw.roundedBorder(
+                g,
+                imgX,
+                imgY,
+                thumb,
+                thumb,
+                imageRadius,
+                palette.border
+            )
         }
 
         drawPostCaption(g, post, imgX, imgY + thumb + 12, thumb, cache)
@@ -264,8 +304,8 @@ object SearchGridRenderer {
         )
 
         val author = post.tags.getStringArtist()
-            .ifBlank { post.uploaderName }
-            .ifBlank { "未知作者" }
+                .ifBlank { post.uploaderName }
+                .ifBlank { "未知作者" }
         val authorFit = ImageTextUtils.ellipsizeRunAware(
             g = g,
             text = author,
@@ -309,7 +349,6 @@ object SearchGridRenderer {
             cache
         )
     }
-
 
     private fun ratingBadgeColors(rating: String): BadgeColors {
         val p = palette
@@ -366,8 +405,20 @@ object SearchGridRenderer {
         val desc = "可以换一组关键词或查看下一页。"
         val titleFont = style.headingFont
         val bodyFont = style.bodyFont
-        val titleW = ImageTextUtils.measureTextRunAware(g, title, titleFont, bodyFont, cache)
-        val descW = ImageTextUtils.measureTextRunAware(g, desc, bodyFont, bodyFont, cache)
+        val titleW = ImageTextUtils.measureTextRunAware(
+            g,
+            title,
+            titleFont,
+            bodyFont,
+            cache
+        )
+        val descW = ImageTextUtils.measureTextRunAware(
+            g,
+            desc,
+            bodyFont,
+            bodyFont,
+            cache
+        )
         val centerY = y + height / 2
 
         g.color = palette.text

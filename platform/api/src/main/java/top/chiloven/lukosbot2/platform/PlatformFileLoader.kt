@@ -15,14 +15,17 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package top.chiloven.lukosbot2.util
+package top.chiloven.lukosbot2.platform
 
-/**
- * Successful HTTP response wrapper that keeps the parsed body together with transport metadata.
- */
-data class HttpCallResult<T>(
-    val body: T,
-    val statusCode: Int,
-    val url: String,
-    val headers: Map<String, List<String>>,
-)
+import top.chiloven.lukosbot2.core.model.message.media.LoadedPlatformMedia
+import top.chiloven.lukosbot2.core.model.message.media.PlatformFileRef
+import java.io.IOException
+
+interface PlatformFileLoader {
+
+    fun supports(platform: String): Boolean
+
+    @Throws(IOException::class)
+    suspend fun load(ref: PlatformFileRef): LoadedPlatformMedia
+
+}

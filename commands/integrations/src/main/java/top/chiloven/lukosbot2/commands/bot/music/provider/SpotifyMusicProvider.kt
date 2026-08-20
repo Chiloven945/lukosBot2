@@ -17,24 +17,23 @@
  */
 package top.chiloven.lukosbot2.commands.bot.music.provider
 
-import okhttp3.FormBody
-import okhttp3.Request
-import tools.jackson.databind.node.ObjectNode
+import io.ktor.client.*
+import io.ktor.client.plugins.*
+import io.ktor.client.request.*
+import io.ktor.client.request.forms.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import top.chiloven.lukosbot2.commands.bot.music.MusicPlatform
 import top.chiloven.lukosbot2.commands.bot.music.TrackInfo
-import top.chiloven.lukosbot2.util.HttpJson
-import top.chiloven.lukosbot2.util.HttpText
-import top.chiloven.lukosbot2.util.JsonUtils.MAPPER
-import top.chiloven.lukosbot2.util.JsonUtils.arr
-import top.chiloven.lukosbot2.util.JsonUtils.int
-import top.chiloven.lukosbot2.util.JsonUtils.long
-import top.chiloven.lukosbot2.util.JsonUtils.obj
-import top.chiloven.lukosbot2.util.JsonUtils.str
-import java.net.URI
+import top.chiloven.lukosbot2.http.requireSuccess
+import top.chiloven.lukosbot2.util.JsonUtils
 import java.nio.charset.StandardCharsets
 import java.util.*
 
 class SpotifyMusicProvider(
+    private val http: HttpClient,
     private val clientId: String,
     private val clientSecret: String
 ) : IMusicProvider {
@@ -47,116 +46,161 @@ class SpotifyMusicProvider(
 
     }
 
-    @Volatile
-    private var accessToken: String? = null
-    @Volatile
-    private var tokenExpireAtMs: Long = 0L
+    private data class SpotifyTokenResponse(
+        val accessToken: String? = null,
+        val expiresIn: Int? = null
+    )
+
+    private data class SpotifySearchResponse(
+        val tracks: SpotifyTracksDto? = null
+    ) {
+
+        data class SpotifyTracksDto(
+            val items: List<SpotifyTrackDto> = emptyList()
+        )
+
+    }
+
+    private data class SpotifyTrackDto(
+        val id: String? = null,
+        val name: String? = null,
+        val artists: List<SpotifyArtistDto> = emptyList(),
+        val album: SpotifyAlbumDto? = null,
+        val externalUrls: Map<String, String>? = null,
+        val durationMs: Long? = null
+    ) {
+
+        data class SpotifyArtistDto(
+            val name: String? = null
+        )
+
+        data class SpotifyAlbumDto(
+            val name: String? = null,
+            val images: List<SpotifyImageDto> = emptyList()
+        )
+
+        data class SpotifyImageDto(
+            val url: String? = null
+        )
+
+    }
+
+    @Volatile private var accessToken: String? = null
+    @Volatile private var tokenExpireAtMs: Long = 0L
+    private val tokenMutex = Mutex()
 
     override fun platform(): MusicPlatform = MusicPlatform.SPOTIFY
 
     @Throws(Exception::class)
-    override fun searchTrack(query: String): TrackInfo? {
+    override suspend fun searchTrack(query: String): TrackInfo? {
         val token = ensureToken()
-        val root = HttpJson.getObjectResponse(
-            uri = URI("$API_BASE/search"),
-            params = mapOf(
-                "q" to query,
-                "type" to "track",
-                "limit" to "1",
-            ),
-            headers = bearerHeaders(token),
-        ).body
+        val response = http.get("$API_BASE/search") {
+            header(HttpHeaders.Accept, "application/json")
+            header(HttpHeaders.Authorization, "Bearer $token")
+            parameter("q", query)
+            parameter("type", "track")
+            parameter("limit", "1")
+        }.requireSuccess()
 
-        val tracks = root.obj("tracks") ?: return null
-        val items = tracks.arr("items") ?: return null
-        if (items.size() == 0) return null
-
-        return toTrackInfo(items[0].asObject())
+        val text = response.bodyAsText()
+        val dto = JsonUtils.SNAKE_CASE_MAPPER.readValue(
+            text,
+            SpotifySearchResponse::class.java
+        )
+        val item = dto.tracks?.items?.firstOrNull() ?: return null
+        return toTrackInfo(item)
     }
 
     @Throws(Exception::class)
-    override fun resolveLink(link: String): TrackInfo? {
+    override suspend fun resolveLink(link: String): TrackInfo? {
         val id = extractTrackIdFromLink(link)?.takeIf { it.isNotBlank() } ?: return null
         val token = ensureToken()
 
-        val root = HttpJson.getObjectResponse(
-            uri = URI("$API_BASE/tracks/$id"),
-            headers = bearerHeaders(token),
-        ).body
-        return toTrackInfo(root)
+        val response = http.get("$API_BASE/tracks/$id") {
+            header(HttpHeaders.Accept, "application/json")
+            header(HttpHeaders.Authorization, "Bearer $token")
+        }.requireSuccess()
+
+        val text = response.bodyAsText()
+        val item = JsonUtils.SNAKE_CASE_MAPPER.readValue(
+            text,
+            SpotifyTrackDto::class.java
+        )
+        return toTrackInfo(item)
     }
 
-    @Synchronized
     @Throws(Exception::class)
-    private fun ensureToken(): String {
+    private suspend fun ensureToken(): String {
         val now = System.currentTimeMillis()
         val cached = accessToken
         if (cached != null && now < tokenExpireAtMs - 60_000) {
             return cached
         }
 
-        val basic = Base64.getEncoder().encodeToString(
-            "$clientId:$clientSecret".toByteArray(StandardCharsets.UTF_8)
-        )
+        return tokenMutex.withLock {
+            val currentNow = System.currentTimeMillis()
+            val currentCached = accessToken
+            if (currentCached != null && currentNow < tokenExpireAtMs - 60_000) {
+                return@withLock currentCached
+            }
 
-        val req = Request.Builder()
-            .url(TOKEN_URL)
-            .header("Authorization", "Basic $basic")
-            .header("Accept", "application/json")
-            .post(
-                FormBody.Builder()
-                    .add("grant_type", "client_credentials")
-                    .build()
+            val basic = Base64.getEncoder().encodeToString(
+                "$clientId:$clientSecret".toByteArray(StandardCharsets.UTF_8)
             )
-            .build()
 
-        val body = HttpText.sendStringResponse(req, timeoutMs = 10_000).body
-        val root = MAPPER.readTree(body).asObject()
-        val token = root.str("access_token").orEmpty()
-        val expiresIn = root.int("expires_in") ?: 0
+            val response = http.submitForm(
+                url = TOKEN_URL,
+                formParameters = parameters {
+                    append("grant_type", "client_credentials")
+                }
+            ) {
+                header(HttpHeaders.Authorization, "Basic $basic")
+                header(HttpHeaders.Accept, "application/json")
+                timeout {
+                    requestTimeoutMillis = 10_000
+                }
+            }.requireSuccess()
 
-        accessToken = token
-        tokenExpireAtMs = now + expiresIn * 1000L
-        return token
+            val text = response.bodyAsText()
+            val dto = JsonUtils.SNAKE_CASE_MAPPER.readValue(
+                text,
+                SpotifyTokenResponse::class.java
+            )
+            val token = dto.accessToken.orEmpty()
+            val expiresIn = dto.expiresIn ?: 0
+
+            accessToken = token
+            tokenExpireAtMs = currentNow + expiresIn * 1000L
+            token
+        }
     }
 
-    private fun bearerHeaders(token: String): Map<String, String> = mapOf(
-        "Accept" to "application/json",
-        "Accept-Encoding" to "identity",
-        "Authorization" to "Bearer $token",
-    )
-
-    private fun toTrackInfo(t: ObjectNode): TrackInfo {
-        val id = t.str("id").orEmpty()
-        val name = t.str("name").orEmpty()
-
-        val artist = t.arr("artists")
-            ?.takeIf { it.size() > 0 }
-            ?.get(0)?.asObjectOpt()?.orElse(null)
-            ?.str("name")
-            .orEmpty()
-
-        val albumObj = t.obj("album")
-        val album = albumObj?.str("name").orEmpty()
-
-        val cover = albumObj?.arr("images")
-            ?.takeIf { it.size() > 0 }
-            ?.get(0)?.asObjectOpt()?.orElse(null)
-            ?.str("url")
-
-        var url = t.obj("external_urls")?.str("spotify")
-        if (url.isNullOrBlank()) {
-            url = "https://open.spotify.com/track/$id"
-        }
-
-        val duration = t.long("duration_ms") ?: 0L
-        return TrackInfo(platform(), id, name, artist, album, cover, url, duration)
+    private fun toTrackInfo(t: SpotifyTrackDto): TrackInfo {
+        val id = t.id.orEmpty()
+        val name = t.name.orEmpty()
+        val artist = t.artists.firstOrNull()?.name.orEmpty()
+        val album = t.album?.name.orEmpty()
+        val cover = t.album?.images?.firstOrNull()?.url
+        val url = t.externalUrls?.get("spotify")?.takeIf {
+            it.isNotBlank()
+        } ?: "https://open.spotify.com/track/$id"
+        val duration = t.durationMs ?: 0L
+        return TrackInfo(
+            platform(),
+            id,
+            name,
+            artist,
+            album,
+            cover,
+            url,
+            duration
+        )
     }
 
     private fun extractTrackIdFromLink(link: String?): String? {
-        if (link.isNullOrBlank()) return null
-        val m = TRACK_ID_RE.find(link.trim()) ?: return null
-        return m.groupValues.getOrNull(1)
+        return if (link.isNullOrBlank()) null else {
+            (TRACK_ID_RE.find(link.trim()) ?: return null).groupValues.getOrNull(1)
+        }
     }
 
 }

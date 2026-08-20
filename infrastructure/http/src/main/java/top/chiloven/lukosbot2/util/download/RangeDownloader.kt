@@ -19,7 +19,6 @@ package top.chiloven.lukosbot2.util.download
 
 import okhttp3.Response
 import org.apache.logging.log4j.LogManager
-import top.chiloven.lukosbot2.util.HttpStatusException
 import top.chiloven.lukosbot2.util.PathUtils
 import top.chiloven.lukosbot2.util.concurrent.Coroutines
 import java.io.IOException
@@ -64,7 +63,11 @@ internal class RangeDownloader(
         val meta = try {
             probeRangeMeta(url, headers, timeoutMs)
         } catch (ex: Exception) {
-            log.debug("[DL-FAST] Range probe failed, fallback to single: url={}, err={}", url, ex.toString())
+            log.debug(
+                "[DL-FAST] Range probe failed, fallback to single: url={}, err={}",
+                url,
+                ex.toString()
+            )
             singleFileDownloader.downloadToFile(url, targetFile, headers, timeoutMs, maxRetries)
             return
         } finally {
@@ -127,7 +130,8 @@ internal class RangeDownloader(
                 http.debugResponseSummary(url, code, response.headers, false, 0)
                 if (code < 400) {
                     val len = response.header("Content-Length")?.toLongOrNull() ?: -1L
-                    val accept = response.header("Accept-Ranges")?.contains("bytes", ignoreCase = true) == true
+                    val accept = response.header("Accept-Ranges")
+                            ?.contains("bytes", ignoreCase = true) == true
                     val token = http.pickIfRangeToken(response.headers)
                     if (accept && len > 0) {
                         log.debug(
@@ -162,7 +166,8 @@ internal class RangeDownloader(
             val code = response.code
             http.debugResponseSummary(url, code, response.headers, true, 0)
             if (code == 206) {
-                val total = response.header("Content-Range")?.let(http::parseTotalFromContentRange) ?: -1L
+                val total = response.header("Content-Range")?.let(http::parseTotalFromContentRange)
+                    ?: -1L
                 val token = http.pickIfRangeToken(response.headers)
                 if (total > 0) {
                     log.debug(
@@ -189,7 +194,10 @@ internal class RangeDownloader(
     ): List<RangePart> {
         val minPart = max(256 * 1024L, minPartSizeBytes)
         val maxPartsBySize = ((total + minPart - 1) / minPart).coerceAtLeast(1L)
-        val parts = max(2, min(max(1, chunkThreads), min(Int.MAX_VALUE.toLong(), maxPartsBySize).toInt()))
+        val parts = max(
+            2,
+            min(max(1, chunkThreads), min(Int.MAX_VALUE.toLong(), maxPartsBySize).toInt())
+        )
         val partSize = (total + parts - 1) / parts
         val result = mutableListOf<RangePart>()
 
@@ -318,7 +326,7 @@ internal class RangeDownloader(
                     http.debugResponseSummary(url, code, response.headers, true, part.start)
 
                     if (code >= 400) {
-                        throw HttpStatusException.fromResponse(response)
+                        throw response.toHttpStatusException()
                     }
                     if (code != 206) {
                         throw IOException("Expected HTTP 206, got HTTP $code")
@@ -365,7 +373,12 @@ internal class RangeDownloader(
                     continue
                 }
 
-                log.warn("[DL-PART] part#{} failed (no more retries): url={}, err={}", part.index, url, e.toString())
+                log.warn(
+                    "[DL-PART] part#{} failed (no more retries): url={}, err={}",
+                    part.index,
+                    url,
+                    e.toString()
+                )
                 throw e
             }
         }
@@ -402,21 +415,22 @@ internal class RangeDownloader(
         var written = 0L
         val buffer = ByteArray(DownloadDefaults.BUFFER_SIZE)
         response.body.byteStream().use { input ->
-            FileChannel.open(tmpFile, StandardOpenOption.WRITE, StandardOpenOption.CREATE).use { channel ->
-                var pos = start
-                while (true) {
-                    val read = input.read(buffer)
-                    if (read == -1) break
+            FileChannel.open(tmpFile, StandardOpenOption.WRITE, StandardOpenOption.CREATE)
+                    .use { channel ->
+                        var pos = start
+                        while (true) {
+                            val read = input.read(buffer)
+                            if (read == -1) break
 
-                    val bb = ByteBuffer.wrap(buffer, 0, read)
-                    while (bb.hasRemaining()) {
-                        val count = channel.write(bb, pos)
-                        if (count <= 0) throw IOException("FileChannel write returned $count")
-                        pos += count
-                        written += count
+                            val bb = ByteBuffer.wrap(buffer, 0, read)
+                            while (bb.hasRemaining()) {
+                                val count = channel.write(bb, pos)
+                                if (count <= 0) throw IOException("FileChannel write returned $count")
+                                pos += count
+                                written += count
+                            }
+                        }
                     }
-                }
-            }
         }
         return written
     }

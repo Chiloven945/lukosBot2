@@ -17,6 +17,8 @@
  */
 package top.chiloven.lukosbot2.commands.bot.music
 
+import io.ktor.client.*
+import kotlinx.coroutines.CancellationException
 import org.apache.logging.log4j.LogManager
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
@@ -35,18 +37,29 @@ import top.chiloven.lukosbot2.core.command.definition.dsl.botCommand
     havingValue = "true",
     matchIfMissing = true
 )
-class MusicCommand(ccp: CommandConfigProp) : IBotCommand {
+class MusicCommand(
+    ccp: CommandConfigProp,
+    httpClient: HttpClient
+) : IBotCommand {
 
     private val log = LogManager.getLogger(MusicCommand::class.java)
 
     private val spotify: IMusicProvider? = ccp.music.spotify.let { sp ->
-        if (sp.enabled && sp.clientId.isNotBlank() && sp.clientSecret.isNotBlank()) SpotifyMusicProvider(
+        if (
+            sp.enabled
+            && sp.clientId.isNotBlank()
+            && sp.clientSecret.isNotBlank()
+        ) SpotifyMusicProvider(
+            httpClient,
             sp.clientId,
             sp.clientSecret
         ) else null
     }
     private val soundCloud: IMusicProvider? = ccp.music.soundcloud.let { sc ->
-        if (sc.enabled && sc.clientId.isNotBlank()) SoundCloudMusicProvider(sc.clientId) else null
+        if (sc.enabled && sc.clientId.isNotBlank()) SoundCloudMusicProvider(
+            httpClient,
+            sc.clientId
+        ) else null
     }
 
     private val commandDefinition = botCommand("music") {
@@ -54,7 +67,9 @@ class MusicCommand(ccp: CommandConfigProp) : IBotCommand {
 
         literal("link") {
             description = "通过链接解析歌曲"
-            raw("link") { link -> runLink(source, link) }
+            raw("link") { link ->
+                runLink(source, link)
+            }
             param("link", "Spotify 或 SoundCloud 链接")
         }
 
@@ -83,12 +98,18 @@ class MusicCommand(ccp: CommandConfigProp) : IBotCommand {
 
     override fun definition() = commandDefinition
 
-    private fun runSearch(src: CommandSource, query: String, platformToken: String?): Int {
+    private suspend fun runSearch(
+        src: CommandSource,
+        query: String,
+        platformToken: String?
+    ): Int {
         return try {
             val provider = pickProvider(platformToken) ?: run {
                 src.reply("音乐平台暂未配置或不可用。")
                 return 0
             }
+
+
             val info = provider.searchTrack(query) ?: run {
                 src.reply("没有找到匹配的歌曲。")
                 return 0
@@ -96,19 +117,27 @@ class MusicCommand(ccp: CommandConfigProp) : IBotCommand {
 
             src.reply(info.formatted())
             1
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             src.reply("查询失败：${e.message ?: "未知错误"}")
-            log.warn("Music search failed: query='{}', platform='{}'", query, platformToken, e)
+            log.warn(
+                "Music search failed: query='{}', platform='{}'",
+                query,
+                platformToken,
+                e
+            )
             0
         }
     }
 
-    private fun runLink(src: CommandSource, link: String): Int {
+    private suspend fun runLink(src: CommandSource, link: String): Int {
         return try {
             val provider = detectProviderByLink(link) ?: run {
                 src.reply("无法识别链接所属平台。")
                 return 0
             }
+
             val info = provider.resolveLink(link) ?: run {
                 src.reply("无法从链接解析到歌曲信息。")
                 return 0
@@ -116,6 +145,8 @@ class MusicCommand(ccp: CommandConfigProp) : IBotCommand {
 
             src.reply(info.formatted())
             1
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             src.reply("解析链接失败：${e.message ?: "未知错误"}")
             log.warn("Music link failed: link='{}'", link, e)

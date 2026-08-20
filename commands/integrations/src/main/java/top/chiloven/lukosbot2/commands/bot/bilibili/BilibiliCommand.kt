@@ -81,13 +81,13 @@ class BilibiliCommand(
 
     override fun definition() = commandDefinition
 
-    private fun execute(
+    private suspend fun execute(
         src: CommandSource,
         target: String,
         detailed: Boolean
     ): Int {
         log.info("BilibiliCommand invoked with target='{}', detailed={}", target, detailed)
-        return runCatching {
+        return try {
             val video = bilibiliQueryService.query(target)
             if (video == null) {
                 src.reply("未找到该视频。")
@@ -98,7 +98,9 @@ class BilibiliCommand(
             val cover = video.cover?.takeIf { it.isNotBlank() }
             src.reply(cover?.let { "$text\n$it" } ?: text)
             1
-        }.getOrElse { e ->
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
             log.warn("Bilibili command failed: {}", target, e)
             src.reply(friendlyError(e))
             0

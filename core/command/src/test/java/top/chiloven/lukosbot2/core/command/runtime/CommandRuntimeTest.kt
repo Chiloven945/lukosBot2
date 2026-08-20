@@ -17,6 +17,7 @@
  */
 package top.chiloven.lukosbot2.core.command.runtime
 
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -59,7 +60,7 @@ class CommandRuntimeTest {
         IBotCommand { spec }
 
     @Test
-    fun execute_empty_leaf() {
+    fun execute_empty_leaf() = runTest {
         val replies = mutableListOf<String>()
         val src = CommandSource.forAddress(
             Address(
@@ -101,7 +102,7 @@ class CommandRuntimeTest {
     }
 
     @Test
-    fun execute_raw_leaf() {
+    fun execute_raw_leaf() = runTest {
         val s = fakeSource()
         val spec = CommandDefinition(
             name = "echo",
@@ -128,7 +129,7 @@ class CommandRuntimeTest {
     }
 
     @Test
-    fun execute_required_raw_missing() {
+    fun execute_required_raw_missing() = runTest {
         val s = fakeSource()
         val spec = CommandDefinition(
             name = "echo",
@@ -156,7 +157,7 @@ class CommandRuntimeTest {
     }
 
     @Test
-    fun execute_argv_leaf() {
+    fun execute_argv_leaf() = runTest {
         val s = fakeSource()
         val spec = CommandDefinition(
             name = "dice",
@@ -187,7 +188,7 @@ class CommandRuntimeTest {
     }
 
     @Test
-    fun execute_tree_leaf() {
+    fun execute_tree_leaf() = runTest {
         val s = fakeSource()
         val spec = CommandDefinition(
             name = "calc",
@@ -228,7 +229,7 @@ class CommandRuntimeTest {
     }
 
     @Test
-    fun nested_literal_wins_over_raw() {
+    fun nested_literal_wins_over_raw() = runTest {
         val s = fakeSource()
         val spec = CommandDefinition(
             name = "music",
@@ -265,7 +266,7 @@ class CommandRuntimeTest {
     }
 
     @Test
-    fun child_alias_match() {
+    fun child_alias_match() = runTest {
         val s = fakeSource()
         val spec = CommandDefinition(
             name = "wiki",
@@ -295,7 +296,7 @@ class CommandRuntimeTest {
     }
 
     @Test
-    fun unknown_subcommand_returns_parse_error() {
+    fun unknown_subcommand_returns_parse_error() = runTest {
         val s = fakeSource()
         val spec = CommandDefinition(
             name = "wiki",
@@ -321,7 +322,7 @@ class CommandRuntimeTest {
     }
 
     @Test
-    fun extra_args_on_empty_leaf_returns_parse_error() {
+    fun extra_args_on_empty_leaf_returns_parse_error() = runTest {
         val s = fakeSource()
         val spec = CommandDefinition(
             name = "ping",
@@ -345,7 +346,7 @@ class CommandRuntimeTest {
     }
 
     @Test
-    fun missing_subcommand_shows_help_hint() {
+    fun missing_subcommand_shows_help_hint() = runTest {
         val s = fakeSource()
         val spec = CommandDefinition(
             name = "github",
@@ -371,7 +372,7 @@ class CommandRuntimeTest {
     }
 
     @Test
-    fun deeply_nested_literal_routing() {
+    fun deeply_nested_literal_routing() = runTest {
         val s = fakeSource()
         val spec = CommandDefinition(
             name = "a",

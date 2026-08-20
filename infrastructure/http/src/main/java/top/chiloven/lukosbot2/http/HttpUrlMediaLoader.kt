@@ -17,21 +17,26 @@
  */
 package top.chiloven.lukosbot2.http
 
+import io.ktor.client.*
+import io.ktor.client.request.*
 import org.springframework.stereotype.Component
 import top.chiloven.lukosbot2.core.IUrlMediaLoader
 import top.chiloven.lukosbot2.core.model.message.media.LoadedPlatformMedia
 import top.chiloven.lukosbot2.core.model.message.media.UrlRef
-import top.chiloven.lukosbot2.util.HttpBytes
 import java.io.IOException
 
 @Component
-class HttpUrlMediaLoader : IUrlMediaLoader {
+class HttpUrlMediaLoader(
+    private val http: HttpClient
+) : IUrlMediaLoader {
 
     @Throws(IOException::class)
-    override fun load(ref: UrlRef): LoadedPlatformMedia {
-        val remote = HttpBytes.getResponse(ref.url()).body
+    override suspend fun load(ref: UrlRef): LoadedPlatformMedia {
+        val payload = http.get(ref.url()).readBytePayload()
         return LoadedPlatformMedia(
-            remote.bytes, remote.fileName, remote.mime
+            payload.bytes,
+            payload.fileName,
+            payload.mime
         )
     }
 

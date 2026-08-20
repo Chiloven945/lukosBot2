@@ -76,10 +76,15 @@ class IpCommand(
 
     override fun definition() = commandDefinition
 
-    private fun CommandInvocation<CommandSource>.runQuery(ip: String, providers: List<String>) {
+    private suspend fun CommandInvocation<CommandSource>.runQuery(
+        ip: String,
+        providers: List<String>
+    ) {
         try {
             val result = ipQueryService.query(ip = ip, requestedProviders = providers)
             source.reply(result.toDisplayText())
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: IllegalArgumentException) {
             source.reply(e.message ?: "参数错误，请检查 IP 地址或数据源名称")
         } catch (e: IpQueryException) {

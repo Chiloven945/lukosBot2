@@ -25,11 +25,11 @@ class BilibiliQueryService(
     private val bilibiliApi: BilibiliApi,
 ) {
 
-    fun query(target: String): BilibiliVideo? {
+    suspend fun query(target: String): BilibiliVideo? {
         val id = bilibiliApi.resolveVideoId(target) ?: return null
         val viewData = bilibiliApi.getViewData(id) ?: return null
         val ownerMid = BilibiliVideo.ownerMid(viewData)
-        val fans = ownerMid?.takeIf { it > 0 }?.let(bilibiliApi::getFollowerCount) ?: 0L
+        val fans = ownerMid?.takeIf { it > 0 }?.let { bilibiliApi.getFollowerCount(it) } ?: 0L
         return BilibiliVideo.fromViewData(viewData, id, fans)
     }
 

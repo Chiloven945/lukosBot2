@@ -18,8 +18,6 @@
 package top.chiloven.lukosbot2.commands.bot.motd
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import tools.jackson.databind.node.ObjectNode
-import top.chiloven.lukosbot2.util.JsonUtils
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class McSrvStatusResponse(
@@ -64,12 +62,5 @@ data class McSrvStatusResponse(
         val srv: Boolean? = null,
         val cachehit: Boolean? = null,
     )
-
-    companion object {
-
-        fun fromJsonObject(obj: ObjectNode): McSrvStatusResponse =
-            JsonUtils.snakeTreeToValue(obj, McSrvStatusResponse::class.java)
-
-    }
 
 }

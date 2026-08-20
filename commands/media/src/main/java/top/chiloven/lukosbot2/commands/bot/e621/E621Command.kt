@@ -17,11 +17,12 @@
  */
 package top.chiloven.lukosbot2.commands.bot.e621
 
+import io.ktor.client.*
+import kotlinx.coroutines.CancellationException
 import org.apache.logging.log4j.LogManager
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
-import top.chiloven.lukosbot2.commands.bot.e621.schema.Artist
 import top.chiloven.lukosbot2.commands.bot.e621.schema.Post
 import top.chiloven.lukosbot2.core.command.bot.CommandSource
 import top.chiloven.lukosbot2.core.command.definition.ArgType
@@ -38,6 +39,8 @@ import top.chiloven.lukosbot2.util.StringUtils.isUrl
     matchIfMissing = true
 )
 class E621Command(
+    private val e621Api: E621Api,
+    private val http: HttpClient,
     private val policyService: PolicyService
 ) : IBotCommand {
 
@@ -126,27 +129,56 @@ class E621Command(
 
     override fun definition() = commandDefinition
 
-    private fun getArtist(src: CommandSource, input: String) {
+    private suspend fun getArtist(src: CommandSource, input: String) {
         val id = src.extractIdOrReply(input) ?: return
-        src.reply(Artist.fromJsonObject(E621Api.getArtistsXIdOrName(id)).getString())
+        try {
+            val artist = e621Api.getArtistsXIdOrName(id)
+            src.reply(artist.getString())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("e621 get artist failed: {}", input, e)
+            src.reply("获取作者信息失败：${e.message ?: "未知错误"}")
+        }
     }
 
-    private fun getPost(src: CommandSource, input: String) {
+    private suspend fun getPost(src: CommandSource, input: String) {
         val id = src.extractIdOrReply(input) ?: return
-        val post = Post.fromJsonObject(E621Api.getPostsXId(id))
-        if (!src.isPostAllowed(post)) return
-        src.reply(post.getString())
+        try {
+            val post = e621Api.getPostsXId(id) ?: run {
+                src.reply("未找到 ID 为 $id 的帖子。")
+                return
+            }
+
+            if (!src.isPostAllowed(post)) return
+            src.reply(post.getString())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("e621 get post failed: {}", input, e)
+            src.reply("获取帖子信息失败：${e.message ?: "未知错误"}")
+        }
     }
 
-    private fun searchArtist(src: CommandSource, search: String, page: Int) {
-        src.reply(src.search(SearchType.ARTIST, search, page) ?: return)
+    private suspend fun searchArtist(
+        src: CommandSource,
+        search: String,
+        page: Int
+    ) {
+        val result = src.search(SearchType.ARTIST, search, page) ?: return
+        src.reply(result)
     }
 
-    private fun searchPost(src: CommandSource, search: String, page: Int) {
-        src.reply(src.search(SearchType.POST, search, page) ?: return)
+    private suspend fun searchPost(
+        src: CommandSource,
+        search: String,
+        page: Int
+    ) {
+        val result = src.search(SearchType.POST, search, page) ?: return
+        src.reply(result)
     }
 
-    private fun searchMd5(src: CommandSource, md5Raw: String) {
+    private suspend fun searchMd5(src: CommandSource, md5Raw: String) {
         val md5 = md5Raw.trim().lowercase()
 
         if (!Regex("^[0-9a-fA-F]{32}$").matches(md5)) {
@@ -154,16 +186,23 @@ class E621Command(
             return
         }
 
-        val posts = Post.fromJsonArray(E621Api.getPosts(limit = 1, page = 1, md5 = md5))
-        if (posts.isEmpty()) {
-            src.reply("未找到 MD5 为 $md5 的帖子。")
-            return
+        try {
+            val posts = e621Api.getPosts(limit = 1, page = 1, md5 = md5)
+            if (posts.isEmpty()) {
+                src.reply("未找到 MD5 为 $md5 的帖子。")
+                return
+            }
+
+            val post = posts.first()
+            if (!src.isPostAllowed(post)) return
+
+            src.reply(post.getString())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("e621 search md5 failed: {}", md5Raw, e)
+            src.reply("搜索 MD5 失败：${e.message ?: "未知错误"}")
         }
-
-        val post = posts.first()
-        if (!src.isPostAllowed(post)) return
-
-        src.reply(post.getString())
     }
 
     private fun CommandSource.extractIdOrReply(input: String): String? =
@@ -171,12 +210,12 @@ class E621Command(
             input
         } else {
             Regex("/(?:artists|posts)/(\\d+)")
-                .find(input)
-                ?.groupValues
-                ?.get(1)
-                .also {
-                    if (it == null) reply("无法从该链接中识别 ID。")
-                }
+                    .find(input)
+                    ?.groupValues
+                    ?.get(1)
+                    .also {
+                        if (it == null) reply("无法从该链接中识别 ID。")
+                    }
         }
 
     private fun CommandSource.isPostAllowed(post: Post): Boolean {
@@ -198,7 +237,7 @@ class E621Command(
 
     }
 
-    private fun CommandSource.search(
+    private suspend fun CommandSource.search(
         type: SearchType,
         search: String,
         page: Int,
@@ -207,13 +246,18 @@ class E621Command(
         val allowedRatings = allowedRatings().map { it.normalizedRating() }.toSet()
         val result = when (type) {
             SearchType.ARTIST -> {
-                val artists = Artist.fromJsonArray(
-                    E621Api.getArtists(
+                val artists = try {
+                    e621Api.getArtists(
                         limit = limit,
                         page = page,
                         searchAnyNameMatches = search
                     )
-                )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.warn("e621 search artist failed: {}", search, e)
+                    emptyList()
+                }
                 SearchResult(artists.map { it.getStringBrief() })
             }
 
@@ -224,25 +268,34 @@ class E621Command(
                     if (search.isBlank()) "-rating:e" else "$search -rating:e"
                 }
 
-                val posts = Post.fromJsonArray(
-                    E621Api.getPosts(
+                val posts = try {
+                    e621Api.getPosts(
                         limit = limit,
                         page = page,
                         tags = effectiveSearch
                     )
-                )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.warn("e621 search post failed: {}", search, e)
+                    emptyList()
+                }
 
                 val visiblePosts = posts.filter { it.rating.normalizedRating() in allowedRatings }
 
                 if (visiblePosts.isNotEmpty()) {
                     try {
+                        val renderedBytes =
+                            SearchGridRenderer.render(search, page, visiblePosts, http)
                         this.reply(
                             OutboundMessage.imageBytesPng(
                                 addr(),
-                                SearchGridRenderer.render(search, page, visiblePosts),
+                                renderedBytes,
                                 "e621-posts-$page.png"
                             )
                         )
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         log.warn("[e621] Grid render/send failed.", e)
                     }

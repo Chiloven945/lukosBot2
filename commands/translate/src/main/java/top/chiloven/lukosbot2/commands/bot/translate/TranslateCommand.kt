@@ -17,6 +17,7 @@
  */
 package top.chiloven.lukosbot2.commands.bot.translate
 
+import io.ktor.client.*
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
@@ -31,10 +32,13 @@ import top.chiloven.lukosbot2.core.command.definition.dsl.*
     havingValue = "true",
     matchIfMissing = true
 )
-class TranslateCommand(ccp: CommandConfigProp) : IBotCommand {
+class TranslateCommand(
+    ccp: CommandConfigProp,
+    httpClient: HttpClient
+) : IBotCommand {
 
     private val translate = ccp.translate
-    private val ts = TranslationService(translate)
+    private val ts = TranslationService(translate, httpClient)
 
     private val commandDefinition = botCommand("translate") {
         alias("tr")

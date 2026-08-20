@@ -17,9 +17,6 @@
  */
 package top.chiloven.lukosbot2.commands.bot.github.data
 
-import tools.jackson.databind.node.ObjectNode
-import top.chiloven.lukosbot2.util.JsonUtils
-
 data class GitHubSearchResult(
     val totalCount: Int = 0,
     val items: List<GitHubRepoBrief> = emptyList()
@@ -36,15 +33,6 @@ data class GitHubSearchResult(
             }
         }
         return lines.trimEnd()
-    }
-
-    companion object {
-
-        fun from(obj: ObjectNode, top: Int): GitHubSearchResult {
-            val mapped = JsonUtils.snakeTreeToValue(obj, GitHubSearchResult::class.java)
-            return mapped.copy(items = mapped.items.take(top))
-        }
-
     }
 
 }
