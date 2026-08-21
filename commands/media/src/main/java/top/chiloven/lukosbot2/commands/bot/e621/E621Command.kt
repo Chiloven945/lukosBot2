@@ -20,28 +20,23 @@ package top.chiloven.lukosbot2.commands.bot.e621
 import io.ktor.client.*
 import kotlinx.coroutines.CancellationException
 import org.apache.logging.log4j.LogManager
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
+import top.chiloven.lukosbot2.commands.UsageImageUtils
 import top.chiloven.lukosbot2.commands.bot.e621.schema.Post
+import top.chiloven.lukosbot2.config.AppProperties
 import top.chiloven.lukosbot2.core.command.bot.CommandSource
 import top.chiloven.lukosbot2.core.command.definition.ArgType
 import top.chiloven.lukosbot2.core.command.definition.dsl.botCommand
 import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage
 import top.chiloven.lukosbot2.core.policy.PolicyService
+import top.chiloven.lukosbot2.util.ModernImageDraw
 import top.chiloven.lukosbot2.util.StringUtils.isUrl
 
-@Service
-@ConditionalOnProperty(
-    prefix = "lukos.commands.control",
-    name = ["e621"],
-    havingValue = "true",
-    matchIfMissing = true
-)
 class E621Command(
     private val e621Api: E621Api,
     private val http: HttpClient,
-    private val policyService: PolicyService
+    private val policyService: PolicyService,
+    private val appProperties: AppProperties? = null,
 ) : IBotCommand {
 
     private val log = LogManager.getLogger(E621Command::class.java)
@@ -285,8 +280,11 @@ class E621Command(
 
                 if (visiblePosts.isNotEmpty()) {
                     try {
+                        val customStyle = appProperties?.let {
+                            UsageImageUtils.ImageStyle.forTheme(ModernImageDraw.ThemeMode.parse(it.image.theme))
+                        }
                         val renderedBytes =
-                            SearchGridRenderer.render(search, page, visiblePosts, http)
+                            SearchGridRenderer.render(search, page, visiblePosts, http, customStyle)
                         this.reply(
                             OutboundMessage.imageBytesPng(
                                 addr(),

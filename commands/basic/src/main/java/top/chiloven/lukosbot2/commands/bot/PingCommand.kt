@@ -17,8 +17,6 @@
  */
 package top.chiloven.lukosbot2.commands.bot
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.core.command.definition.dsl.botCommand
@@ -28,13 +26,6 @@ import java.lang.management.ManagementFactory
 import java.time.Instant
 import java.time.ZoneId
 
-@Service
-@ConditionalOnProperty(
-    prefix = "lukos.commands.control",
-    name = ["ping"],
-    havingValue = "true",
-    matchIfMissing = true
-)
 class PingCommand : IBotCommand {
 
     private val commandDefinition = botCommand("ping") {

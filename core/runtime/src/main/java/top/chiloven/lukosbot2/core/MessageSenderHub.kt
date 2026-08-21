@@ -17,13 +17,11 @@
  */
 package top.chiloven.lukosbot2.core
 
-import jakarta.annotation.PreDestroy
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.runBlocking
 import org.apache.logging.log4j.LogManager
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.core.model.message.Address
 import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage
 import top.chiloven.lukosbot2.platform.ChatPlatform
@@ -42,7 +40,6 @@ import java.util.concurrent.ConcurrentHashMap
  * sender does not affect already queued messages. On shutdown all lanes are closed and drained before
  * returning (orderly shutdown), then the runtime scope is cancelled by Spring destroy ordering.</p>
  */
-@Service
 class MessageSenderHub(
     private val runtime: BotCoroutineRuntime,
 ) {
@@ -108,7 +105,6 @@ class MessageSenderHub(
     /**
      * Closes all lanes and drains the remaining queue before returning.
      */
-    @PreDestroy
     fun destroy() {
         log.info("Shutting down sender hub: closing send lanes and draining queue")
         runBlocking {

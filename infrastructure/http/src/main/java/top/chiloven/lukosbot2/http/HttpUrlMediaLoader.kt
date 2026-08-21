@@ -19,13 +19,11 @@ package top.chiloven.lukosbot2.http
 
 import io.ktor.client.*
 import io.ktor.client.request.*
-import org.springframework.stereotype.Component
 import top.chiloven.lukosbot2.core.IUrlMediaLoader
 import top.chiloven.lukosbot2.core.model.message.media.LoadedPlatformMedia
 import top.chiloven.lukosbot2.core.model.message.media.UrlRef
 import java.io.IOException
 
-@Component
 class HttpUrlMediaLoader(
     private val http: HttpClient
 ) : IUrlMediaLoader {

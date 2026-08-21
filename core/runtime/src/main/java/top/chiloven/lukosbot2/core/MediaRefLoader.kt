@@ -17,12 +17,10 @@
  */
 package top.chiloven.lukosbot2.core
 
-import org.springframework.stereotype.Component
 import top.chiloven.lukosbot2.core.model.message.media.*
 import top.chiloven.lukosbot2.platform.PlatformFileLoader
 import java.io.IOException
 
-@Component
 class MediaRefLoader(
     private val platformFileLoaders: List<PlatformFileLoader>,
     private val urlMediaLoader: IUrlMediaLoader

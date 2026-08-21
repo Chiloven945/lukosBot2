@@ -23,5 +23,4 @@ dependencies {
     implementation(project(":core:runtime"))
     implementation(platform(libs.spring.boot.dependencies.bom))
     implementation(libs.spring.boot.starter.jdbc)
-    implementation("org.springframework:spring-context")
 }

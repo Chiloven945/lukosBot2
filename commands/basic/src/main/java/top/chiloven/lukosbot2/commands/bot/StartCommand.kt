@@ -17,11 +17,9 @@
  */
 package top.chiloven.lukosbot2.commands.bot
 
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.core.command.definition.dsl.botCommand
 
-@Service
 class StartCommand : IBotCommand {
 
     private val commandDefinition = botCommand("start") {

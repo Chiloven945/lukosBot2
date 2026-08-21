@@ -17,8 +17,6 @@
  */
 package top.chiloven.lukosbot2.commands.bot
 
-import org.springframework.beans.factory.ObjectProvider
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.*
 import top.chiloven.lukosbot2.config.AppProperties
 import top.chiloven.lukosbot2.core.command.bot.CommandRegistry
@@ -29,13 +27,18 @@ import top.chiloven.lukosbot2.core.command.definition.dsl.botCommand
 import top.chiloven.lukosbot2.core.command.definition.dsl.lit
 import top.chiloven.lukosbot2.core.command.definition.dsl.optOneOf
 import top.chiloven.lukosbot2.core.policy.PolicyService
+import top.chiloven.lukosbot2.util.ModernImageDraw
 
-@Service
 class HelpCommand(
-    private val registryProvider: ObjectProvider<CommandRegistry>,
+    private val registryProvider: () -> CommandRegistry,
     private val appProperties: AppProperties,
     private val policyService: PolicyService
 ) : IBotCommand {
+
+    private val style: UsageImageUtils.ImageStyle
+        get() = UsageImageUtils.ImageStyle.forTheme(
+            ModernImageDraw.ThemeMode.parse(appProperties.image.theme)
+        )
 
     private val commandDefinition = botCommand("help") {
         alias("h")
@@ -91,20 +94,28 @@ class HelpCommand(
 
     private val p: String get() = appProperties.prefix.let { it.ifBlank { "/" } }
 
-    private fun registry() = registryProvider.`object`
+    private fun registry() = registryProvider()
 
     private fun showList(src: CommandSource) {
-        val sb = StringBuilder("可用命令：\n")
-        registry().all().stream()
-            .filter { it.isVisible }
-            .filter { policyService.isCommandAllowed(src, it.name()) }
-            .forEach { c ->
-                sb.append(p).append(c.name())
-                if (c.aliases().isNotEmpty()) sb.append(c.aliases())
-                sb.append(" - ").append(c.description()).append("\n")
-            }
-        sb.append("\n发送 `").append(p).append(name()).append(" <command>` 查看某个命令的详细用法。")
-        src.reply(sb.toString().trim())
+        src.reply(
+            buildString {
+                appendLine("可用命令：")
+
+                registry().all()
+                        .filter { it.isVisible }
+                        .filter { policyService.isCommandAllowed(src, it.name()) }
+                        .forEach {
+                            append(p).append(it.name())
+                            if (it.aliases().isNotEmpty()) {
+                                append(it.aliases())
+                            }
+                            append(" - ").appendLine(it.description())
+                        }
+
+                appendLine()
+                append("发送 `${p}${name()} <command>` 查看某个命令的详细用法。")
+            }.trim()
+        )
     }
 
     private fun showUsage(
@@ -117,6 +128,7 @@ class HelpCommand(
             src.reply("未知的命令：$cmdName\n发送 `$p${name()}` 查看可用命令列表。")
             return 0
         }
+
         if (!policyService.isCommandAllowed(src, cmd.name())) {
             src.reply(policyService.commandDeniedMessage(cmd.name()))
             return 0
@@ -130,7 +142,7 @@ class HelpCommand(
             cmd.name(),
             node,
             opt,
-            UsageImageUtils.ImageStyle.defaults(),
+            style,
             UsageOutput.parseMode(modeRaw)
         )
         return 1

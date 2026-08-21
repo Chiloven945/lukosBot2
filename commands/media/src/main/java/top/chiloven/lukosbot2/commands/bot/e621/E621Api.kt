@@ -20,7 +20,6 @@ package top.chiloven.lukosbot2.commands.bot.e621
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.bot.e621.schema.Artist
 import top.chiloven.lukosbot2.commands.bot.e621.schema.Post
 import top.chiloven.lukosbot2.http.requireSuccess
@@ -28,7 +27,6 @@ import top.chiloven.lukosbot2.util.JsonUtils
 import java.io.IOException
 import java.net.URI
 
-@Service
 class E621Api(
     private val http: HttpClient
 ) {

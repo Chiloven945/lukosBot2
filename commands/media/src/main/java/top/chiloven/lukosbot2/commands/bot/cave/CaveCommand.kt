@@ -17,8 +17,6 @@
  */
 package top.chiloven.lukosbot2.commands.bot.cave
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.core.auth.AuthorizationService
 import top.chiloven.lukosbot2.core.command.bot.CommandSource
@@ -26,13 +24,6 @@ import top.chiloven.lukosbot2.core.command.definition.ArgType
 import top.chiloven.lukosbot2.core.command.definition.dsl.arg
 import top.chiloven.lukosbot2.core.command.definition.dsl.botCommand
 
-@Service
-@ConditionalOnProperty(
-    prefix = "lukos.commands.control",
-    name = ["cave"],
-    havingValue = "true",
-    matchIfMissing = true
-)
 class CaveCommand(
     private val caveService: CaveService,
     private val authz: AuthorizationService

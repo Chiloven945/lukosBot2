@@ -17,13 +17,10 @@
  */
 package top.chiloven.lukosbot2.core.auth;
 
-import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.core.command.bot.CommandSource;
-import top.chiloven.lukosbot2.platform.ChatPlatform;
 
 import java.util.List;
 
-@Service
 public class AuthorizationService {
 
     private final BotAdminService botAdminService;
@@ -38,41 +35,50 @@ public class AuthorizationService {
     }
 
     public boolean ensureBotAdmin(CommandSource src, String action) {
-        AuthContext ctx = inspect(src);
+        var ctx = inspect(src);
         if (!ctx.canManageGlobal()) {
-            src.reply("权限不足：只有机器人管理员可以" + action + "。发送 `/admin me` 可查看当前身份。");
+            src.reply(
+                    "权限不足：只有机器人管理员可以%s。发送 `/admin me` 可查看当前身份。".formatted(
+                            action)
+            );
             return false;
         }
         return true;
     }
 
     public AuthContext inspect(CommandSource src) {
-        ChatPlatform platform = src.platform();
-        Long userId = src.userIdOrNull();
+        var platform = src.platform();
+        var userId = src.userIdOrNull();
 
-        boolean botAdmin = botAdminService.isBotAdmin(platform, userId);
-        boolean chatAdmin = botAdmin || resolveChatAdmin(src);
+        var botAdmin = botAdminService.isBotAdmin(platform, userId);
+        var chatAdmin = botAdmin || resolveChatAdmin(src);
 
         return new AuthContext(botAdmin, chatAdmin);
     }
 
     private boolean resolveChatAdmin(CommandSource src) {
-        if (!src.isGroup()) return false;
-        ChatPlatform platform = src.platform();
-        if (platform == null) return false;
-
-        for (IChatAdminResolver resolver : chatAdminResolvers) {
-            if (resolver.supports(platform) && resolver.isChatAdmin(src)) {
-                return true;
-            }
+        if (!src.isGroup()) {
+            return false;
         }
-        return false;
+
+        var platform = src.platform();
+        if (platform == null) {
+            return false;
+        }
+
+        return chatAdminResolvers.stream()
+                .anyMatch(resolver ->
+                        resolver.supports(platform) && resolver.isChatAdmin(src)
+                );
     }
 
     public boolean ensureChatManager(CommandSource src, String action) {
-        AuthContext ctx = inspect(src);
+        var ctx = inspect(src);
         if (!ctx.canManageChat()) {
-            src.reply("权限不足：只有当前聊天管理员或机器人管理员可以" + action + "。发送 `/admin me` 可查看当前身份。");
+            src.reply(
+                    "权限不足：只有当前聊天管理员或机器人管理员可以%s。发送 `/admin me` 可查看当前身份。"
+                            .formatted(action)
+            );
             return false;
         }
         return true;

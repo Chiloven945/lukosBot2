@@ -17,11 +17,9 @@
  */
 package top.chiloven.lukosbot2.core.auth.impl;
 
-import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.client.AbstractTelegramClient;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.meta.api.methods.groupadministration.GetChatMember;
-import org.telegram.telegrambots.meta.api.objects.chatmember.ChatMember;
 import top.chiloven.lukosbot2.config.AppProperties;
 import top.chiloven.lukosbot2.core.auth.IChatAdminResolver;
 import top.chiloven.lukosbot2.core.command.bot.CommandSource;
@@ -30,7 +28,6 @@ import top.chiloven.lukosbot2.platform.ChatPlatform;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Component
 public class TelegramChatAdminResolver implements IChatAdminResolver {
 
     private static final long CACHE_TTL_MS = 60_000L;
@@ -40,7 +37,7 @@ public class TelegramChatAdminResolver implements IChatAdminResolver {
     private volatile AbstractTelegramClient client;
 
     public TelegramChatAdminResolver(AppProperties props) {
-        this.token = props.getTelegram() == null ? "" : props.getTelegram().getBotToken();
+        this.token = props.getTelegram().getBotToken();
     }
 
     @Override
@@ -50,28 +47,41 @@ public class TelegramChatAdminResolver implements IChatAdminResolver {
 
     @Override
     public boolean isChatAdmin(CommandSource src) {
-        if (!src.isGroup()) return false;
-        Long userId = src.userIdOrNull();
-        if (userId == null || token == null || token.isBlank()) return false;
+        if (!src.isGroup()) {
+            return false;
+        }
 
-        String key = src.chatId() + ":" + userId;
-        CacheEntry hit = cache.get(key);
-        long now = System.currentTimeMillis();
+        var userId = src.userIdOrNull();
+        if (userId == null || token == null || token.isBlank()) {
+            return false;
+        }
+
+        var key = src.chatId() + ":" + userId;
+        var hit = cache.get(key);
+        var now = System.currentTimeMillis();
+
         if (hit != null && hit.expiresAt > now) {
             return hit.value;
         }
 
-        boolean value = queryIsAdmin(src.chatId(), userId);
-        cache.put(key, new CacheEntry(value, now + CACHE_TTL_MS));
+        var value = queryIsAdmin(src.chatId(), userId);
+        cache.put(
+                key,
+                new CacheEntry(value, now + CACHE_TTL_MS)
+        );
         return value;
     }
 
     private boolean queryIsAdmin(long chatId, long userId) {
         try {
-            GetChatMember req = new GetChatMember(String.valueOf(chatId), userId);
-            ChatMember member = telegramClient().execute(req);
-            if (member == null || member.getStatus() == null) return false;
-            String status = member.getStatus();
+            var req = new GetChatMember(String.valueOf(chatId), userId);
+            var member = telegramClient().execute(req);
+
+            if (member == null || member.getStatus() == null) {
+                return false;
+            }
+
+            var status = member.getStatus();
             return "creator".equalsIgnoreCase(status) || "administrator".equalsIgnoreCase(status);
         } catch (Exception _) {
             return false;
@@ -79,8 +89,11 @@ public class TelegramChatAdminResolver implements IChatAdminResolver {
     }
 
     private AbstractTelegramClient telegramClient() {
-        AbstractTelegramClient c = client;
-        if (c != null) return c;
+        var c = client;
+        if (c != null) {
+            return c;
+        }
+
         synchronized (this) {
             if (client == null) {
                 client = new OkHttpTelegramClient(token);

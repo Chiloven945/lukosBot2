@@ -28,6 +28,7 @@ import top.chiloven.lukosbot2.config.ProxyConfigProp
 import top.chiloven.lukosbot2.core.BotCoroutineRuntime
 import top.chiloven.lukosbot2.core.MessageDispatcher
 import top.chiloven.lukosbot2.core.MessageSenderHub
+import top.chiloven.lukosbot2.core.command.bot.CommandRegistry
 import top.chiloven.lukosbot2.platform.ChatPlatform
 import top.chiloven.lukosbot2.platform.discord.DiscordReceiver
 
@@ -43,6 +44,7 @@ class DiscordLifecycle(
     private val props: AppProperties,
     private val proxyConfigProp: ProxyConfigProp,
     private val runtime: BotCoroutineRuntime,
+    private val commandRegistry: CommandRegistry,
 ) : IPlatformAdapter {
 
     private val log = LogManager.getLogger(DiscordLifecycle::class.java)
@@ -58,6 +60,7 @@ class DiscordLifecycle(
             val recv = DiscordReceiver(
                 props.discord.token,
                 proxyConfigProp,
+                commandRegistry,
                 runtime.dispatcher
             )
 

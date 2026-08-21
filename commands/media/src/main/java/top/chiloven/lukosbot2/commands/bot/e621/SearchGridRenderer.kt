@@ -54,7 +54,10 @@ object SearchGridRenderer {
     private val palette: ModernImageDraw.Palette
         get() = style.palette
 
-    private suspend fun loadImage(url: String?, http: HttpClient): BufferedImage? {
+    private suspend fun loadImage(
+        url: String?,
+        http: HttpClient
+    ): BufferedImage? {
         if (url.isNullOrBlank()) return null
 
         return try {
@@ -67,7 +70,11 @@ object SearchGridRenderer {
             }
 
             if (!response.status.isSuccess()) {
-                log.debug("Thumbnail load failed: code={}, url={}", response.status.value, url)
+                log.debug(
+                    "Thumbnail load failed: code={}, url={}",
+                    response.status.value,
+                    url
+                )
                 return null
             }
 
@@ -85,8 +92,11 @@ object SearchGridRenderer {
         search: String,
         page: Int,
         posts: List<Post>,
-        http: HttpClient
+        http: HttpClient,
+        customStyle: UsageImageUtils.ImageStyle? = null,
     ): ByteArray {
+        val activeStyle = customStyle?.resolveFontFallbacks() ?: style
+        val activePalette = activeStyle.palette
         val cache = ImageTextUtils.GlyphRunCache()
 
         val n = posts.size.coerceAtLeast(1)
@@ -111,7 +121,7 @@ object SearchGridRenderer {
         val out = BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB)
         val g = out.createGraphics()
         ModernImageDraw.quality(g)
-        ModernImageDraw.background(g, w, h, palette)
+        ModernImageDraw.background(g, w, h, activePalette)
 
         drawHeader(
             g,
@@ -121,13 +131,24 @@ object SearchGridRenderer {
             pad,
             pad,
             w - pad * 2,
-            cache
+            cache,
+            activeStyle,
+            activePalette
         )
 
         val baseY = pad + headerH
 
         if (posts.isEmpty()) {
-            drawEmptyState(g, pad, baseY, cellW, cellH, cache)
+            drawEmptyState(
+                g,
+                pad,
+                baseY,
+                cellW,
+                cellH,
+                cache,
+                activeStyle,
+                activePalette
+            )
         } else {
             for (i in posts.indices) {
                 val post = posts[i]
@@ -149,7 +170,9 @@ object SearchGridRenderer {
                     cardRadius = cardRadius,
                     imageRadius = imageRadius,
                     cache = cache,
-                    http = http
+                    http = http,
+                    style = activeStyle,
+                    palette = activePalette
                 )
             }
         }
@@ -171,7 +194,9 @@ object SearchGridRenderer {
         x: Int,
         y: Int,
         width: Int,
-        cache: ImageTextUtils.GlyphRunCache
+        cache: ImageTextUtils.GlyphRunCache,
+        style: UsageImageUtils.ImageStyle,
+        palette: ModernImageDraw.Palette,
     ) {
         val titlePrimary = style.titleFont
         val titleFallback = style.bodyFont
@@ -224,7 +249,9 @@ object SearchGridRenderer {
         cardRadius: Int,
         imageRadius: Int,
         cache: ImageTextUtils.GlyphRunCache,
-        http: HttpClient
+        http: HttpClient,
+        style: UsageImageUtils.ImageStyle,
+        palette: ModernImageDraw.Palette,
     ) {
         ModernImageDraw.card(g, x, y, cellW, cellH, cardRadius, palette)
 
@@ -240,7 +267,9 @@ object SearchGridRenderer {
                 thumb,
                 thumb,
                 imageRadius,
-                cache
+                cache,
+                style,
+                palette
             )
         } else {
             ModernImageDraw.imageCoverRounded(
@@ -263,7 +292,16 @@ object SearchGridRenderer {
             )
         }
 
-        drawPostCaption(g, post, imgX, imgY + thumb + 12, thumb, cache)
+        drawPostCaption(
+            g,
+            post,
+            imgX,
+            imgY + thumb + 12,
+            thumb,
+            cache,
+            style,
+            palette
+        )
     }
 
     private fun drawPostCaption(
@@ -272,7 +310,9 @@ object SearchGridRenderer {
         x: Int,
         y: Int,
         width: Int,
-        cache: ImageTextUtils.GlyphRunCache
+        cache: ImageTextUtils.GlyphRunCache,
+        style: UsageImageUtils.ImageStyle,
+        palette: ModernImageDraw.Palette,
     ) {
         val bodyPrimary = style.bodyFont
         val bodyFallback = style.bodyFont
@@ -292,7 +332,7 @@ object SearchGridRenderer {
         ) + 8
 
         val rating = post.rating.uppercase().ifBlank { "?" }
-        val ratingColors = ratingBadgeColors(rating)
+        val ratingColors = ratingBadgeColors(rating, palette)
         ModernImageDraw.pill(
             g = g,
             text = rating,
@@ -350,7 +390,10 @@ object SearchGridRenderer {
         )
     }
 
-    private fun ratingBadgeColors(rating: String): BadgeColors {
+    private fun ratingBadgeColors(
+        rating: String,
+        palette: ModernImageDraw.Palette
+    ): BadgeColors {
         val p = palette
         return when (rating.uppercase()) {
             "E" -> BadgeColors(p.ratingExplicitFg, p.ratingExplicitBg)
@@ -367,13 +410,30 @@ object SearchGridRenderer {
         width: Int,
         height: Int,
         radius: Int,
-        cache: ImageTextUtils.GlyphRunCache
+        cache: ImageTextUtils.GlyphRunCache,
+        style: UsageImageUtils.ImageStyle,
+        palette: ModernImageDraw.Palette,
     ) {
         val primary = style.bodyFont
         val fallback = style.bodyFont
         g.color = palette.surfaceSoft
-        g.fillRoundRect(x, y, width, height, radius, radius)
-        ModernImageDraw.roundedBorder(g, x, y, width, height, radius, palette.border)
+        g.fillRoundRect(
+            x,
+            y,
+            width,
+            height,
+            radius,
+            radius
+        )
+        ModernImageDraw.roundedBorder(
+            g,
+            x,
+            y,
+            width,
+            height,
+            radius,
+            palette.border
+        )
 
         val text = "无预览图"
         val textW = ImageTextUtils.measureTextRunAware(g, text, primary, fallback, cache)
@@ -397,7 +457,9 @@ object SearchGridRenderer {
         y: Int,
         width: Int,
         height: Int,
-        cache: ImageTextUtils.GlyphRunCache
+        cache: ImageTextUtils.GlyphRunCache,
+        style: UsageImageUtils.ImageStyle,
+        palette: ModernImageDraw.Palette,
     ) {
         ModernImageDraw.card(g, x, y, width, height, 22, palette)
 

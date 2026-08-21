@@ -18,8 +18,6 @@
 package top.chiloven.lukosbot2.commands.bot.ip
 
 import org.apache.logging.log4j.LogManager
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.commands.bot.ip.IpQueryResult.IpQueryException
 import top.chiloven.lukosbot2.core.command.bot.CommandSource
@@ -27,14 +25,8 @@ import top.chiloven.lukosbot2.core.command.definition.ArgType
 import top.chiloven.lukosbot2.core.command.definition.CommandInvocation
 import top.chiloven.lukosbot2.core.command.definition.dsl.arg
 import top.chiloven.lukosbot2.core.command.definition.dsl.botCommand
+import kotlin.coroutines.cancellation.CancellationException
 
-@Service
-@ConditionalOnProperty(
-    prefix = "lukos.commands.control",
-    name = ["ip"],
-    havingValue = "true",
-    matchIfMissing = true
-)
 class IpCommand(
     private val ipQueryService: IpQueryService
 ) : IBotCommand {
@@ -83,7 +75,7 @@ class IpCommand(
         try {
             val result = ipQueryService.query(ip = ip, requestedProviders = providers)
             source.reply(result.toDisplayText())
-        } catch (e: kotlinx.coroutines.CancellationException) {
+        } catch (e: CancellationException) {
             throw e
         } catch (e: IllegalArgumentException) {
             source.reply(e.message ?: "参数错误，请检查 IP 地址或数据源名称")

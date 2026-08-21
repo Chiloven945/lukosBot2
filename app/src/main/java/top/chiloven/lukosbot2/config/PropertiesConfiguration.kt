@@ -15,17 +15,16 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-plugins {
-    `java-library`
-    alias(libs.plugins.kotlin.jvm)
-    alias(libs.plugins.kotlin.spring)
-    alias(libs.plugins.kotlin.lombok)
-}
+package top.chiloven.lukosbot2.config
 
-dependencies {
-    api(platform(libs.spring.boot.dependencies.bom))
-    api(libs.spring.boot.starter)
+import org.springframework.boot.context.properties.EnableConfigurationProperties
+import org.springframework.context.annotation.Configuration
 
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
-}
+@Configuration(proxyBeanMethods = false)
+@EnableConfigurationProperties(
+    AppProperties::class,
+    CommandConfigProp::class,
+    ServiceConfigProp::class,
+    ProxyConfigProp::class,
+)
+class PropertiesConfiguration

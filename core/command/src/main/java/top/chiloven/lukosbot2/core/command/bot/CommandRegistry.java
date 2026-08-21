@@ -17,17 +17,15 @@
  */
 package top.chiloven.lukosbot2.core.command.bot;
 
-import lombok.extern.log4j.Log4j2;
-import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.IBotCommand;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.log4j.Log4j2;
 
 @Log4j2
-@Service
 public class CommandRegistry {
 
     private final List<IBotCommand> commands;
@@ -40,16 +38,18 @@ public class CommandRegistry {
 
     private static Map<String, IBotCommand> buildIndex(List<IBotCommand> commands) {
         var map = new LinkedHashMap<String, IBotCommand>();
-        for (var cmd : commands) {
+        commands.forEach(cmd -> {
             register(map, cmd, cmd.name());
-            for (var alias : cmd.aliases()) {
-                register(map, cmd, alias);
-            }
-        }
+            cmd.aliases().forEach(alias -> register(map, cmd, alias));
+        });
         return Collections.unmodifiableMap(map);
     }
 
-    private static void register(Map<String, IBotCommand> map, IBotCommand cmd, String key) {
+    private static void register(
+            Map<String, IBotCommand> map,
+            IBotCommand cmd,
+            String key
+    ) {
         var lower = key.toLowerCase();
         var existing = map.get(lower);
         if (existing != null) {
@@ -81,7 +81,9 @@ public class CommandRegistry {
      * @return the IBotCommand instance, or null if not found
      */
     public IBotCommand get(String name) {
-        if (name == null) return null;
+        if (name == null) {
+            return null;
+        }
         return index.get(name.toLowerCase());
     }
 

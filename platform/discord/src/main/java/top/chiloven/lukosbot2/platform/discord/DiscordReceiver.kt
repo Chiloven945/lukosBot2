@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.withContext
 import org.apache.logging.log4j.LogManager
 import top.chiloven.lukosbot2.config.ProxyConfigProp
+import top.chiloven.lukosbot2.core.command.bot.CommandRegistry
 import top.chiloven.lukosbot2.core.model.message.inbound.InboundMessage
 import top.chiloven.lukosbot2.platform.ChatPlatform
 import top.chiloven.lukosbot2.platform.IReceiver
@@ -36,12 +37,13 @@ import top.chiloven.lukosbot2.platform.ISender
 class DiscordReceiver(
     token: String,
     proxyConfigProp: ProxyConfigProp,
+    commandRegistry: CommandRegistry? = null,
     private val blockingDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : IReceiver {
 
     private val log = LogManager.getLogger(DiscordReceiver::class.java)
 
-    private val stack = DiscordStack(token, proxyConfigProp)
+    private val stack = DiscordStack(token, proxyConfigProp, commandRegistry)
     private val channel = Channel<InboundMessage>(Channel.UNLIMITED)
 
     override val platform: ChatPlatform

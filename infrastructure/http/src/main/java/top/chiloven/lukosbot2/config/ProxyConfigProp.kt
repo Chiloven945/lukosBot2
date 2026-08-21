@@ -22,7 +22,6 @@ import okhttp3.Credentials
 import okhttp3.OkHttpClient
 import org.apache.logging.log4j.LogManager
 import org.springframework.boot.context.properties.ConfigurationProperties
-import org.springframework.context.annotation.Configuration
 import java.net.*
 import java.net.http.HttpClient
 import java.util.*
@@ -32,7 +31,6 @@ import java.util.*
  *
  * Properties are read from `lukos.proxy.*` (application.yml / application.properties).
  */
-@Configuration(proxyBeanMethods = false)
 @ConfigurationProperties(prefix = "lukos.proxy")
 data class ProxyConfigProp(
     var enabled: Boolean = false,
@@ -57,9 +55,9 @@ data class ProxyConfigProp(
         if (!enabled) return
 
         val bypass = nonProxyHostsList
-            ?.takeIf { it.isNotEmpty() }
-            ?.joinToString("|")
-            .orEmpty()
+                ?.takeIf { it.isNotEmpty() }
+                ?.joinToString("|")
+                .orEmpty()
 
         if (bypass.isNotBlank()) {
             System.setProperty("http.nonProxyHosts", bypass)
@@ -154,8 +152,8 @@ data class ProxyConfigProp(
             val cred = Credentials.basic(username.orEmpty(), password.orEmpty())
             builder.proxyAuthenticator { _, response ->
                 response.request.newBuilder()
-                    .header("Proxy-Authorization", cred)
-                    .build()
+                        .header("Proxy-Authorization", cred)
+                        .build()
             }
         }
 
@@ -186,7 +184,10 @@ data class ProxyConfigProp(
      */
     @Deprecated(
         message = "Prefer OkHttpUtils.newBuilder() for project HTTP calls.",
-        replaceWith = ReplaceWith("OkHttpUtils.newBuilder(this)", "top.chiloven.lukosbot2.util.OkHttpUtils")
+        replaceWith = ReplaceWith(
+            "OkHttpUtils.newBuilder(this)",
+            "top.chiloven.lukosbot2.util.OkHttpUtils"
+        )
     )
     fun applyTo(b: HttpClient.Builder?): HttpClient.Builder {
         val builder = b ?: HttpClient.newBuilder()
@@ -212,9 +213,11 @@ data class ProxyConfigProp(
     }
 
     enum class NormalizedType {
+
         NONE,
         HTTP,
         SOCKS5
+
     }
 
     companion object {

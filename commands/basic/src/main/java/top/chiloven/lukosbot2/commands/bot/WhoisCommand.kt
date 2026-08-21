@@ -17,10 +17,7 @@
  */
 package top.chiloven.lukosbot2.commands.bot
 
-import jakarta.annotation.PostConstruct
 import org.apache.commons.net.whois.WhoisClient
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.core.command.definition.dsl.arg
 import top.chiloven.lukosbot2.core.command.definition.dsl.botCommand
@@ -28,25 +25,15 @@ import java.io.IOException
 import java.util.*
 import java.util.regex.Pattern
 
-@Service
-@ConditionalOnProperty(
-    prefix = "lukos.commands.control",
-    name = ["whois"],
-    havingValue = "true",
-    matchIfMissing = true
-)
 class WhoisCommand : IBotCommand {
 
-    private val whoisServerMap = mutableMapOf<String, String>()
-
-    @PostConstruct
-    private fun initWhoisServers() {
-        whoisServerMap["com"] = WhoisClient.DEFAULT_HOST
-        whoisServerMap["net"] = WhoisClient.DEFAULT_HOST
-        whoisServerMap["edu"] = WhoisClient.DEFAULT_HOST
-        whoisServerMap["cn"] = "whois.cnnic.cn"
-        whoisServerMap["中国"] = "whois.cnnic.cn"
-    }
+    private val whoisServerMap = mutableMapOf(
+        "com" to WhoisClient.DEFAULT_HOST,
+        "net" to WhoisClient.DEFAULT_HOST,
+        "edu" to WhoisClient.DEFAULT_HOST,
+        "cn" to "whois.cnnic.cn",
+        "中国" to "whois.cnnic.cn",
+    )
 
     private val commandDefinition = botCommand("whois") {
         description = "查询域名 Whois 信息"
@@ -94,11 +81,11 @@ class WhoisCommand : IBotCommand {
         var cleaned = if (cutPos >= 0) raw.substring(0, cutPos) else raw
 
         cleaned = cleaned.replace("\r\n", "\n")
-            .replace("\r", "\n")
-            .replace(Regex("(?m)^[^\\n:]+:\\s*$\\n?"), "")
+                .replace("\r", "\n")
+                .replace(Regex("(?m)^[^\\n:]+:\\s*$\\n?"), "")
         cleaned = compressDuplicateKeyLines(cleaned)
         cleaned = cleaned.replace(Regex("\\n{3,}"), "\n\n")
-            .replace(Regex("^\\s+|\\s+$"), "")
+                .replace(Regex("^\\s+|\\s+$"), "")
 
         return cleaned
     }
@@ -144,12 +131,23 @@ class WhoisCommand : IBotCommand {
     }
 
     fun chooseWhoisHost(domain: String?): String {
-        if (domain == null) return WhoisClient.DEFAULT_HOST
+        if (domain == null) {
+            return WhoisClient.DEFAULT_HOST
+        }
+
         var d = domain.trim().lowercase(Locale.ROOT)
-        if (d.endsWith(".")) d = d.substring(0, d.length - 1)
+        if (d.endsWith(".")) {
+            d = d.substring(0, d.length - 1)
+        }
+
         val tld = d.substringAfterLast('.', "")
-        if (tld.isEmpty()) return WhoisClient.DEFAULT_HOST
-        return whoisServerMap[tld] ?: lookupWhoisFromIana(tld) ?: WhoisClient.DEFAULT_HOST
+        if (tld.isEmpty()) {
+            return WhoisClient.DEFAULT_HOST
+        }
+
+        return whoisServerMap[tld]
+            ?: lookupWhoisFromIana(tld)
+            ?: WhoisClient.DEFAULT_HOST
     }
 
     private fun lookupWhoisFromIana(tld: String): String? {
@@ -158,7 +156,11 @@ class WhoisCommand : IBotCommand {
             wc.connect("whois.iana.org")
             val res = wc.query(tld)
             val m = Pattern.compile("(?im)^whois:\\s*(\\S+)").matcher(res)
-            if (m.find()) m.group(1).trim() else null
+            if (m.find()) {
+                m.group(1).trim()
+            } else {
+                null
+            }
         } catch (_: IOException) {
             null
         } finally {

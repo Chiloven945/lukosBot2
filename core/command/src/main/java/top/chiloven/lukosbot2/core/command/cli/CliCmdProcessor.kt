@@ -18,10 +18,8 @@
 package top.chiloven.lukosbot2.core.command.cli
 
 import org.apache.logging.log4j.LogManager
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.util.StringUtils.indexOfWhitespace
 
-@Service
 class CliCmdProcessor(
     private val registry: CliCmdRegistry
 ) {

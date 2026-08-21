@@ -22,7 +22,7 @@ import top.chiloven.lukosbot2.config.ProxyConfigProp
 import java.net.InetSocketAddress
 import java.net.Proxy as JavaProxy
 
-object SeleniumProxyFactory {
+internal object SeleniumProxyFactory {
 
     /**
      * Chromium proxy argument from [ProxyConfigProp].

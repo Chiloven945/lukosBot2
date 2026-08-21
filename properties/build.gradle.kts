@@ -18,16 +18,14 @@
 plugins {
     `java-library`
     alias(libs.plugins.kotlin.jvm)
-    alias(libs.plugins.kotlin.spring)
     alias(libs.plugins.kotlin.lombok)
 }
 
 dependencies {
     implementation(project(":shared"))
-    implementation(project(":infrastructure:spring"))
 
-    implementation(platform(libs.spring.boot.dependencies.bom))
-    implementation(libs.spring.boot.starter)
+    compileOnly(platform(libs.spring.boot.dependencies.bom))
+    compileOnly("org.springframework.boot:spring-boot")
 
     compileOnly(libs.lombok)
     annotationProcessor(platform(libs.spring.boot.dependencies.bom))

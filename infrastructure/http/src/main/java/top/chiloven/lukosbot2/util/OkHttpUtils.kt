@@ -19,7 +19,6 @@ package top.chiloven.lukosbot2.util
 
 import okhttp3.OkHttpClient
 import top.chiloven.lukosbot2.config.ProxyConfigProp
-import top.chiloven.lukosbot2.util.spring.SpringBeans
 import java.util.concurrent.TimeUnit
 
 /**
@@ -43,7 +42,7 @@ object OkHttpUtils {
     @JvmStatic
     @JvmOverloads
     fun newBuilder(
-        proxy: ProxyConfigProp? = proxyOrNull(),
+        proxy: ProxyConfigProp? = null,
         connectTimeoutMs: Long? = null,
         readTimeoutMs: Long? = null,
         callTimeoutMs: Long? = null,
@@ -66,19 +65,6 @@ object OkHttpUtils {
                 proxy.applyTo(this)
             }
         }
-    }
-
-    /**
-     * Try to obtain [ProxyConfigProp] from the Spring container.
-     *
-     * Returning `null` is considered a normal outcome when the application is running in a context
-     * where the bean is not available.
-     */
-    @JvmStatic
-    fun proxyOrNull(): ProxyConfigProp? = try {
-        SpringBeans.getBean(ProxyConfigProp::class.java)
-    } catch (_: Throwable) {
-        null
     }
 
     /**
@@ -111,7 +97,7 @@ object OkHttpUtils {
         private val callTimeoutMs: Long? = null,
         private val followRedirects: Boolean = true,
         private val followSslRedirects: Boolean = true,
-        private val proxyProvider: () -> ProxyConfigProp? = { proxyOrNull() },
+        private val proxyProvider: () -> ProxyConfigProp? = { null },
         private val configureBuilder: OkHttpClient.Builder.() -> Unit = {}
     ) {
 

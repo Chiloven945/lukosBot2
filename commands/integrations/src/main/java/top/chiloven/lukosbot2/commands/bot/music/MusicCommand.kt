@@ -20,8 +20,6 @@ package top.chiloven.lukosbot2.commands.bot.music
 import io.ktor.client.*
 import kotlinx.coroutines.CancellationException
 import org.apache.logging.log4j.LogManager
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.commands.bot.music.provider.IMusicProvider
 import top.chiloven.lukosbot2.commands.bot.music.provider.SoundCloudMusicProvider
@@ -30,13 +28,6 @@ import top.chiloven.lukosbot2.config.CommandConfigProp
 import top.chiloven.lukosbot2.core.command.bot.CommandSource
 import top.chiloven.lukosbot2.core.command.definition.dsl.botCommand
 
-@Service
-@ConditionalOnProperty(
-    prefix = "lukos.commands.control",
-    name = ["music"],
-    havingValue = "true",
-    matchIfMissing = true
-)
 class MusicCommand(
     ccp: CommandConfigProp,
     httpClient: HttpClient
@@ -49,17 +40,26 @@ class MusicCommand(
             sp.enabled
             && sp.clientId.isNotBlank()
             && sp.clientSecret.isNotBlank()
-        ) SpotifyMusicProvider(
-            httpClient,
-            sp.clientId,
-            sp.clientSecret
-        ) else null
+        ) {
+            SpotifyMusicProvider(
+                httpClient,
+                sp.clientId,
+                sp.clientSecret
+            )
+        } else {
+            null
+        }
     }
+
     private val soundCloud: IMusicProvider? = ccp.music.soundcloud.let { sc ->
-        if (sc.enabled && sc.clientId.isNotBlank()) SoundCloudMusicProvider(
-            httpClient,
-            sc.clientId
-        ) else null
+        if (sc.enabled && sc.clientId.isNotBlank()) {
+            SoundCloudMusicProvider(
+                httpClient,
+                sc.clientId
+            )
+        } else {
+            null
+        }
     }
 
     private val commandDefinition = botCommand("music") {
@@ -108,8 +108,6 @@ class MusicCommand(
                 src.reply("音乐平台暂未配置或不可用。")
                 return 0
             }
-
-
             val info = provider.searchTrack(query) ?: run {
                 src.reply("没有找到匹配的歌曲。")
                 return 0

@@ -18,7 +18,6 @@
 package top.chiloven.lukosbot2.core.command.bot
 
 import org.apache.logging.log4j.LogManager
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.config.AppProperties
 import top.chiloven.lukosbot2.core.IProcessor
@@ -31,7 +30,6 @@ import top.chiloven.lukosbot2.util.message.TextExtractor
 /**
  * Command processor using the project's own CommandRuntime.
  */
-@Service
 class CommandProcessor(
         commands: List<IBotCommand>?,
         props: AppProperties?,

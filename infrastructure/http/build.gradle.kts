@@ -18,22 +18,21 @@
 plugins {
     `java-library`
     alias(libs.plugins.kotlin.jvm)
-    alias(libs.plugins.kotlin.spring)
     alias(libs.plugins.kotlin.lombok)
 }
 
 dependencies {
-    implementation(platform(libs.spring.boot.dependencies.bom))
     implementation(project(":shared"))
-    implementation(project(":infrastructure:spring"))
     implementation(project(":core:runtime"))
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.okhttp)
     implementation(libs.jackson.core.databind)
     implementation(libs.okhttp)
-    implementation(libs.spring.boot.starter)
-
     implementation(libs.kotlinx.coroutines.core)
+
+    compileOnly(platform(libs.spring.boot.dependencies.bom))
+    compileOnly("org.springframework.boot:spring-boot")
+    compileOnly("jakarta.annotation:jakarta.annotation-api")
 
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.kotlin.test.junit)

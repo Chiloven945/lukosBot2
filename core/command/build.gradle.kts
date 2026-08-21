@@ -18,14 +18,12 @@
 plugins {
     `java-library`
     alias(libs.plugins.kotlin.jvm)
-    alias(libs.plugins.kotlin.spring)
     alias(libs.plugins.kotlin.lombok)
 }
 
 dependencies {
     api(project(":core:model"))
     api(project(":platform:api"))
-    api(project(":properties"))
 
     implementation(project(":shared"))
     implementation(libs.kotlinx.coroutines.core)

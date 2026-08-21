@@ -27,7 +27,6 @@ import top.chiloven.lukosbot2.util.JsonUtils
 import java.io.IOException
 import java.net.URI
 
-@org.springframework.stereotype.Service
 class KemonoAPI(
     private val http: HttpClient
 ) {
@@ -42,6 +41,7 @@ class KemonoAPI(
     private companion object {
 
         private val API = URI.create("https://kemono.cr/api/")
+
         /** Kemono only accept "text/css"*/
         private val HEADER = mapOf("Accept" to "text/css")
 

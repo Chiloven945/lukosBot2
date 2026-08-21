@@ -18,43 +18,49 @@
 package top.chiloven.lukosbot2.util.feature
 
 import com.vladsch.flexmark.html2md.converter.FlexmarkHtmlConverter
+import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.config.ProxyConfigProp
 import top.chiloven.lukosbot2.core.model.ContentData
 import top.chiloven.lukosbot2.util.JsoupHttp
 import top.chiloven.lukosbot2.util.PathUtils.sanitizeFileName
-import top.chiloven.lukosbot2.util.spring.SpringBeans
 import java.net.Proxy
 import java.nio.charset.StandardCharsets
 import java.time.Duration
 
-object WebToMarkdown {
+class WebToMarkdown(
+    private val proxyConfig: ProxyConfigProp,
+) {
 
-    private val USER_AGENT = "Mozilla/5.0 (compatible; ${Constants.UA})"
+    private companion object {
 
-    private val TIMEOUT_MS: Int = Duration.ofSeconds(15).toMillis().toInt()
-    private val html2md: FlexmarkHtmlConverter = FlexmarkHtmlConverter.builder().build()
+        private val USER_AGENT = "Mozilla/5.0 (compatible; ${Constants.UA})"
+        private val TIMEOUT_MS: Int = Duration.ofSeconds(15).toMillis().toInt()
+        private val html2md: FlexmarkHtmlConverter = FlexmarkHtmlConverter.builder().build()
+
+    }
 
     @Throws(Exception::class)
-    @JvmStatic
     fun fetchAndConvertWithSelectors(
         url: String,
         titleSelector: String?,
         contentSelectorsCsv: String?,
         defaultTitleBase: String?
     ): ContentData {
-        val proxy = SpringBeans.getBean(ProxyConfigProp::class.java)
-
-        val javaProxy: Proxy = proxy.toJavaProxy()
+        val javaProxy: Proxy = proxyConfig.toJavaProxy()
         val doc = JsoupHttp.getDocument(
             url = url,
             userAgent = USER_AGENT,
             timeoutMs = TIMEOUT_MS,
-            proxy = javaProxy.takeIf { proxy.enabled && it != Proxy.NO_PROXY },
+            proxy = javaProxy.takeIf { proxyConfig.enabled && it != Proxy.NO_PROXY },
         )
 
-        val title = resolveTitle(docTitleFallback = defaultTitleBase, doc = doc, titleSelector = titleSelector)
+        val title = resolveTitle(
+            docTitleFallback = defaultTitleBase,
+            doc = doc,
+            titleSelector = titleSelector
+        )
         val filename = "${sanitizeFileName(title, fallback = defaultTitleBase ?: "page")}.md"
 
         val contentEl = selectFirstByCsv(doc, contentSelectorsCsv)
@@ -67,11 +73,19 @@ object WebToMarkdown {
     }
 
     @Throws(Exception::class)
-    @JvmStatic
     fun fetchWikipediaMarkdown(url: String): ContentData =
-        fetchAndConvertWithSelectors(url, "h1#firstHeading", "#content", "wikipedia")
+        fetchAndConvertWithSelectors(
+            url,
+            "h1#firstHeading",
+            "#content",
+            "wikipedia"
+        )
 
-    private fun resolveTitle(docTitleFallback: String?, doc: org.jsoup.nodes.Document, titleSelector: String?): String {
+    private fun resolveTitle(
+        docTitleFallback: String?,
+        doc: Document,
+        titleSelector: String?
+    ): String {
         val fallback = docTitleFallback?.takeIf { it.isNotBlank() } ?: "page"
         val selector = titleSelector?.trim().orEmpty()
         if (selector.isEmpty()) return fallback
@@ -81,14 +95,17 @@ object WebToMarkdown {
         return text.ifEmpty { fallback }
     }
 
-    private fun selectFirstByCsv(doc: org.jsoup.nodes.Document, csv: String?): Element? {
+    private fun selectFirstByCsv(
+        doc: Document,
+        csv: String?
+    ): Element? {
         val raw = csv?.trim().orEmpty()
         if (raw.isEmpty()) return null
 
         return raw.splitToSequence(',')
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-            .firstNotNullOfOrNull { sel -> doc.selectFirst(sel) }
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .firstNotNullOfOrNull { sel -> doc.selectFirst(sel) }
     }
 
 }
