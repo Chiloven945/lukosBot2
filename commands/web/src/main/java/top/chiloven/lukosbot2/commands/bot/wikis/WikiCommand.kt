@@ -18,8 +18,6 @@
 package top.chiloven.lukosbot2.commands.bot.wikis
 
 import org.apache.logging.log4j.LogManager
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.core.command.bot.CommandSource
 import top.chiloven.lukosbot2.core.command.definition.dsl.arg
@@ -32,14 +30,10 @@ import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage
 import top.chiloven.lukosbot2.util.feature.WebScreenshot
 import top.chiloven.lukosbot2.util.feature.WebToMarkdown
 
-@Service
-@ConditionalOnProperty(
-    prefix = "lukos.commands.control",
-    name = ["wiki"],
-    havingValue = "true",
-    matchIfMissing = true
-)
-class WikiCommand : IBotCommand, IWikiishCommand {
+class WikiCommand(
+    private val webScreenshot: WebScreenshot,
+    private val webToMarkdown: WebToMarkdown,
+) : IBotCommand, IWikiishCommand {
 
     private val log = LogManager.getLogger(WikiCommand::class.java)
 
@@ -90,9 +84,14 @@ class WikiCommand : IBotCommand, IWikiishCommand {
                 return
             }
 
-            val img = WebScreenshot.screenshotWikipedia(url)
+            val img = webScreenshot.screenshotWikipedia(url)
             val ref = BytesRef(img.filename(), img.bytes(), img.mime())
-            src.reply(OutboundMessage(src.addr(), listOf(OutImage(ref, null, img.filename(), img.mime()))))
+            src.reply(
+                OutboundMessage(
+                    src.addr(),
+                    listOf(OutImage(ref, null, img.filename(), img.mime()))
+                )
+            )
         } catch (e: Exception) {
             log.warn("Wiki screenshot failed: {}", linkOrTitle, e)
             src.reply("截图失败：${e.message}")
@@ -107,7 +106,7 @@ class WikiCommand : IBotCommand, IWikiishCommand {
                 return
             }
 
-            val md = WebToMarkdown.fetchWikipediaMarkdown(url)
+            val md = webToMarkdown.fetchWikipediaMarkdown(url)
             val ref = BytesRef(md.filename(), md.bytes(), md.mime())
             src.reply(
                 OutboundMessage(

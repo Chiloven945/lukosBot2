@@ -22,7 +22,7 @@ plugins {
 }
 
 dependencies {
-    api(libs.jspecify)
+    compileOnlyApi(libs.jspecify)
 
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)

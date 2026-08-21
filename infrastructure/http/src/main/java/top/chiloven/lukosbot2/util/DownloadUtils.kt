@@ -17,10 +17,10 @@
  */
 package top.chiloven.lukosbot2.util
 
-import top.chiloven.lukosbot2.util.download.*
+import top.chiloven.lukosbot2.util.download.DownloadDefaults
+import top.chiloven.lukosbot2.util.download.DownloadNaming
 import java.io.IOException
 import java.net.URI
-import java.nio.file.Files
 import java.nio.file.Path
 
 /**
@@ -38,11 +38,7 @@ object DownloadUtils {
     const val DEFAULT_RETRY_AFTER_CAP_MS: Long = DownloadDefaults.DEFAULT_RETRY_AFTER_CAP_MS
     const val DEFAULT_PROGRESS_LOG_INTERVAL_MS: Long = DownloadDefaults.DEFAULT_PROGRESS_LOG_INTERVAL_MS
 
-    private val http = DownloadHttp()
-    private val retryPolicyFactory: (Int) -> RetryPolicy = { RetryPolicy.default(it) }
-    private val singleFileDownloader = SingleFileDownloader(http, retryPolicyFactory)
-    private val rangeDownloader = RangeDownloader(http, singleFileDownloader, retryPolicyFactory)
-    private val batchDownloader = BatchDownloader(singleFileDownloader, rangeDownloader)
+    private val defaultClient = DownloadClient()
 
     @JvmStatic
     @Throws(IOException::class)
@@ -51,14 +47,7 @@ object DownloadUtils {
         dir: Path,
         headers: Map<String, String>?,
         timeoutMs: Int,
-    ): BatchResult = batchDownloader.download(
-        items = items,
-        dir = dir,
-        headers = headers,
-        timeoutMs = timeoutMs,
-        namingMode = BatchDownloader.BatchNamingMode.FLAT_FILES,
-        options = BatchDownloader.BatchDownloadOptions()
-    )
+    ): BatchResult = defaultClient.downloadAllToDir(items, dir, headers, timeoutMs)
 
     @JvmStatic
     @JvmOverloads
@@ -71,13 +60,8 @@ object DownloadUtils {
         maxConcurrentFiles: Int = DEFAULT_MAX_CONCURRENT_FILES,
         chunkThreadsPerFile: Int = 1,
         maxRetries: Int = DEFAULT_MAX_RETRIES,
-    ): BatchResult = batchDownloader.download(
-        items = items,
-        dir = dir,
-        headers = headers,
-        timeoutMs = timeoutMs,
-        namingMode = BatchDownloader.BatchNamingMode.FLAT_FILES,
-        options = BatchDownloader.BatchDownloadOptions(maxConcurrentFiles, chunkThreadsPerFile, maxRetries)
+    ): BatchResult = defaultClient.downloadAllToDirConcurrent(
+        items, dir, headers, timeoutMs, maxConcurrentFiles, chunkThreadsPerFile, maxRetries
     )
 
     @JvmStatic
@@ -91,13 +75,8 @@ object DownloadUtils {
         maxConcurrentFiles: Int = DEFAULT_MAX_CONCURRENT_FILES,
         chunkThreadsPerFile: Int = DEFAULT_CHUNK_THREADS,
         maxRetries: Int = DEFAULT_MAX_RETRIES,
-    ): BatchResult = batchDownloader.download(
-        items = items,
-        dir = dir,
-        headers = headers,
-        timeoutMs = timeoutMs,
-        namingMode = BatchDownloader.BatchNamingMode.RELATIVE_PATHS,
-        options = BatchDownloader.BatchDownloadOptions(maxConcurrentFiles, chunkThreadsPerFile, maxRetries)
+    ): BatchResult = defaultClient.downloadNamedUrlsToDirConcurrent(
+        items, dir, headers, timeoutMs, maxConcurrentFiles, chunkThreadsPerFile, maxRetries
     )
 
     @JvmStatic
@@ -110,7 +89,7 @@ object DownloadUtils {
         timeoutMs: Int,
         maxRetries: Int = DEFAULT_MAX_RETRIES,
     ) {
-        singleFileDownloader.downloadToFile(url, targetFile, headers, timeoutMs, maxRetries)
+        defaultClient.downloadToFile(url, targetFile, headers, timeoutMs, maxRetries)
     }
 
     @JvmStatic
@@ -123,12 +102,7 @@ object DownloadUtils {
         headers: Map<String, String>?,
         timeoutMs: Int,
         maxRetries: Int = DEFAULT_MAX_RETRIES,
-    ): Path {
-        Files.createDirectories(dir)
-        val target = DownloadNaming.resolveFlatTarget(dir, fileName)
-        downloadToFile(url, target, headers, timeoutMs, maxRetries)
-        return target
-    }
+    ): Path = defaultClient.downloadToDir(url, dir, fileName, headers, timeoutMs, maxRetries)
 
     @JvmStatic
     @JvmOverloads
@@ -143,15 +117,15 @@ object DownloadUtils {
         minPartSizeBytes: Long = DEFAULT_MIN_PART_SIZE_BYTES,
         maxRetries: Int = DEFAULT_MAX_RETRIES,
     ) {
-        rangeDownloader.downloadToFileFast(
-            url = url,
-            targetFile = targetFile,
-            headers = headers,
-            timeoutMs = timeoutMs,
-            chunkThreads = chunkThreads,
-            minSizeForChunking = minSizeForChunking,
-            minPartSizeBytes = minPartSizeBytes,
-            maxRetries = maxRetries
+        defaultClient.downloadToFileFast(
+            url,
+            targetFile,
+            headers,
+            timeoutMs,
+            chunkThreads,
+            minSizeForChunking,
+            minPartSizeBytes,
+            maxRetries
         )
     }
 
@@ -166,21 +140,9 @@ object DownloadUtils {
         timeoutMs: Int,
         chunkThreads: Int = DEFAULT_CHUNK_THREADS,
         maxRetries: Int = DEFAULT_MAX_RETRIES,
-    ): Path {
-        Files.createDirectories(dir)
-        val target = DownloadNaming.resolveFlatTarget(dir, fileName)
-        downloadToFileFast(
-            url = url,
-            targetFile = target,
-            headers = headers,
-            timeoutMs = timeoutMs,
-            chunkThreads = chunkThreads,
-            minSizeForChunking = DEFAULT_MIN_SIZE_FOR_CHUNKING_BYTES,
-            minPartSizeBytes = DEFAULT_MIN_PART_SIZE_BYTES,
-            maxRetries = maxRetries
-        )
-        return target
-    }
+    ): Path = defaultClient.downloadToDirFast(
+        url, dir, fileName, headers, timeoutMs, chunkThreads, maxRetries
+    )
 
     @JvmStatic
     fun sanitizeFileName(name: String?): String = DownloadNaming.flatFileName(name)

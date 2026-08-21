@@ -17,12 +17,10 @@
  */
 package top.chiloven.lukosbot2.core.auth.impl;
 
-import org.springframework.stereotype.Component;
 import top.chiloven.lukosbot2.core.auth.IChatAdminResolver;
 import top.chiloven.lukosbot2.core.command.bot.CommandSource;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
 
-@Component
 public class DiscordChatAdminResolver implements IChatAdminResolver {
 
     @Override
@@ -32,11 +30,9 @@ public class DiscordChatAdminResolver implements IChatAdminResolver {
 
     @Override
     public boolean isChatAdmin(CommandSource src) {
-        Object explicit = src.ext("discord.chatAdmin");
-        if (explicit instanceof Boolean b) return b;
-
-        Object guildAdmin = src.ext("discord.guildAdmin");
-        return guildAdmin instanceof Boolean b && b;
+        return src.ext("discord.chatAdmin") instanceof Boolean b1
+                ? b1
+                : src.ext("discord.guildAdmin") instanceof Boolean b2 && b2;
     }
 
 }

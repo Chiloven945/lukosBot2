@@ -18,20 +18,11 @@
 package top.chiloven.lukosbot2.commands.bot.bilibili
 
 import org.apache.logging.log4j.LogManager
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.core.command.bot.CommandSource
 import top.chiloven.lukosbot2.core.command.definition.ArgType
 import top.chiloven.lukosbot2.core.command.definition.dsl.*
 
-@Service
-@ConditionalOnProperty(
-    prefix = "lukos.commands.control",
-    name = ["bilibili"],
-    havingValue = "true",
-    matchIfMissing = true,
-)
 class BilibiliCommand(
     private val bilibiliQueryService: BilibiliQueryService,
 ) : IBotCommand {

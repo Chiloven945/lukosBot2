@@ -17,17 +17,15 @@
  */
 package top.chiloven.lukosbot2.core.command.cli;
 
-import lombok.extern.log4j.Log4j2;
-import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.commands.ICliCommand;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.log4j.Log4j2;
 
 @Log4j2
-@Service
 public class CliCmdRegistry {
 
     private final List<ICliCommand> cliCommands;
@@ -40,16 +38,18 @@ public class CliCmdRegistry {
 
     private static Map<String, ICliCommand> buildIndex(List<ICliCommand> commands) {
         var map = new LinkedHashMap<String, ICliCommand>();
-        for (var cmd : commands) {
+        commands.forEach(cmd -> {
             register(map, cmd, cmd.name());
-            for (var alias : cmd.aliases()) {
-                register(map, cmd, alias);
-            }
-        }
+            cmd.aliases().forEach(alias -> register(map, cmd, alias));
+        });
         return Collections.unmodifiableMap(map);
     }
 
-    private static void register(Map<String, ICliCommand> map, ICliCommand cmd, String key) {
+    private static void register(
+            Map<String, ICliCommand> map,
+            ICliCommand cmd,
+            String key
+    ) {
         var lower = key.toLowerCase();
         var existing = map.get(lower);
         if (existing != null) {
@@ -81,7 +81,9 @@ public class CliCmdRegistry {
      * @return the ICliBotCommand instance, or null if not found
      */
     public ICliCommand get(String name) {
-        if (name == null) return null;
+        if (name == null) {
+            return null;
+        }
         return index.get(name.toLowerCase());
     }
 

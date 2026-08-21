@@ -21,7 +21,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
-import org.springframework.stereotype.Component
 import top.chiloven.lukosbot2.config.AppProperties
 import top.chiloven.lukosbot2.core.model.message.media.LoadedPlatformMedia
 import top.chiloven.lukosbot2.core.model.message.media.PlatformFileRef
@@ -31,7 +30,6 @@ import top.chiloven.lukosbot2.platform.PlatformFileLoader
 import top.chiloven.lukosbot2.util.JsonUtils
 import java.io.IOException
 
-@Component
 class TelegramFileLoader(
     private val appProperties: AppProperties,
     private val http: HttpClient

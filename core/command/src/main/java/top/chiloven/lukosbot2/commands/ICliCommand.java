@@ -38,8 +38,7 @@ import java.util.List;
  * for red) and convenience methods like {@link CliCmdContext#println} and
  * {@link CliCmdContext#printlnErr}.
  *
- * <p>Commands are discovered automatically by Spring via
- * {@link org.springframework.stereotype.Service} and registered into the {@code CliCmdRegistry}.
+ * <p>Commands are registered into the {@code CliCmdRegistry}.
  * The {@code CliCmdProcessor} reads input lines from the console, looks up the matching command,
  * and delegates execution to {@code CliCommandRuntime}.</p>
  *
@@ -49,13 +48,6 @@ import java.util.List;
  *
  * <p>Minimal example (Kotlin):</p>
  * <pre>{@code
- * @Service
- * @ConditionalOnProperty(
- *     prefix = "lukos.cli.control",
- *     name = ["shutdown"],
- *     havingValue = "true",
- *     matchIfMissing = true
- * )
  * class ShutdownCliCommand : ICliCommand {
  *     private val cmd = cliCommand("shutdown") {
  *         alias("stop", "close")

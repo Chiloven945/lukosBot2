@@ -22,13 +22,11 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.http.requireSuccess
 import top.chiloven.lukosbot2.util.Base64Utils
 import top.chiloven.lukosbot2.util.JsonUtils
 import java.io.IOException
 
-@Service
 class MojangApi(
     private val http: HttpClient
 ) {

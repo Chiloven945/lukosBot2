@@ -18,8 +18,6 @@
 package top.chiloven.lukosbot2.commands.bot.motd
 
 import org.apache.logging.log4j.LogManager
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.core.command.bot.CommandSource
 import top.chiloven.lukosbot2.core.command.definition.dsl.arg
@@ -27,14 +25,8 @@ import top.chiloven.lukosbot2.core.command.definition.dsl.botCommand
 import top.chiloven.lukosbot2.core.model.message.media.BytesRef
 import top.chiloven.lukosbot2.core.model.message.outbound.OutImage
 import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage
+import kotlin.coroutines.cancellation.CancellationException
 
-@Service
-@ConditionalOnProperty(
-    prefix = "lukos.commands.control",
-    name = ["motd"],
-    havingValue = "true",
-    matchIfMissing = true
-)
 class MotdCommand(
     private val motdQueryService: MotdQueryService,
 ) : IBotCommand {
@@ -128,7 +120,7 @@ class MotdCommand(
             }
 
             1
-        } catch (e: kotlinx.coroutines.CancellationException) {
+        } catch (e: CancellationException) {
             throw e
         } catch (e: IllegalArgumentException) {
             src.reply(e.message ?: "地址格式不正确")

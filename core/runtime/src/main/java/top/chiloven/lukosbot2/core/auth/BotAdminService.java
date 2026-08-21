@@ -17,18 +17,16 @@
  */
 package top.chiloven.lukosbot2.core.auth;
 
-import org.springframework.stereotype.Service;
-import tools.jackson.databind.JsonNode;
 import top.chiloven.lukosbot2.config.AppProperties;
 import top.chiloven.lukosbot2.core.state.Scope;
 import top.chiloven.lukosbot2.core.state.store.IStateStore;
 import top.chiloven.lukosbot2.platform.ChatPlatform;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static top.chiloven.lukosbot2.util.JsonUtils.MAPPER;
 
-@Service
 public class BotAdminService {
 
     private static final String NS_AUTH = "auth";
@@ -37,45 +35,58 @@ public class BotAdminService {
     private final IStateStore store;
     private final AppProperties props;
 
-    public BotAdminService(IStateStore store, AppProperties props) {
+    public BotAdminService(
+            IStateStore store,
+            AppProperties props
+    ) {
         this.store = store;
         this.props = props;
     }
 
     public boolean isBotAdmin(ChatPlatform platform, Long userId) {
-        if (platform == null || userId == null) return false;
+        if (platform == null || userId == null) {
+            return false;
+        }
         return listEffectiveAdmins().getOrDefault(platform, Set.of()).contains(userId);
     }
 
     public Map<ChatPlatform, Set<Long>> listEffectiveAdmins() {
-        Map<ChatPlatform, Set<Long>> out = new EnumMap<>(ChatPlatform.class);
-        for (ChatPlatform platform : ChatPlatform.values()) {
-            out.put(platform, new LinkedHashSet<>());
-        }
+        Map<ChatPlatform, Set<Long>> out = Arrays.stream(ChatPlatform.values())
+                .collect(Collectors.toMap(
+                        platform -> platform,
+                        _ -> new LinkedHashSet<>(),
+                        (_, b) -> b,
+                        () -> new EnumMap<>(ChatPlatform.class)
+                ));
 
         mergeInto(out, bootstrapAdmins());
         mergeInto(out, dynamicAdmins());
 
         Map<ChatPlatform, Set<Long>> readonly = new EnumMap<>(ChatPlatform.class);
-        out.forEach((k, v) -> readonly.put(k, Collections.unmodifiableSet(v)));
+        out.forEach((k, v) ->
+                readonly.put(k, Collections.unmodifiableSet(v))
+        );
         return Collections.unmodifiableMap(readonly);
     }
 
-    private static void mergeInto(Map<ChatPlatform, Set<Long>> target, Map<ChatPlatform, Set<Long>> source) {
-        source.forEach((platform, ids) -> target.computeIfAbsent(platform, _ -> new LinkedHashSet<>()).addAll(ids));
+    private static void mergeInto(
+            Map<ChatPlatform, Set<Long>> target,
+            Map<ChatPlatform, Set<Long>> source
+    ) {
+        source.forEach((platform, ids) -> target.computeIfAbsent(
+                platform,
+                _ -> new LinkedHashSet<>()
+        ).addAll(ids));
     }
 
     private Map<ChatPlatform, Set<Long>> bootstrapAdmins() {
         Map<ChatPlatform, Set<Long>> out = new EnumMap<>(ChatPlatform.class);
-        AppProperties.Security security = props.getSecurity();
-        if (security == null || security.getBootstrapBotAdmins() == null) {
-            return out;
-        }
+        var security = props.getSecurity();
+        security.getBootstrapBotAdmins();
 
         security.getBootstrapBotAdmins().forEach((platformRaw, ids) -> {
-            if (platformRaw == null || ids == null) return;
             try {
-                ChatPlatform platform = ChatPlatform.fromString(platformRaw);
+                var platform = ChatPlatform.fromString(platformRaw);
                 out.computeIfAbsent(platform, _ -> new LinkedHashSet<>()).addAll(ids);
             } catch (IllegalArgumentException _) {
             }
@@ -92,11 +103,13 @@ public class BotAdminService {
     private Map<ChatPlatform, Set<Long>> parseAdminsJson(String json) {
         Map<ChatPlatform, Set<Long>> out = new EnumMap<>(ChatPlatform.class);
         try {
-            JsonNode root = MAPPER.readTree(json);
-            if (root == null || !root.isObject()) return out;
+            var root = MAPPER.readTree(json);
+            if (root == null || !root.isObject()) {
+                return out;
+            }
 
             for (var entry : root.properties()) {
-                String field = entry.getKey();
+                var field = entry.getKey();
                 ChatPlatform platform;
                 try {
                     platform = ChatPlatform.fromString(field);
@@ -104,12 +117,16 @@ public class BotAdminService {
                     continue;
                 }
 
-                JsonNode arr = entry.getValue();
-                if (arr == null || !arr.isArray()) continue;
+                var arr = entry.getValue();
+                if (arr == null || !arr.isArray()) {
+                    continue;
+                }
 
-                Set<Long> ids = out.computeIfAbsent(platform, _ -> new LinkedHashSet<>());
-                for (JsonNode node : arr) {
-                    if (node == null || !node.canConvertToLong()) continue;
+                var ids = out.computeIfAbsent(platform, _ -> new LinkedHashSet<>());
+                for (var node : arr) {
+                    if (node == null || !node.canConvertToLong()) {
+                        continue;
+                    }
                     ids.add(node.longValue());
                 }
             }
@@ -119,17 +136,21 @@ public class BotAdminService {
     }
 
     public void addDynamicAdmin(ChatPlatform platform, long userId) {
-        Map<ChatPlatform, Set<Long>> admins = dynamicAdmins();
+        var admins = dynamicAdmins();
         admins.computeIfAbsent(platform, _ -> new LinkedHashSet<>()).add(userId);
         saveDynamicAdmins(admins);
     }
 
     private void saveDynamicAdmins(Map<ChatPlatform, Set<Long>> admins) {
-        Map<String, List<Long>> raw = new LinkedHashMap<>();
-        for (ChatPlatform platform : ChatPlatform.values()) {
-            Set<Long> ids = admins.getOrDefault(platform, Set.of());
-            raw.put(platform.name(), ids.stream().sorted().toList());
-        }
+        Map<String, List<Long>> raw = Arrays.stream(ChatPlatform.values())
+                .collect(Collectors.toMap(
+                        Enum::name,
+                        platform -> admins.getOrDefault(platform, Set.of()).stream()
+                                .sorted()
+                                .toList(),
+                        (_, b) -> b,
+                        LinkedHashMap::new
+                ));
         store.upsertJson(
                 Scope.global(),
                 NS_AUTH,
@@ -140,8 +161,9 @@ public class BotAdminService {
     }
 
     public void removeDynamicAdmin(ChatPlatform platform, long userId) {
-        Map<ChatPlatform, Set<Long>> admins = dynamicAdmins();
-        Set<Long> ids = admins.get(platform);
+        var admins = dynamicAdmins();
+        var ids = admins.get(platform);
+
         if (ids != null) {
             ids.remove(userId);
         }

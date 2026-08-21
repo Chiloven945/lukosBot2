@@ -18,20 +18,11 @@
 package top.chiloven.lukosbot2.commands.cli
 
 import kotlinx.coroutines.CancellationException
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.ICliCommand
 import top.chiloven.lukosbot2.core.IReloadControl
 import top.chiloven.lukosbot2.core.command.definition.ArgType
 import top.chiloven.lukosbot2.core.command.definition.dsl.cliCommand
 
-@Service
-@ConditionalOnProperty(
-    prefix = "lukos.cli.control",
-    name = ["reload"],
-    havingValue = "true",
-    matchIfMissing = true
-)
 class ReloadCliCommand(
     private val reloadManager: IReloadControl
 ) : ICliCommand {
@@ -58,8 +49,8 @@ class ReloadCliCommand(
                     }
                 } else {
                     val modules = raw.split(Regex("[,\\s]+"))
-                        .map { it.trim() }
-                        .filter { it.isNotEmpty() }
+                            .map { it.trim() }
+                            .filter { it.isNotEmpty() }
 
                     try {
                         val r = reloadManager.reloadModules(modules)

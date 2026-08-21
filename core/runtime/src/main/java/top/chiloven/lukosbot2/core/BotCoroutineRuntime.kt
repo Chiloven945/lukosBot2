@@ -17,7 +17,6 @@
  */
 package top.chiloven.lukosbot2.core
 
-import jakarta.annotation.PreDestroy
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineName
@@ -29,7 +28,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.apache.logging.log4j.LogManager
-import org.springframework.stereotype.Service
 import java.lang.Runnable
 import kotlin.math.max
 import kotlin.time.Duration.Companion.milliseconds
@@ -55,7 +53,6 @@ import kotlin.time.Duration.Companion.milliseconds
  * own children in their own destroy methods before this bean is destroyed (Spring destroys constructor-injected
  * dependencies last).</p>
  */
-@Service
 class BotCoroutineRuntime(
     /**
      * Blocking-capable dispatcher for suspend boundaries that wrap blocking SDK calls.
@@ -145,7 +142,6 @@ class BotCoroutineRuntime(
     /**
      * Cancels the whole runtime scope without joining. See the class docs for why this must not join.
      */
-    @PreDestroy
     fun destroy() {
         log.info("Cancelling bot coroutine runtime scope")
         rootJob.cancel()

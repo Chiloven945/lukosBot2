@@ -18,8 +18,6 @@
 package top.chiloven.lukosbot2.commands.bot
 
 import org.apache.logging.log4j.LogManager
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.config.CommandConfigProp
 import top.chiloven.lukosbot2.core.BotCoroutineRuntime
@@ -36,13 +34,6 @@ import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.math.abs
 
-@Service
-@ConditionalOnProperty(
-    prefix = "lukos.commands.control",
-    name = ["twentyfour"],
-    havingValue = "true",
-    matchIfMissing = true,
-)
 class TwentyFourCommand(
     private val senderHub: MessageSenderHub,
     private val runtime: BotCoroutineRuntime,

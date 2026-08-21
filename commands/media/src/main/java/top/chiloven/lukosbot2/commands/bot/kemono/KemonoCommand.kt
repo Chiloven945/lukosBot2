@@ -24,7 +24,6 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.CancellationException
 import org.apache.logging.log4j.LogManager
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.commands.bot.kemono.schema.Creator
@@ -60,17 +59,11 @@ import java.util.*
  *
  * @author Chiloven945
  */
-@org.springframework.stereotype.Service
-@ConditionalOnProperty(
-    prefix = "lukos.commands.control",
-    name = ["kemono"],
-    havingValue = "true",
-    matchIfMissing = true
-)
 class KemonoCommand(
     private val appProperties: AppProperties,
     private val kemonoApi: KemonoAPI,
     private val http: HttpClient,
+    private val downloadClient: DownloadClient = DownloadClient(),
 ) : IBotCommand {
 
     private companion object {
@@ -543,7 +536,7 @@ class KemonoCommand(
     private fun downloadArchiveItems(
         items: List<DownloadUtils.NamedUrl>,
         downloadDir: Path,
-    ): DownloadUtils.BatchResult = DownloadUtils.downloadNamedUrlsToDirConcurrent(
+    ): DownloadUtils.BatchResult = downloadClient.downloadNamedUrlsToDirConcurrent(
         items,
         downloadDir,
         ARCHIVE_HEADERS,

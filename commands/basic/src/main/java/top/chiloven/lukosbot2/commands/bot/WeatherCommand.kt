@@ -17,18 +17,9 @@
  */
 package top.chiloven.lukosbot2.commands.bot
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.core.command.definition.dsl.botCommand
 
-@Service
-@ConditionalOnProperty(
-    prefix = "lukos.commands.control",
-    name = ["weather"],
-    havingValue = "true",
-    matchIfMissing = true
-)
 class WeatherCommand : IBotCommand {
 
     private val commandDefinition = botCommand("weather") {

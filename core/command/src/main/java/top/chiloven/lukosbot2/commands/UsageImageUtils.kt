@@ -24,16 +24,11 @@ import java.awt.Font
 import java.awt.Graphics2D
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
-import java.util.*
 import javax.imageio.ImageIO
-import kotlin.math.max
-import kotlin.math.min
 
 object UsageImageUtils {
 
-    private fun configuredDefaultStyle(): ImageStyle = ImageStyle(
-        palette = ModernImageDraw.defaultPalette()
-    )
+    private val bulletSeparators = listOf(" — ", " – ", " - ", ": ", "：")
 
     @JvmStatic
     fun renderUsagePng(
@@ -41,11 +36,11 @@ object UsageImageUtils {
         node: UsageNode,
         options: UsageTextRenderer.Options,
         style: ImageStyle
-    ): RenderedImage {
-        Objects.requireNonNull(style, "style")
-        val result = UsageTextRenderer.render(node, options)
-        return renderLinesPng(filenameBase, result.lines(), style)
-    }
+    ): RenderedImage = renderLinesPng(
+        filenameBase = filenameBase,
+        lines = UsageTextRenderer.render(node, options).lines(),
+        style0 = style
+    )
 
     @JvmStatic
     fun renderLinesPng(
@@ -55,96 +50,214 @@ object UsageImageUtils {
     ): RenderedImage {
         val style = style0.resolveFontFallbacks()
         val palette = style.palette
-        val safeBase = PathUtils.sanitizeFileName(filenameBase, fallback = "usage", maxLength = 64)
-        val filename = "$safeBase.png"
 
-        val model = parse(lines ?: emptyList())
-        val width = max(style.minWidth, style.maxWidth)
+        val filename = PathUtils
+                .sanitizeFileName(
+                    filenameBase,
+                    fallback = "usage",
+                    maxLength = 64
+                )
+                .let { "$it.png" }
+
+        val model = parse(lines.orEmpty())
+
+        /*
+        There is currently no external target width such as requestedWidth, therefore, the actual
+        rendered width is maxWidth.
+
+        The original max(minWidth, maxWidth) is always equal to maxWidth under normal configuration,
+        and cannot truly reflect the constraint relationship between min/max.
+        */
+        val width = style.maxWidth
         val contentWidth = width - style.padding * 2
 
-        val probe = BufferedImage(10, 10, BufferedImage.TYPE_INT_ARGB)
-        val g0 = probe.createGraphics()
-        ModernImageDraw.quality(g0)
         val cache = ImageTextUtils.GlyphRunCache()
 
-        val headerLayout = measureHeader(g0, model.header, contentWidth, cache, style)
-        val flowSectionsLayout = layoutSections(g0, model.sections, contentWidth, headerLayout.height, cache, style)
-        val singleColumnSectionsLayout = layoutSingleColumnSections(
-            g0,
-            model.sections,
-            contentWidth,
-            headerLayout.height,
-            cache,
-            style
+        val probe = BufferedImage(
+            10,
+            10,
+            BufferedImage.TYPE_INT_ARGB
         )
-        val sectionsLayout = chooseSectionsLayout(
-            model.sections,
-            contentWidth,
-            flowSectionsLayout,
-            singleColumnSectionsLayout,
-            style
-        )
-        val height = max(style.minHeight, sectionsLayout.totalHeight)
-        g0.dispose()
 
-        val img = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB)
-        val g = img.createGraphics()
-        ModernImageDraw.quality(g)
-        ModernImageDraw.background(g, width, height, palette)
+        val probeGraphics = probe.createGraphics()
 
-        drawHeader(g, model.header, headerLayout, style.padding, style.padding, contentWidth, cache, style)
-        for (placement in sectionsLayout.placements) {
-            drawSection(g, placement.layout, placement.x, placement.y, cache, style)
+        val headerLayout: HeaderLayout
+        val sectionsLayout: SectionsLayout
+
+        try {
+            ModernImageDraw.quality(probeGraphics)
+
+            headerLayout = measureHeader(
+                g = probeGraphics,
+                header = model.header,
+                width = contentWidth,
+                cache = cache,
+                style = style
+            )
+
+            val flowLayout = layoutSections(
+                g = probeGraphics,
+                sections = model.sections,
+                contentWidth = contentWidth,
+                headerHeight = headerLayout.height,
+                cache = cache,
+                style = style
+            )
+
+            val singleColumnLayout = layoutSingleColumnSections(
+                g = probeGraphics,
+                sections = model.sections,
+                contentWidth = contentWidth,
+                headerHeight = headerLayout.height,
+                cache = cache,
+                style = style
+            )
+
+            sectionsLayout = chooseSectionsLayout(
+                sections = model.sections,
+                contentWidth = contentWidth,
+                flowLayout = flowLayout,
+                singleColumnLayout = singleColumnLayout,
+                style = style
+            )
+        } finally {
+            probeGraphics.dispose()
         }
 
-        g.dispose()
+        val height = sectionsLayout.totalHeight
+                .coerceAtLeast(style.minHeight)
+
+        val image = BufferedImage(
+            width,
+            height,
+            BufferedImage.TYPE_INT_ARGB
+        )
+
+        val g = image.createGraphics()
+
+        try {
+            ModernImageDraw.quality(g)
+            ModernImageDraw.background(
+                g,
+                width,
+                height,
+                palette
+            )
+
+            drawHeader(
+                g = g,
+                header = model.header,
+                layout = headerLayout,
+                x = style.padding,
+                y = style.padding,
+                width = contentWidth,
+                cache = cache,
+                style = style
+            )
+
+            for ((layout, x, y) in sectionsLayout.placements) {
+                drawSection(
+                    g = g,
+                    layout = layout,
+                    x = x,
+                    y = y,
+                    cache = cache,
+                    style = style
+                )
+            }
+        } finally {
+            g.dispose()
+        }
 
         return try {
-            val bos = ByteArrayOutputStream()
-            ImageIO.write(img, "png", bos)
-            RenderedImage(filename, bos.toByteArray(), "image/png")
+            ByteArrayOutputStream().use { output ->
+                ImageIO.write(image, "png", output)
+
+                RenderedImage(
+                    filename = filename,
+                    bytes = output.toByteArray(),
+                    mime = "image/png"
+                )
+            }
         } catch (e: Exception) {
-            throw RuntimeException("Render usage PNG failed: ${e.message}", e)
+            throw RuntimeException(
+                "Render usage PNG failed: ${e.message}",
+                e
+            )
         }
     }
 
-    private fun parse(lines: List<UsageTextRenderer.RenderedLine>): PageModel {
+    private fun parse(
+        lines: List<UsageTextRenderer.RenderedLine>
+    ): PageModel {
         val header = HeaderModel(title = "命令帮助")
-        val sections = ArrayList<SectionModel>()
+        val sections = mutableListOf<SectionModel>()
+
         var currentSection: SectionModel? = null
 
-        for (line in lines) {
-            val text = line.plain().trim()
-            if (line.kind() == UsageTextRenderer.LineKind.BLANK || text.isBlank()) continue
+        for ((kind, _, plain) in lines) {
+            val text = plain.trim()
 
-            when (line.kind()) {
-                UsageTextRenderer.LineKind.TITLE -> header.title = text
+            if (
+                kind == UsageTextRenderer.LineKind.BLANK ||
+                text.isBlank()
+            ) {
+                continue
+            }
+
+            when (kind) {
+                UsageTextRenderer.LineKind.TITLE -> {
+                    header.title = text
+                }
+
                 UsageTextRenderer.LineKind.SUBTITLE -> {
-                    if (looksLikeAliasLine(text)) header.aliases.addAll(parseAliases(text))
-                    else header.descriptionLines.add(text)
+                    if (looksLikeAliasLine(text)) {
+                        header.aliases += parseAliases(text)
+                    } else {
+                        header.descriptionLines += text
+                    }
                 }
 
                 UsageTextRenderer.LineKind.HEADING -> {
-                    currentSection = SectionModel(cleanHeading(text))
-                    sections.add(currentSection)
+                    currentSection = SectionModel(
+                        title = cleanHeading(text)
+                    ).also {
+                        sections += it
+                    }
+                }
+
+                UsageTextRenderer.LineKind.TEXT -> {
+                    val section = currentSection
+
+                    if (section == null) {
+                        header.descriptionLines += text
+                    } else {
+                        section.items += ItemModel(
+                            kind = kind,
+                            text = text
+                        )
+                    }
                 }
 
                 UsageTextRenderer.LineKind.LABEL,
                 UsageTextRenderer.LineKind.CODE,
-                UsageTextRenderer.LineKind.TEXT,
                 UsageTextRenderer.LineKind.BULLET -> {
-                    if (currentSection == null) {
-                        if (line.kind() == UsageTextRenderer.LineKind.TEXT) header.descriptionLines.add(text)
-                    } else {
-                        currentSection.items.add(ItemModel(line.kind(), text))
-                    }
+                    currentSection?.items?.add(
+                        ItemModel(
+                            kind = kind,
+                            text = text
+                        )
+                    )
                 }
 
                 UsageTextRenderer.LineKind.BLANK -> Unit
             }
         }
 
-        return PageModel(header, sections)
+        return PageModel(
+            header = header,
+            sections = sections
+        )
     }
 
     private fun measureHeader(
@@ -154,12 +267,17 @@ object UsageImageUtils {
         cache: ImageTextUtils.GlyphRunCache,
         style: ImageStyle
     ): HeaderLayout {
-        val rows = ArrayList<List<String>>()
-        val titleWidth = width - style.cardPadding * 2
-        val descWidth = width - style.cardPadding * 2
+        val descriptionRows = mutableListOf<List<String>>()
+
+        val innerWidth = width - style.cardPadding * 2
 
         var contentHeight = 0
-        contentHeight += pillHeight(g, style.labelFont)
+
+        contentHeight += pillHeight(
+            g,
+            style.labelFont
+        )
+
         contentHeight += style.headerBadgeGap
 
         val titleLines = ImageTextUtils.wrapTextRunAware(
@@ -168,40 +286,73 @@ object UsageImageUtils {
             style.titleFont,
             style.bodyFont,
             cache,
-            titleWidth
-        ).ifEmpty { listOf(header.title) }
-        val titleLineHeight = textLineHeight(g, style.titleFont, 1.10f)
+            innerWidth
+        ).ifEmpty {
+            listOf(header.title)
+        }
+
+        val titleLineHeight = textLineHeight(
+            g,
+            style.titleFont,
+            1.10f
+        )
+
         contentHeight += titleLines.size * titleLineHeight
 
         if (header.descriptionLines.isNotEmpty()) {
             contentHeight += style.headerTextGap
-            for (desc in header.descriptionLines) {
+
+            val descriptionLineHeight = textLineHeight(
+                g,
+                style.subtitleFont,
+                1.30f
+            )
+
+            for (description in header.descriptionLines) {
                 val wrapped = ImageTextUtils.wrapTextRunAware(
                     g,
-                    desc,
+                    description,
                     style.subtitleFont,
                     style.bodyFont,
                     cache,
-                    descWidth
-                ).ifEmpty { listOf(desc) }
-                rows.add(wrapped)
-                contentHeight += wrapped.size * textLineHeight(g, style.subtitleFont, 1.30f)
+                    innerWidth
+                ).ifEmpty {
+                    listOf(description)
+                }
+
+                descriptionRows += wrapped
+
+                contentHeight += wrapped.size * descriptionLineHeight
                 contentHeight += style.paragraphGap
             }
+
             contentHeight -= style.paragraphGap
         }
 
-        val pillRows = layoutPills(g, header.aliases, style.labelFont, descWidth, style)
-        if (pillRows.isNotEmpty()) {
+        val aliasRows = layoutPills(
+            g = g,
+            pills = header.aliases,
+            font = style.labelFont,
+            maxWidth = innerWidth,
+            style = style
+        )
+
+        if (aliasRows.isNotEmpty()) {
             contentHeight += style.aliasGap
-            contentHeight += pillRows.size * pillHeight(g, style.labelFont)
-            if (pillRows.size > 1) contentHeight += (pillRows.size - 1) * style.pillRowGap
+
+            contentHeight += aliasRows.size *
+                    pillHeight(g, style.labelFont)
+
+            if (aliasRows.size > 1) {
+                contentHeight +=
+                    (aliasRows.size - 1) * style.pillRowGap
+            }
         }
 
         return HeaderLayout(
             titleLines = titleLines,
-            descriptionRows = rows,
-            aliasRows = pillRows,
+            descriptionRows = descriptionRows,
+            aliasRows = aliasRows,
             height = contentHeight + style.cardPadding * 2
         )
     }
@@ -215,45 +366,145 @@ object UsageImageUtils {
         style: ImageStyle
     ): SectionsLayout {
         if (sections.isEmpty()) {
-            return SectionsLayout(emptyList(), style.padding + headerHeight + style.padding)
+            return SectionsLayout(
+                placements = emptyList(),
+                totalHeight =
+                    style.padding +
+                            headerHeight +
+                            style.padding
+            )
         }
 
-        val placements = ArrayList<SectionPlacement>()
-        val startY = style.padding + headerHeight + style.sectionGap
-        val halfWidth = (contentWidth - style.sectionGap) / 2
-        val allowTwoColumns = contentWidth >= style.multiColumnSectionMinWidth
+        val placements = mutableListOf<SectionPlacement>()
+
+        val startY =
+            style.padding +
+                    headerHeight +
+                    style.sectionGap
+
+        val allowTwoColumns =
+            contentWidth >= style.multiColumnSectionMinWidth
+
+        /*
+         * 不允许双栏时直接按照完整 contentWidth 布局。
+         *
+         * 原实现会先按照 halfWidth 测量，再作为 fullWidth section
+         * 放进去，导致窄画布下卡片实际只有半宽。
+         */
+        if (!allowTwoColumns) {
+            var cursorY = startY
+
+            for (section in sections) {
+                val layout = measureSection(
+                    g = g,
+                    section = section,
+                    width = contentWidth,
+                    cache = cache,
+                    style = style
+                )
+
+                placements += SectionPlacement(
+                    layout = layout,
+                    x = style.padding,
+                    y = cursorY
+                )
+
+                cursorY +=
+                    layout.height +
+                            style.sectionGap
+            }
+
+            return SectionsLayout(
+                placements = placements,
+                totalHeight =
+                    cursorY -
+                            style.sectionGap +
+                            style.padding
+            )
+        }
+
+        val halfWidth =
+            (contentWidth - style.sectionGap) / 2
+
+        val leftX = style.padding
+
+        val rightX =
+            style.padding +
+                    halfWidth +
+                    style.sectionGap
 
         var leftY = startY
         var rightY = startY
-        val leftX = style.padding
-        val rightX = style.padding + halfWidth + style.sectionGap
 
         for (section in sections) {
-            val narrowLayout = measureSection(g, section, halfWidth, cache, style)
-            val wideLayout = if (allowTwoColumns) {
-                measureSection(g, section, contentWidth, cache, style)
-            } else {
-                narrowLayout
-            }
-            val fullWidth = !allowTwoColumns || shouldSpanFullWidth(section, narrowLayout, wideLayout, style)
-            val layout = if (fullWidth) wideLayout else narrowLayout
+            val narrowLayout = measureSection(
+                g = g,
+                section = section,
+                width = halfWidth,
+                cache = cache,
+                style = style
+            )
+
+            val wideLayout = measureSection(
+                g = g,
+                section = section,
+                width = contentWidth,
+                cache = cache,
+                style = style
+            )
+
+            val fullWidth = shouldSpanFullWidth(
+                section = section,
+                narrowLayout = narrowLayout,
+                wideLayout = wideLayout,
+                style = style
+            )
 
             if (fullWidth) {
-                val y = max(leftY, rightY)
-                placements.add(SectionPlacement(layout, style.padding, y))
-                leftY = y + layout.height + style.sectionGap
+                val y = maxOf(leftY, rightY)
+
+                placements += SectionPlacement(
+                    layout = wideLayout,
+                    x = style.padding,
+                    y = y
+                )
+
+                leftY =
+                    y +
+                            wideLayout.height +
+                            style.sectionGap
+
                 rightY = leftY
             } else if (leftY <= rightY) {
-                placements.add(SectionPlacement(layout, leftX, leftY))
-                leftY += layout.height + style.sectionGap
+                placements += SectionPlacement(
+                    layout = narrowLayout,
+                    x = leftX,
+                    y = leftY
+                )
+
+                leftY +=
+                    narrowLayout.height +
+                            style.sectionGap
             } else {
-                placements.add(SectionPlacement(layout, rightX, rightY))
-                rightY += layout.height + style.sectionGap
+                placements += SectionPlacement(
+                    layout = narrowLayout,
+                    x = rightX,
+                    y = rightY
+                )
+
+                rightY +=
+                    narrowLayout.height +
+                            style.sectionGap
             }
         }
 
-        val totalHeight = max(leftY, rightY) - style.sectionGap + style.padding
-        return SectionsLayout(placements, totalHeight)
+        return SectionsLayout(
+            placements = placements,
+            totalHeight =
+                maxOf(leftY, rightY) -
+                        style.sectionGap +
+                        style.padding
+        )
     }
 
     private fun layoutSingleColumnSections(
@@ -265,19 +516,49 @@ object UsageImageUtils {
         style: ImageStyle
     ): SectionsLayout {
         if (sections.isEmpty()) {
-            return SectionsLayout(emptyList(), style.padding + headerHeight + style.padding)
+            return SectionsLayout(
+                placements = emptyList(),
+                totalHeight =
+                    style.padding +
+                            headerHeight +
+                            style.padding
+            )
         }
 
-        val placements = ArrayList<SectionPlacement>()
-        var cursorY = style.padding + headerHeight + style.sectionGap
+        val placements = mutableListOf<SectionPlacement>()
+
+        var cursorY =
+            style.padding +
+                    headerHeight +
+                    style.sectionGap
+
         for (section in sections) {
-            val layout = measureSection(g, section, contentWidth, cache, style)
-            placements.add(SectionPlacement(layout, style.padding, cursorY))
-            cursorY += layout.height + style.sectionGap
+            val layout = measureSection(
+                g = g,
+                section = section,
+                width = contentWidth,
+                cache = cache,
+                style = style
+            )
+
+            placements += SectionPlacement(
+                layout = layout,
+                x = style.padding,
+                y = cursorY
+            )
+
+            cursorY +=
+                layout.height +
+                        style.sectionGap
         }
 
-        val totalHeight = cursorY - style.sectionGap + style.padding
-        return SectionsLayout(placements, totalHeight)
+        return SectionsLayout(
+            placements = placements,
+            totalHeight =
+                cursorY -
+                        style.sectionGap +
+                        style.padding
+        )
     }
 
     private fun chooseSectionsLayout(
@@ -287,12 +568,25 @@ object UsageImageUtils {
         singleColumnLayout: SectionsLayout,
         style: ImageStyle
     ): SectionsLayout {
-        if (sections.isEmpty()) return flowLayout
-        val flowAspectRatio = flowLayout.totalHeight.toDouble() / contentWidth.toDouble()
+        if (sections.isEmpty()) {
+            return flowLayout
+        }
+
+        val flowAspectRatio =
+            flowLayout.totalHeight.toDouble() /
+                    contentWidth
+
         val preferSingleColumn =
-            sections.size <= style.preferredSingleColumnMaxSections &&
-                    flowAspectRatio <= style.preferredSingleColumnAspectRatioThreshold
-        return if (preferSingleColumn) singleColumnLayout else flowLayout
+            sections.size <=
+                    style.preferredSingleColumnMaxSections &&
+                    flowAspectRatio <=
+                    style.preferredSingleColumnAspectRatioThreshold
+
+        return if (preferSingleColumn) {
+            singleColumnLayout
+        } else {
+            flowLayout
+        }
     }
 
     private fun measureSection(
@@ -302,48 +596,152 @@ object UsageImageUtils {
         cache: ImageTextUtils.GlyphRunCache,
         style: ImageStyle
     ): SectionLayout {
-        val innerWidth = width - style.cardPadding * 2
-        val titleHeight = textLineHeight(g, style.headingFont, 1.0f)
-        val useItemGrid = shouldUseItemGrid(section, innerWidth, style)
-        val columnWidth = if (useItemGrid) (innerWidth - style.gridGap) / 2 else innerWidth
+        val innerWidth =
+            width - style.cardPadding * 2
 
-        val placedItems = ArrayList<PlacedItem>()
-        var cursorY = style.cardPadding + titleHeight
-        if (section.items.isNotEmpty()) cursorY += style.sectionTitleGap
+        val titleHeight = textLineHeight(
+            g,
+            style.headingFont,
+            1.0f
+        )
+
+        val useItemGrid = shouldUseItemGrid(
+            section = section,
+            innerWidth = innerWidth,
+            style = style
+        )
+
+        val columnWidth =
+            if (useItemGrid) {
+                (innerWidth - style.gridGap) / 2
+            } else {
+                innerWidth
+            }
+
+        val placedItems = mutableListOf<PlacedItem>()
+
+        var cursorY =
+            style.cardPadding +
+                    titleHeight
+
+        if (section.items.isNotEmpty()) {
+            cursorY += style.sectionTitleGap
+        }
 
         var index = 0
+
         while (index < section.items.size) {
             val current = section.items[index]
+
             when {
-                !useItemGrid || current.kind != UsageTextRenderer.LineKind.BULLET -> {
-                    val measured = measureItem(g, current, innerWidth, cache, style)
-                    placedItems.add(PlacedItem(measured, 0, cursorY, measured.boxWidth, measured.height))
-                    cursorY += measured.height + style.itemGap
+                !useItemGrid ||
+                        current.kind != UsageTextRenderer.LineKind.BULLET -> {
+                    val measured = measureItem(
+                        g = g,
+                        item = current,
+                        width = innerWidth,
+                        cache = cache,
+                        style = style
+                    )
+
+                    placedItems += PlacedItem(
+                        item = measured,
+                        x = 0,
+                        y = cursorY,
+                        width = measured.boxWidth,
+                        boxHeight = measured.height
+                    )
+
+                    cursorY +=
+                        measured.height +
+                                style.itemGap
+
                     index++
                 }
 
-                index + 1 < section.items.size && section.items[index + 1].kind == UsageTextRenderer.LineKind.BULLET -> {
-                    val left = measureItem(g, current, columnWidth, cache, style)
-                    val right = measureItem(g, section.items[index + 1], columnWidth, cache, style)
-                    val rowHeight = max(left.height, right.height)
-                    placedItems.add(PlacedItem(left, 0, cursorY, columnWidth, rowHeight))
-                    placedItems.add(PlacedItem(right, columnWidth + style.gridGap, cursorY, columnWidth, rowHeight))
-                    cursorY += rowHeight + style.itemGap
+                index + 1 < section.items.size &&
+                        section.items[index + 1].kind ==
+                        UsageTextRenderer.LineKind.BULLET -> {
+                    val left = measureItem(
+                        g = g,
+                        item = current,
+                        width = columnWidth,
+                        cache = cache,
+                        style = style
+                    )
+
+                    val right = measureItem(
+                        g = g,
+                        item = section.items[index + 1],
+                        width = columnWidth,
+                        cache = cache,
+                        style = style
+                    )
+
+                    val rowHeight = maxOf(
+                        left.height,
+                        right.height
+                    )
+
+                    placedItems += PlacedItem(
+                        item = left,
+                        x = 0,
+                        y = cursorY,
+                        width = columnWidth,
+                        boxHeight = rowHeight
+                    )
+
+                    placedItems += PlacedItem(
+                        item = right,
+                        x = columnWidth + style.gridGap,
+                        y = cursorY,
+                        width = columnWidth,
+                        boxHeight = rowHeight
+                    )
+
+                    cursorY +=
+                        rowHeight +
+                                style.itemGap
+
                     index += 2
                 }
 
                 else -> {
-                    val measured = measureItem(g, current, innerWidth, cache, style)
-                    placedItems.add(PlacedItem(measured, 0, cursorY, measured.boxWidth, measured.height))
-                    cursorY += measured.height + style.itemGap
+                    val measured = measureItem(
+                        g = g,
+                        item = current,
+                        width = innerWidth,
+                        cache = cache,
+                        style = style
+                    )
+
+                    placedItems += PlacedItem(
+                        item = measured,
+                        x = 0,
+                        y = cursorY,
+                        width = measured.boxWidth,
+                        boxHeight = measured.height
+                    )
+
+                    cursorY +=
+                        measured.height +
+                                style.itemGap
+
                     index++
                 }
             }
         }
 
-        if (placedItems.isNotEmpty()) cursorY -= style.itemGap
-        val totalHeight = cursorY + style.cardPadding
-        return SectionLayout(section.title, width, totalHeight, placedItems)
+        if (placedItems.isNotEmpty()) {
+            cursorY -= style.itemGap
+        }
+
+        return SectionLayout(
+            title = section.title,
+            width = width,
+            height = cursorY + style.cardPadding,
+            items = placedItems
+        )
     }
 
     private fun measureItem(
@@ -352,12 +750,24 @@ object UsageImageUtils {
         width: Int,
         cache: ImageTextUtils.GlyphRunCache,
         style: ImageStyle
-    ): MeasuredItem {
-        return when (item.kind) {
+    ): MeasuredItem =
+        when (item.kind) {
             UsageTextRenderer.LineKind.CODE -> {
-                val lineHeight = textLineHeight(g, style.codeFont, 1.12f)
-                val maxBoxWidth = min(width, style.codeBlockMaxWidth)
-                val maxTextWidth = max(1, maxBoxWidth - style.codePaddingX * 2)
+                val lineHeight = textLineHeight(
+                    g,
+                    style.codeFont,
+                    1.12f
+                )
+
+                val maxBoxWidth =
+                    width.coerceAtMost(
+                        style.codeBlockMaxWidth
+                    )
+
+                val maxTextWidth =
+                    (maxBoxWidth - style.codePaddingX * 2)
+                            .coerceAtLeast(1)
+
                 val lines = ImageTextUtils.wrapTextRunAware(
                     g,
                     item.text,
@@ -365,74 +775,186 @@ object UsageImageUtils {
                     style.bodyFont,
                     cache,
                     maxTextWidth
-                ).ifEmpty { listOf(item.text) }
-                var measuredTextWidth = 0
-                for (line in lines) {
-                    measuredTextWidth = max(
-                        measuredTextWidth,
-                        ImageTextUtils.measureTextRunAware(g, line, style.codeFont, style.bodyFont, cache)
-                    )
+                ).ifEmpty {
+                    listOf(item.text)
                 }
-                val naturalBoxWidth = min(maxBoxWidth, measuredTextWidth + style.codePaddingX * 2)
-                val h = style.codePaddingY * 2 + lines.size * lineHeight
-                MeasuredItem(item.kind, item.text, lines, null, h, naturalBoxWidth)
+
+                val measuredTextWidth =
+                    lines.maxOfOrNull { line ->
+                        ImageTextUtils.measureTextRunAware(
+                            g,
+                            line,
+                            style.codeFont,
+                            style.bodyFont,
+                            cache
+                        )
+                    } ?: 0
+
+                val naturalBoxWidth =
+                    (measuredTextWidth +
+                            style.codePaddingX * 2)
+                            .coerceAtMost(maxBoxWidth)
+
+                MeasuredItem(
+                    kind = item.kind,
+                    text = item.text,
+                    lines = lines,
+                    head = null,
+                    height =
+                        style.codePaddingY * 2 +
+                                lines.size * lineHeight,
+                    boxWidth = naturalBoxWidth
+                )
             }
 
             UsageTextRenderer.LineKind.LABEL -> {
-                val h = pillHeight(g, style.labelFont)
-                MeasuredItem(item.kind, sanitizeChipText(item.text), listOf(item.text), null, h, width)
+                MeasuredItem(
+                    kind = item.kind,
+                    text = sanitizeChipText(item.text),
+                    lines = listOf(item.text),
+                    head = null,
+                    height = pillHeight(
+                        g,
+                        style.labelFont
+                    ),
+                    boxWidth = width
+                )
             }
 
             UsageTextRenderer.LineKind.BULLET -> {
-                val raw = item.text.removePrefix("•").trim()
+                val raw = item.text
+                        .removePrefix("•")
+                        .trim()
+
                 val split = splitBullet(raw)
+
                 if (split != null) {
-                    val bodyLines = if (split.second.isBlank()) {
-                        emptyList()
-                    } else {
+                    val (head, body) = split
+
+                    val bodyLines =
+                        if (body.isBlank()) {
+                            emptyList()
+                        } else {
+                            ImageTextUtils.wrapTextRunAware(
+                                g,
+                                body,
+                                style.bodyFont,
+                                style.bodyFont,
+                                cache,
+                                (
+                                        width -
+                                                style.bulletBoxPadding * 2
+                                        ).coerceAtLeast(1)
+                            ).ifEmpty {
+                                listOf(body)
+                            }
+                        }
+
+                    val bodyLineHeight =
+                        textLineHeight(
+                            g,
+                            style.bodyFont,
+                            1.26f
+                        )
+
+                    val top =
+                        style.bulletBoxPadding * 2 +
+                                pillHeight(
+                                    g,
+                                    style.labelFont
+                                )
+
+                    val bodyHeight =
+                        if (bodyLines.isEmpty()) {
+                            0
+                        } else {
+                            style.bulletBodyGap +
+                                    bodyLines.size *
+                                    bodyLineHeight
+                        }
+
+                    MeasuredItem(
+                        kind = item.kind,
+                        text = raw,
+                        lines = bodyLines,
+                        head = sanitizeChipText(head),
+                        height = top + bodyHeight,
+                        boxWidth = width
+                    )
+                } else {
+                    val lineHeight =
+                        textLineHeight(
+                            g,
+                            style.bodyFont,
+                            1.26f
+                        )
+
+                    val sanitized =
+                        sanitizeInlineBulletText(raw)
+
+                    val textWidth =
+                        (
+                                width -
+                                        style.bulletBoxPadding * 2 -
+                                        style.bulletDotGap -
+                                        style.bulletDotSize
+                                ).coerceAtLeast(1)
+
+                    val lines =
                         ImageTextUtils.wrapTextRunAware(
                             g,
-                            split.second,
+                            sanitized,
                             style.bodyFont,
                             style.bodyFont,
                             cache,
-                            width - style.bulletBoxPadding * 2
-                        ).ifEmpty { listOf(split.second) }
-                    }
-                    val bodyLineHeight = textLineHeight(g, style.bodyFont, 1.26f)
-                    val top = style.bulletBoxPadding * 2 + pillHeight(g, style.labelFont)
-                    val body = if (bodyLines.isEmpty()) 0 else style.bulletBodyGap + bodyLines.size * bodyLineHeight
-                    MeasuredItem(item.kind, raw, bodyLines, sanitizeChipText(split.first), top + body, width)
-                } else {
-                    val lineHeight = textLineHeight(g, style.bodyFont, 1.26f)
-                    val lines = ImageTextUtils.wrapTextRunAware(
-                        g,
-                        sanitizeInlineBulletText(raw),
-                        style.bodyFont,
-                        style.bodyFont,
-                        cache,
-                        width - style.bulletBoxPadding * 2 - style.bulletDotGap - style.bulletDotSize
-                    ).ifEmpty { listOf(sanitizeInlineBulletText(raw)) }
-                    val h = style.bulletBoxPadding * 2 + lines.size * lineHeight
-                    MeasuredItem(item.kind, raw, lines, null, h, width)
+                            textWidth
+                        ).ifEmpty {
+                            listOf(sanitized)
+                        }
+
+                    MeasuredItem(
+                        kind = item.kind,
+                        text = raw,
+                        lines = lines,
+                        head = null,
+                        height =
+                            style.bulletBoxPadding * 2 +
+                                    lines.size * lineHeight,
+                        boxWidth = width
+                    )
                 }
             }
 
             else -> {
-                val lineHeight = textLineHeight(g, style.bodyFont, 1.26f)
-                val lines = ImageTextUtils.wrapTextRunAware(
-                    g,
-                    item.text,
-                    style.bodyFont,
-                    style.bodyFont,
-                    cache,
-                    width
-                ).ifEmpty { listOf(item.text) }
-                val h = lines.size * lineHeight
-                MeasuredItem(item.kind, item.text, lines, null, h, width)
+                val lineHeight =
+                    textLineHeight(
+                        g,
+                        style.bodyFont,
+                        1.26f
+                    )
+
+                val lines =
+                    ImageTextUtils.wrapTextRunAware(
+                        g,
+                        item.text,
+                        style.bodyFont,
+                        style.bodyFont,
+                        cache,
+                        width.coerceAtLeast(1)
+                    ).ifEmpty {
+                        listOf(item.text)
+                    }
+
+                MeasuredItem(
+                    kind = item.kind,
+                    text = item.text,
+                    lines = lines,
+                    head = null,
+                    height = lines.size * lineHeight,
+                    boxWidth = width
+                )
             }
         }
-    }
 
     private fun drawHeader(
         g: Graphics2D,
@@ -445,10 +967,24 @@ object UsageImageUtils {
         style: ImageStyle
     ) {
         val palette = style.palette
-        ModernImageDraw.card(g, x, y, width, layout.height, style.cardRadius, palette)
 
-        var cursorY = y + style.cardPadding
-        val contentX = x + style.cardPadding
+        ModernImageDraw.card(
+            g,
+            x,
+            y,
+            width,
+            layout.height,
+            style.cardRadius,
+            palette
+        )
+
+        var cursorY =
+            y +
+                    style.cardPadding
+
+        val contentX =
+            x +
+                    style.cardPadding
 
         ModernImageDraw.pill(
             g,
@@ -456,26 +992,68 @@ object UsageImageUtils {
             contentX,
             cursorY,
             style.labelFont,
-            style.palette.secondaryText,
-            style.palette.pillBg
+            palette.secondaryText,
+            palette.pillBg
         )
-        cursorY += pillHeight(g, style.labelFont) + style.headerBadgeGap
 
-        val titleLineHeight = textLineHeight(g, style.titleFont, 1.10f)
+        cursorY +=
+            pillHeight(
+                g,
+                style.labelFont
+            ) +
+                    style.headerBadgeGap
+
+        val titleLineHeight =
+            textLineHeight(
+                g,
+                style.titleFont,
+                1.10f
+            )
+
         g.color = palette.text
+
         for (line in layout.titleLines) {
-            val baseline = cursorY + ImageTextUtils.ascent(g, style.titleFont)
-            ImageTextUtils.drawStringWithFallback(g, line, contentX, baseline, style.titleFont, style.bodyFont, cache)
+            val baseline =
+                cursorY +
+                        ImageTextUtils.ascent(
+                            g,
+                            style.titleFont
+                        )
+
+            ImageTextUtils.drawStringWithFallback(
+                g,
+                line,
+                contentX,
+                baseline,
+                style.titleFont,
+                style.bodyFont,
+                cache
+            )
+
             cursorY += titleLineHeight
         }
 
         if (layout.descriptionRows.isNotEmpty()) {
             cursorY += style.headerTextGap
-            val descLineHeight = textLineHeight(g, style.subtitleFont, 1.30f)
-            g.color = style.palette.secondaryText
+
+            val descriptionLineHeight =
+                textLineHeight(
+                    g,
+                    style.subtitleFont,
+                    1.30f
+                )
+
+            g.color = palette.secondaryText
+
             for (row in layout.descriptionRows) {
                 for (line in row) {
-                    val baseline = cursorY + ImageTextUtils.ascent(g, style.subtitleFont)
+                    val baseline =
+                        cursorY +
+                                ImageTextUtils.ascent(
+                                    g,
+                                    style.subtitleFont
+                                )
+
                     ImageTextUtils.drawStringWithFallback(
                         g,
                         line,
@@ -485,30 +1063,45 @@ object UsageImageUtils {
                         style.bodyFont,
                         cache
                     )
-                    cursorY += descLineHeight
+
+                    cursorY += descriptionLineHeight
                 }
+
                 cursorY += style.paragraphGap
             }
+
             cursorY -= style.paragraphGap
         }
 
         if (layout.aliasRows.isNotEmpty()) {
             cursorY += style.aliasGap
+
             for (row in layout.aliasRows) {
                 var cursorX = contentX
+
                 for (alias in row) {
-                    val used = ModernImageDraw.pill(
-                        g,
-                        alias,
-                        cursorX,
-                        cursorY,
-                        style.labelFont,
-                        style.palette.secondaryText,
-                        style.palette.chipBg
-                    )
-                    cursorX += used + style.pillGap
+                    val usedWidth =
+                        ModernImageDraw.pill(
+                            g,
+                            alias,
+                            cursorX,
+                            cursorY,
+                            style.labelFont,
+                            palette.secondaryText,
+                            palette.chipBg
+                        )
+
+                    cursorX +=
+                        usedWidth +
+                                style.pillGap
                 }
-                cursorY += pillHeight(g, style.labelFont) + style.pillRowGap
+
+                cursorY +=
+                    pillHeight(
+                        g,
+                        style.labelFont
+                    ) +
+                            style.pillRowGap
             }
         }
     }
@@ -522,36 +1115,73 @@ object UsageImageUtils {
         style: ImageStyle
     ) {
         val palette = style.palette
-        ModernImageDraw.card(g, x, y, layout.width, layout.height, style.cardRadius, palette)
 
-        val titleX = x + style.cardPadding
-        val titleY = y + style.cardPadding
-        val barH = textLineHeight(g, style.headingFont, 1.0f) - 2
+        ModernImageDraw.card(
+            g,
+            x,
+            y,
+            layout.width,
+            layout.height,
+            style.cardRadius,
+            palette
+        )
+
+        val titleX =
+            x +
+                    style.cardPadding
+
+        val titleY =
+            y +
+                    style.cardPadding
+
+        val barHeight =
+            (
+                    textLineHeight(
+                        g,
+                        style.headingFont,
+                        1.0f
+                    ) - 2
+                    ).coerceAtLeast(1)
 
         g.color = palette.accent
-        g.fillRoundRect(titleX, titleY + 1, style.sectionBarWidth, barH, style.sectionBarWidth, style.sectionBarWidth)
+
+        g.fillRoundRect(
+            titleX,
+            titleY + 1,
+            style.sectionBarWidth,
+            barHeight,
+            style.sectionBarWidth,
+            style.sectionBarWidth
+        )
 
         g.color = palette.text
+
         ImageTextUtils.drawStringWithFallback(
             g,
             layout.title,
-            titleX + style.sectionBarWidth + style.sectionBarGap,
-            titleY + ImageTextUtils.ascent(g, style.headingFont),
+            titleX +
+                    style.sectionBarWidth +
+                    style.sectionBarGap,
+            titleY +
+                    ImageTextUtils.ascent(
+                        g,
+                        style.headingFont
+                    ),
             style.headingFont,
             style.bodyFont,
             cache
         )
 
-        for (placed in layout.items) {
+        for ((item, itemX, itemY, width, boxHeight) in layout.items) {
             drawMeasuredItem(
-                g,
-                placed.item,
-                titleX + placed.x,
-                y + placed.y,
-                placed.width,
-                placed.boxHeight,
-                cache,
-                style
+                g = g,
+                item = item,
+                x = titleX + itemX,
+                y = y + itemY,
+                width = width,
+                boxHeight = boxHeight,
+                cache = cache,
+                style = style
             )
         }
     }
@@ -567,15 +1197,41 @@ object UsageImageUtils {
         style: ImageStyle
     ) {
         val palette = style.palette
+
         when (item.kind) {
             UsageTextRenderer.LineKind.CODE -> {
-                g.color = style.palette.codeBg
-                g.fillRoundRect(x, y, width, boxHeight, style.codeRadius, style.codeRadius)
-                var lineY = y + style.codePaddingY
-                val lineHeight = textLineHeight(g, style.codeFont, 1.12f)
-                g.color = style.palette.codeText
+                g.color = palette.codeBg
+
+                g.fillRoundRect(
+                    x,
+                    y,
+                    width,
+                    boxHeight,
+                    style.codeRadius,
+                    style.codeRadius
+                )
+
+                var lineY =
+                    y +
+                            style.codePaddingY
+
+                val lineHeight =
+                    textLineHeight(
+                        g,
+                        style.codeFont,
+                        1.12f
+                    )
+
+                g.color = palette.codeText
+
                 for (line in item.lines) {
-                    val baseline = lineY + ImageTextUtils.ascent(g, style.codeFont)
+                    val baseline =
+                        lineY +
+                                ImageTextUtils.ascent(
+                                    g,
+                                    style.codeFont
+                                )
+
                     ImageTextUtils.drawStringWithFallback(
                         g,
                         line,
@@ -585,28 +1241,83 @@ object UsageImageUtils {
                         style.bodyFont,
                         cache
                     )
+
                     lineY += lineHeight
                 }
             }
 
             UsageTextRenderer.LineKind.LABEL -> {
-                drawChip(g, item.text, x, y, style)
+                drawChip(
+                    g = g,
+                    rawText = item.text,
+                    x = x,
+                    y = y,
+                    style = style
+                )
             }
 
             UsageTextRenderer.LineKind.BULLET -> {
-                g.color = style.palette.itemBg
-                g.fillRoundRect(x, y, width, boxHeight, style.itemRadius, style.itemRadius)
-                ModernImageDraw.roundedBorder(g, x, y, width, boxHeight, style.itemRadius, style.palette.itemBorder)
+                g.color = palette.itemBg
 
-                if (item.head != null) {
-                    val pillY = y + style.bulletBoxPadding
-                    drawChip(g, item.head, x + style.bulletBoxPadding, pillY, style)
+                g.fillRoundRect(
+                    x,
+                    y,
+                    width,
+                    boxHeight,
+                    style.itemRadius,
+                    style.itemRadius
+                )
 
-                    var lineY = pillY + pillHeight(g, style.labelFont) + style.bulletBodyGap
-                    val lineHeight = textLineHeight(g, style.bodyFont, 1.26f)
-                    g.color = style.palette.secondaryText
+                ModernImageDraw.roundedBorder(
+                    g,
+                    x,
+                    y,
+                    width,
+                    boxHeight,
+                    style.itemRadius,
+                    palette.itemBorder
+                )
+
+                val head = item.head
+
+                if (head != null) {
+                    val pillY =
+                        y +
+                                style.bulletBoxPadding
+
+                    drawChip(
+                        g = g,
+                        rawText = head,
+                        x = x + style.bulletBoxPadding,
+                        y = pillY,
+                        style = style
+                    )
+
+                    var lineY =
+                        pillY +
+                                pillHeight(
+                                    g,
+                                    style.labelFont
+                                ) +
+                                style.bulletBodyGap
+
+                    val lineHeight =
+                        textLineHeight(
+                            g,
+                            style.bodyFont,
+                            1.26f
+                        )
+
+                    g.color = palette.secondaryText
+
                     for (line in item.lines) {
-                        val baseline = lineY + ImageTextUtils.ascent(g, style.bodyFont)
+                        val baseline =
+                            lineY +
+                                    ImageTextUtils.ascent(
+                                        g,
+                                        style.bodyFont
+                                    )
+
                         ImageTextUtils.drawStringWithFallback(
                             g,
                             line,
@@ -616,20 +1327,54 @@ object UsageImageUtils {
                             style.bodyFont,
                             cache
                         )
+
                         lineY += lineHeight
                     }
                 } else {
-                    val dotX = x + style.bulletBoxPadding
-                    val dotY = y + style.bulletBoxPadding + 7
-                    g.color = palette.accent
-                    g.fillOval(dotX, dotY, style.bulletDotSize, style.bulletDotSize)
+                    val dotX =
+                        x +
+                                style.bulletBoxPadding
 
-                    var lineY = y + style.bulletBoxPadding
-                    val textX = dotX + style.bulletDotSize + style.bulletDotGap
-                    val lineHeight = textLineHeight(g, style.bodyFont, 1.26f)
-                    g.color = style.palette.secondaryText
+                    val dotY =
+                        y +
+                                style.bulletBoxPadding +
+                                7
+
+                    g.color = palette.accent
+
+                    g.fillOval(
+                        dotX,
+                        dotY,
+                        style.bulletDotSize,
+                        style.bulletDotSize
+                    )
+
+                    var lineY =
+                        y +
+                                style.bulletBoxPadding
+
+                    val textX =
+                        dotX +
+                                style.bulletDotSize +
+                                style.bulletDotGap
+
+                    val lineHeight =
+                        textLineHeight(
+                            g,
+                            style.bodyFont,
+                            1.26f
+                        )
+
+                    g.color = palette.secondaryText
+
                     for (line in item.lines) {
-                        val baseline = lineY + ImageTextUtils.ascent(g, style.bodyFont)
+                        val baseline =
+                            lineY +
+                                    ImageTextUtils.ascent(
+                                        g,
+                                        style.bodyFont
+                                    )
+
                         ImageTextUtils.drawStringWithFallback(
                             g,
                             line,
@@ -639,6 +1384,7 @@ object UsageImageUtils {
                             style.bodyFont,
                             cache
                         )
+
                         lineY += lineHeight
                     }
                 }
@@ -646,10 +1392,24 @@ object UsageImageUtils {
 
             else -> {
                 var lineY = y
-                val lineHeight = textLineHeight(g, style.bodyFont, 1.26f)
-                g.color = style.palette.secondaryText
+
+                val lineHeight =
+                    textLineHeight(
+                        g,
+                        style.bodyFont,
+                        1.26f
+                    )
+
+                g.color = palette.secondaryText
+
                 for (line in item.lines) {
-                    val baseline = lineY + ImageTextUtils.ascent(g, style.bodyFont)
+                    val baseline =
+                        lineY +
+                                ImageTextUtils.ascent(
+                                    g,
+                                    style.bodyFont
+                                )
+
                     ImageTextUtils.drawStringWithFallback(
                         g,
                         line,
@@ -659,38 +1419,68 @@ object UsageImageUtils {
                         style.bodyFont,
                         cache
                     )
+
                     lineY += lineHeight
                 }
             }
         }
     }
 
-    private fun drawChip(g: Graphics2D, rawText: String, x: Int, y: Int, style: ImageStyle): Int {
+    private fun drawChip(
+        g: Graphics2D,
+        rawText: String,
+        x: Int,
+        y: Int,
+        style: ImageStyle
+    ): Int {
         val text = sanitizeChipText(rawText)
+
         return if (isCodeChip(text)) {
-            ModernImageDraw.pill(g, text, x, y, style.labelFont, style.palette.codeText, style.palette.codeChipBg)
+            ModernImageDraw.pill(
+                g,
+                text,
+                x,
+                y,
+                style.labelFont,
+                style.palette.codeText,
+                style.palette.codeChipBg
+            )
         } else {
-            ModernImageDraw.pill(g, text, x, y, style.labelFont, style.palette.accent, style.palette.accentChipBg)
+            ModernImageDraw.pill(
+                g,
+                text,
+                x,
+                y,
+                style.labelFont,
+                style.palette.accent,
+                style.palette.accentChipBg
+            )
         }
     }
 
-    private fun sanitizeChipText(rawText: String): String {
-        var t = rawText.trim()
-        if (t.startsWith("•")) t = t.removePrefix("•").trim()
-        if (t.startsWith("- ")) t = t.substring(2).trim()
-        if (t.startsWith("`") && t.endsWith("`") && t.length >= 2) {
-            t = t.substring(1, t.length - 1)
-        }
-        return t.trim()
-    }
+    private fun sanitizeChipText(
+        rawText: String
+    ): String =
+        rawText
+                .trim()
+                .removePrefix("•")
+                .trim()
+                .removePrefix("- ")
+                .trim()
+                .removeSurrounding("`")
+                .trim()
 
-    private fun sanitizeInlineBulletText(rawText: String): String {
-        return rawText.replace("`", "").trim()
-    }
+    private fun sanitizeInlineBulletText(
+        rawText: String
+    ): String =
+        rawText
+                .replace("`", "")
+                .trim()
 
-    private fun isCodeChip(text: String): Boolean {
-        return text.startsWith("/")
-    }
+    private fun isCodeChip(
+        text: String
+    ): Boolean =
+        text.startsWith("/")
 
     private fun shouldSpanFullWidth(
         section: SectionModel,
@@ -698,61 +1488,129 @@ object UsageImageUtils {
         wideLayout: SectionLayout,
         style: ImageStyle
     ): Boolean {
-        val codeCount = section.items.count { it.kind == UsageTextRenderer.LineKind.CODE }
-        return when (section.title) {
-            "参数与选项", "提示", "子命令" -> false
-            "快速使用", "示例" -> {
-                if (narrowLayout.height <= style.preferredColumnSectionMaxHeight && codeCount <= style.preferredColumnCodeCount) {
-                    false
-                } else {
-                    narrowLayout.height - wideLayout.height >= style.fullWidthHeightGainThreshold
-                }
+        val codeCount =
+            section.items.count {
+                it.kind == UsageTextRenderer.LineKind.CODE
             }
 
-            else -> codeCount >= 5 && (narrowLayout.height - wideLayout.height) >= style.fullWidthHeightGainThreshold
-        }
-    }
+        val heightGain =
+            narrowLayout.height -
+                    wideLayout.height
 
-    private fun shouldUseItemGrid(section: SectionModel, innerWidth: Int, style: ImageStyle): Boolean {
-        if (innerWidth < style.multiColumnItemMinWidth) return false
         return when (section.title) {
-            "参数与选项", "提示", "子命令" -> true
-            else -> false
-        }
-    }
+            "参数与选项",
+            "提示",
+            "子命令" -> false
 
-    private fun looksLikeAliasLine(text: String): Boolean {
-        val t = text.trim()
-        return t.startsWith("别名") || t.startsWith("aliases", ignoreCase = true)
-    }
+            "快速使用",
+            "示例" -> {
+                val narrowFitsWell =
+                    narrowLayout.height <=
+                            style.preferredColumnSectionMaxHeight &&
+                            codeCount <=
+                            style.preferredColumnCodeCount
 
-    private fun parseAliases(text: String): List<String> {
-        val raw = when {
-            text.contains("：") -> text.substringAfter("：")
-            text.contains(":") -> text.substringAfter(":")
-            else -> text.removePrefix("别名")
-        }.trim()
-        if (raw.isBlank()) return emptyList()
-        return raw.split(Regex("\\s*[·、,，/|]\\s*"))
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .distinct()
-    }
+                !narrowFitsWell &&
+                        heightGain >=
+                        style.fullWidthHeightGainThreshold
+            }
 
-    private fun cleanHeading(text: String): String = text.trim().removeSuffix("：").removeSuffix(":")
-
-    private fun splitBullet(text: String): Pair<String, String>? {
-        val separators = listOf(" — ", " – ", " - ", ": ", "：")
-        for (sep in separators) {
-            val idx = text.indexOf(sep)
-            if (idx > 0) {
-                val left = text.substring(0, idx).trim()
-                val right = text.substring(idx + sep.length).trim()
-                if (left.isNotBlank()) return left to right
+            else -> {
+                codeCount >= 5 &&
+                        heightGain >=
+                        style.fullWidthHeightGainThreshold
             }
         }
-        return null
     }
+
+    private fun shouldUseItemGrid(
+        section: SectionModel,
+        innerWidth: Int,
+        style: ImageStyle
+    ): Boolean =
+        innerWidth >= style.multiColumnItemMinWidth &&
+                section.title in setOf(
+            "参数与选项",
+            "提示",
+            "子命令"
+        )
+
+    private fun looksLikeAliasLine(
+        text: String
+    ): Boolean {
+        val trimmed = text.trim()
+
+        return trimmed.startsWith("别名") ||
+                trimmed.startsWith(
+                    "aliases",
+                    ignoreCase = true
+                )
+    }
+
+    private fun parseAliases(
+        text: String
+    ): List<String> {
+        val raw =
+            when {
+                "：" in text ->
+                    text.substringAfter("：")
+
+                ":" in text ->
+                    text.substringAfter(":")
+
+                else ->
+                    text.removePrefix("别名")
+            }.trim()
+
+        if (raw.isBlank()) {
+            return emptyList()
+        }
+
+        return raw
+                .split(
+                    Regex(
+                        """\s*[·、,，/|]\s*"""
+                    )
+                )
+                .map(String::trim)
+                .filter(String::isNotBlank)
+                .distinct()
+    }
+
+    private fun cleanHeading(
+        text: String
+    ): String =
+        text
+                .trim()
+                .removeSuffix("：")
+                .removeSuffix(":")
+
+    private fun splitBullet(
+        text: String
+    ): Pair<String, String>? =
+        bulletSeparators.firstNotNullOfOrNull { separator ->
+            val index = text.indexOf(separator)
+
+            if (index <= 0) {
+                return@firstNotNullOfOrNull null
+            }
+
+            val head =
+                text
+                        .substring(0, index)
+                        .trim()
+
+            val body =
+                text
+                        .substring(index + separator.length)
+                        .trim()
+
+            if (head.isBlank()) {
+                null
+            } else {
+                head to body
+            }
+        }
 
     private fun layoutPills(
         g: Graphics2D,
@@ -761,107 +1619,228 @@ object UsageImageUtils {
         maxWidth: Int,
         style: ImageStyle
     ): List<List<String>> {
-        if (pills.isEmpty()) return emptyList()
-        val rows = ArrayList<MutableList<String>>()
-        var current = ArrayList<String>()
-        var rowWidth = 0
+        if (pills.isEmpty()) {
+            return emptyList()
+        }
+
+        val rows = mutableListOf<List<String>>()
+
+        var currentRow = mutableListOf<String>()
+        var currentWidth = 0
 
         for (pill in pills) {
-            val w = pillWidth(g, font, pill)
-            if (current.isNotEmpty() && rowWidth + style.pillGap + w > maxWidth) {
-                rows.add(current)
-                current = ArrayList()
-                rowWidth = 0
+            val width =
+                pillWidth(
+                    g,
+                    font,
+                    pill
+                )
+
+            val requiredWidth =
+                width +
+                        if (currentRow.isEmpty()) {
+                            0
+                        } else {
+                            style.pillGap
+                        }
+
+            if (
+                currentRow.isNotEmpty() &&
+                currentWidth + requiredWidth > maxWidth
+            ) {
+                rows += currentRow.toList()
+
+                currentRow = mutableListOf()
+                currentWidth = 0
             }
-            if (current.isNotEmpty()) rowWidth += style.pillGap
-            current.add(pill)
-            rowWidth += w
+
+            if (currentRow.isNotEmpty()) {
+                currentWidth += style.pillGap
+            }
+
+            currentRow += pill
+            currentWidth += width
         }
-        if (current.isNotEmpty()) rows.add(current)
+
+        if (currentRow.isNotEmpty()) {
+            rows += currentRow.toList()
+        }
+
         return rows
     }
 
-    private fun textLineHeight(g: Graphics2D, font: Font, multiplier: Float): Int {
-        return max(1, (ImageTextUtils.height(g, font) * multiplier).toInt())
-    }
+    private fun textLineHeight(
+        g: Graphics2D,
+        font: Font,
+        multiplier: Float
+    ): Int =
+        (
+                ImageTextUtils.height(
+                    g,
+                    font
+                ) * multiplier
+                )
+                .toInt()
+                .coerceAtLeast(1)
 
-    private fun pillWidth(g: Graphics2D, font: Font, text: String): Int {
-        val fm = g.getFontMetrics(font)
-        return fm.stringWidth(text) + 24
-    }
+    private fun pillWidth(
+        g: Graphics2D,
+        font: Font,
+        text: String
+    ): Int =
+        g
+                .getFontMetrics(font)
+                .stringWidth(text) + 24
 
-    private fun pillHeight(g: Graphics2D, font: Font): Int {
-        val fm = g.getFontMetrics(font)
-        return fm.height + 6
-    }
+    private fun pillHeight(
+        g: Graphics2D,
+        font: Font
+    ): Int =
+        g
+                .getFontMetrics(font)
+                .height + 6
 
     data class ImageStyle(
         val maxWidth: Int = 1380,
         val minWidth: Int = 1180,
         val minHeight: Int = 260,
+
         val padding: Int = 28,
+
         val cardPadding: Int = 26,
         val cardRadius: Int = 24,
-        val palette: ModernImageDraw.Palette = ModernImageDraw.defaultPalette(),
+
+        val palette: ModernImageDraw.Palette =
+            ModernImageDraw.defaultPalette(),
+
         val codePaddingX: Int = 18,
         val codePaddingY: Int = 12,
         val codeRadius: Int = 14,
         val codeBlockMaxWidth: Int = 880,
+
         val sectionGap: Int = 18,
         val sectionTitleGap: Int = 14,
+
         val itemGap: Int = 10,
         val gridGap: Int = 12,
         val itemRadius: Int = 16,
+
         val bulletBoxPadding: Int = 14,
         val bulletBodyGap: Int = 8,
         val bulletDotSize: Int = 8,
         val bulletDotGap: Int = 10,
+
         val sectionBarWidth: Int = 5,
         val sectionBarGap: Int = 12,
+
         val headerBadgeGap: Int = 14,
         val headerTextGap: Int = 12,
         val paragraphGap: Int = 8,
+
         val aliasGap: Int = 14,
         val pillGap: Int = 8,
         val pillRowGap: Int = 8,
+
         val multiColumnSectionMinWidth: Int = 1050,
         val multiColumnItemMinWidth: Int = 420,
+
         val preferredSingleColumnMaxSections: Int = 4,
-        val preferredSingleColumnAspectRatioThreshold: Double = 0.75,
+
+        val preferredSingleColumnAspectRatioThreshold: Double =
+            0.75,
+
         val preferredColumnSectionMaxHeight: Int = 620,
         val preferredColumnCodeCount: Int = 8,
         val fullWidthHeightGainThreshold: Int = 120,
-        val titleFont: Font = Font("Microsoft Yahei UI", Font.BOLD, 32),
-        val headingFont: Font = Font("Microsoft Yahei UI", Font.BOLD, 20),
-        val subtitleFont: Font = Font("Microsoft Yahei UI", Font.PLAIN, 17),
-        val bodyFont: Font = Font("Microsoft Yahei UI", Font.PLAIN, 16),
-        val labelFont: Font = Font("Microsoft Yahei UI", Font.BOLD, 13),
-        val codeFont: Font = Font("Cascadia Code", Font.PLAIN, 15),
+
+        val titleFont: Font =
+            Font(
+                "Microsoft Yahei UI",
+                Font.BOLD,
+                32
+            ),
+
+        val headingFont: Font =
+            Font(
+                "Microsoft Yahei UI",
+                Font.BOLD,
+                20
+            ),
+
+        val subtitleFont: Font =
+            Font(
+                "Microsoft Yahei UI",
+                Font.PLAIN,
+                17
+            ),
+
+        val bodyFont: Font =
+            Font(
+                "Microsoft Yahei UI",
+                Font.PLAIN,
+                16
+            ),
+
+        val labelFont: Font =
+            Font(
+                "Microsoft Yahei UI",
+                Font.BOLD,
+                13
+            ),
+
+        val codeFont: Font =
+            Font(
+                "Cascadia Code",
+                Font.PLAIN,
+                15
+            )
     ) {
 
         companion object {
 
             @JvmStatic
-            fun defaults(): ImageStyle = configuredDefaultStyle()
+            fun defaults(): ImageStyle =
+                ImageStyle()
 
+            @JvmStatic
+            fun forTheme(
+                mode: ModernImageDraw.ThemeMode
+            ): ImageStyle =
+                ImageStyle(
+                    palette = ModernImageDraw.paletteFor(mode)
+                )
+
+            @JvmStatic
+            fun forPalette(
+                palette: ModernImageDraw.Palette
+            ): ImageStyle =
+                ImageStyle(
+                    palette = palette
+                )
         }
 
         fun resolveFontFallbacks(): ImageStyle {
-            val resolvedTitle = ImageTextUtils.FontFallback.resolveNormal(titleFont.style, titleFont.size, titleFont)
-            val resolvedHeading =
-                ImageTextUtils.FontFallback.resolveNormal(headingFont.style, headingFont.size, headingFont)
-            val resolvedSubtitle =
-                ImageTextUtils.FontFallback.resolveNormal(subtitleFont.style, subtitleFont.size, subtitleFont)
-            val resolvedBody = ImageTextUtils.FontFallback.resolveNormal(bodyFont.style, bodyFont.size, bodyFont)
-            val resolvedLabel = ImageTextUtils.FontFallback.resolveNormal(labelFont.style, labelFont.size, labelFont)
-            val resolvedCode = ImageTextUtils.FontFallback.resolveCode(codeFont.style, codeFont.size, codeFont)
+            fun Font.resolveNormal(): Font =
+                ImageTextUtils.FontFallback.resolveNormal(
+                    style,
+                    size,
+                    this
+                )
+
+            fun Font.resolveCode(): Font =
+                ImageTextUtils.FontFallback.resolveCode(
+                    style,
+                    size,
+                    this
+                )
+
             return copy(
-                titleFont = resolvedTitle,
-                headingFont = resolvedHeading,
-                subtitleFont = resolvedSubtitle,
-                bodyFont = resolvedBody,
-                labelFont = resolvedLabel,
-                codeFont = resolvedCode
+                titleFont = titleFont.resolveNormal(),
+                headingFont = headingFont.resolveNormal(),
+                subtitleFont = subtitleFont.resolveNormal(),
+                bodyFont = bodyFont.resolveNormal(),
+                labelFont = labelFont.resolveNormal(),
+                codeFont = codeFont.resolveCode()
             )
         }
     }
@@ -879,13 +1858,16 @@ object UsageImageUtils {
 
     private data class HeaderModel(
         var title: String,
-        val descriptionLines: MutableList<String> = ArrayList(),
-        val aliases: MutableList<String> = ArrayList()
+        val descriptionLines: MutableList<String> =
+            mutableListOf(),
+        val aliases: MutableList<String> =
+            mutableListOf()
     )
 
     private data class SectionModel(
         val title: String,
-        val items: MutableList<ItemModel> = ArrayList()
+        val items: MutableList<ItemModel> =
+            mutableListOf()
     )
 
     private data class ItemModel(

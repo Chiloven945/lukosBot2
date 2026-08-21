@@ -19,8 +19,6 @@ package top.chiloven.lukosbot2.commands.bot.wikis
 
 import org.apache.logging.log4j.LogManager
 import org.jsoup.nodes.Element
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.core.command.bot.CommandSource
 import top.chiloven.lukosbot2.core.command.definition.dsl.arg
@@ -35,14 +33,10 @@ import top.chiloven.lukosbot2.util.feature.WebScreenshot
 import top.chiloven.lukosbot2.util.feature.WebToMarkdown
 import java.time.Duration
 
-@Service
-@ConditionalOnProperty(
-    prefix = "lukos.commands.control",
-    name = ["mcwiki"],
-    havingValue = "true",
-    matchIfMissing = true
-)
-class McWikiCommand : IWikiishCommand {
+class McWikiCommand(
+    private val webScreenshot: WebScreenshot,
+    private val webToMarkdown: WebToMarkdown,
+) : IWikiishCommand {
 
     private val log = LogManager.getLogger(McWikiCommand::class.java)
 
@@ -123,7 +117,7 @@ class McWikiCommand : IWikiishCommand {
                 return
             }
 
-            val md = WebToMarkdown.fetchAndConvertWithSelectors(
+            val md = webToMarkdown.fetchAndConvertWithSelectors(
                 url,
                 "h1#firstHeading",
                 "#content, #mw-content-text",
@@ -131,7 +125,12 @@ class McWikiCommand : IWikiishCommand {
             )
 
             val ref = BytesRef(md.filename(), md.bytes(), md.mime())
-            src.reply(OutboundMessage(src.addr(), listOf(OutFile(ref, "已转换为 Markdown。", md.filename(), md.mime()))))
+            src.reply(
+                OutboundMessage(
+                    src.addr(),
+                    listOf(OutFile(ref, "已转换为 Markdown。", md.filename(), md.mime()))
+                )
+            )
         } catch (e: Exception) {
             log.warn("McWiki md failed: {}", linkOrTitle, e)
             src.reply("转换失败：${e.message}")
@@ -146,9 +145,14 @@ class McWikiCommand : IWikiishCommand {
                 return
             }
 
-            val cd = WebScreenshot.screenshotMcWiki(url)
+            val cd = webScreenshot.screenshotMcWiki(url)
             val ref = BytesRef(cd.filename(), cd.bytes(), cd.mime())
-            src.reply(OutboundMessage(src.addr(), listOf(OutImage(ref, "截图如下。", cd.filename(), cd.mime()))))
+            src.reply(
+                OutboundMessage(
+                    src.addr(),
+                    listOf(OutImage(ref, "截图如下。", cd.filename(), cd.mime()))
+                )
+            )
         } catch (e: Exception) {
             log.warn("McWiki screenshot failed: {}", linkOrTitle, e)
             src.reply("截图失败：${e.message}")
@@ -169,7 +173,8 @@ class McWikiCommand : IWikiishCommand {
 
         val title = doc.selectFirst("h1#firstHeading").textOrEmpty()
         val container =
-            doc.selectFirst("#mw-content-text .mw-parser-output") ?: doc.selectFirst("#content") ?: return TitleLead(
+            doc.selectFirst("#mw-content-text .mw-parser-output") ?: doc.selectFirst("#content")
+            ?: return TitleLead(
                 title,
                 ""
             )

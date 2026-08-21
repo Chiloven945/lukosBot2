@@ -812,6 +812,40 @@ telegramClient.execute(new SendMessage(chatId, "Done."));
 A command can decide *what* should happen. Shared conversion, protocol, platform, HTTP, path, and
 state-store behavior should stay in the appropriate `util`, `core`, `platform`, or service package.
 
+## Architecture, Dependency Injection, and Spring Boundaries
+
+This project strictly enforces modular boundaries and dependency injection principles:
+
+### Spring Boundary in App Composition Root
+
+- Spring Framework / Spring Boot annotations (`@Component`, `@Service`, `@Repository`,
+  `@Configuration`,
+  `@Bean`, `@ConditionalOnProperty`, `@PostConstruct`, `@PreDestroy`, etc.) and the `kotlin-spring`
+  compiler plugin belong **strictly in the `:app` module**.
+- Domain logic, core runtime, command implementations, platform adapters, and utility libraries
+  (`:core:*`, `:commands:*`, `:platform:*`, `:infrastructure:*`, `:shared`) must remain **pure
+  Java/Kotlin classes** without Spring annotations or runtime dependencies on the Spring container.
+- All bean instantiation, lifecycle hooks (`initMethod`, `destroyMethod`), condition evaluation, and
+  wiring are centralized in `@Configuration` classes under
+  `app/src/main/java/top/chiloven/lukosbot2/config/`.
+
+### No Service Locator
+
+- **Do not use Service Locator patterns** or global application context accessors (e.g.,
+  `SpringBeans.getBean(...)`).
+- All dependencies must be declared explicitly as constructor parameters or method arguments.
+- If a dependency needs deferred resolution (e.g. cyclic references or lazy initialization), inject
+  a lambda provider (e.g., `() -> T`) or `ObjectProvider<T>` at the composition root rather than
+  querying a global context.
+
+### Gradle Dependencies and Transitive Encapsulation
+
+- Use `implementation` by default for internal dependencies to avoid accidental transitive leakage.
+- Use `api` only when a module's public API directly exposes types from the dependency in return
+  types or parameters.
+- Property modules (`:properties`) use `compileOnly` for `@ConfigurationProperties` to provide
+  configuration binding metadata without forcing Spring dependencies on consumers.
+
 ## Configuration Classes
 
 Configuration classes should be easy to bind from `application.yml` and easy to inspect.

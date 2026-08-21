@@ -23,7 +23,6 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import org.apache.logging.log4j.LogManager
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.config.ProxyConfigProp
 import top.chiloven.lukosbot2.http.requireSuccess
@@ -31,7 +30,6 @@ import top.chiloven.lukosbot2.util.JsonUtils
 import java.io.IOException
 import java.util.*
 
-@Service
 class MotdQueryService(
     private val proxyConfigProp: ProxyConfigProp,
     private val http: HttpClient,
@@ -52,7 +50,10 @@ class MotdQueryService(
 
     private val log = LogManager.getLogger(MotdQueryService::class.java)
 
-    suspend fun query(rawAddress: String, mode: QueryMode = QueryMode.AUTO): MotdQueryResult {
+    suspend fun query(
+        rawAddress: String,
+        mode: QueryMode = QueryMode.AUTO
+    ): MotdQueryResult {
         val address = MinecraftServerAddress.parse(rawAddress)
 
         return when (mode) {
@@ -108,7 +109,7 @@ class MotdQueryService(
         val candidates = MinecraftJavaAddressResolver.resolveCandidates(address)
         val failures = initialFailures.toMutableList()
 
-        for (candidate in candidates) {
+        candidates.forEach { candidate ->
             runCatching {
                 val status = MinecraftJavaStatusPinger.ping(
                     endpoint = candidate,

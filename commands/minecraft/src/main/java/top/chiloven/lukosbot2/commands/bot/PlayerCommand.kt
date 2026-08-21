@@ -19,8 +19,6 @@ package top.chiloven.lukosbot2.commands.bot
 
 import kotlinx.coroutines.CancellationException
 import org.apache.logging.log4j.LogManager
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.core.command.definition.ArgType
 import top.chiloven.lukosbot2.core.command.definition.dsl.arg
@@ -30,13 +28,6 @@ import top.chiloven.lukosbot2.core.command.definition.dsl.oneOf
 import top.chiloven.lukosbot2.util.feature.MojangApi
 import java.io.IOException
 
-@Service
-@ConditionalOnProperty(
-    prefix = "lukos.commands.control",
-    name = ["player"],
-    havingValue = "true",
-    matchIfMissing = true
-)
 class PlayerCommand(
     private val mojangApi: MojangApi
 ) : IBotCommand {

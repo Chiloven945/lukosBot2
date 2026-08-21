@@ -17,7 +17,6 @@
  */
 package top.chiloven.lukosbot2.core
 
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.core.model.message.inbound.InboundMessage
 import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage
 
@@ -27,20 +26,19 @@ import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage
  * <p>Each processor may contribute zero or more outbound messages. The pipeline concatenates
  * results in processor order.</p>
  */
-@Service
-class PipelineProcessor(processors: List<IProcessor>?) {
+class PipelineProcessor(
+    processors: List<IProcessor>?
+) {
 
     private val processors: List<IProcessor> = processors.orEmpty()
 
     suspend fun handle(inbound: InboundMessage): List<OutboundMessage> {
-        if (processors.isEmpty()) return emptyList()
-
-        val outs = ArrayList<OutboundMessage>()
-        for (p in processors) {
-            val o = p.handle(inbound)
-            if (o.isNotEmpty()) outs.addAll(o)
+        return if (processors.isEmpty()) {
+            emptyList()
+        } else {
+            processors.flatMap { it.handle(inbound) }
         }
-        return outs
+
     }
 
 }

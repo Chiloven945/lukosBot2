@@ -19,7 +19,6 @@ package top.chiloven.lukosbot2.core
 
 import kotlinx.coroutines.CancellationException
 import org.apache.logging.log4j.LogManager
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.core.model.message.inbound.InboundMessage
 import top.chiloven.lukosbot2.core.model.message.outbound.OutboundMessage
 import top.chiloven.lukosbot2.core.service.ServiceManager
@@ -33,7 +32,6 @@ import java.util.concurrent.atomic.AtomicLong
  * every [receive] launches an independent child coroutine in the [BotCoroutineRuntime] scope. Outbound
  * sending is still serialized per chat by [MessageSenderHub].</p>
  */
-@Service
 class MessageDispatcher(
     private val senderHub: MessageSenderHub,
     private val pipeline: PipelineProcessor,

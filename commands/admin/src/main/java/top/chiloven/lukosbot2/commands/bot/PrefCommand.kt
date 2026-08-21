@@ -17,8 +17,6 @@
  */
 package top.chiloven.lukosbot2.commands.bot
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.core.auth.AuthorizationService
 import top.chiloven.lukosbot2.core.command.bot.CommandSource
@@ -31,13 +29,6 @@ import top.chiloven.lukosbot2.core.state.StateService
 import top.chiloven.lukosbot2.core.state.definition.IStateDefinition
 import java.util.*
 
-@Service
-@ConditionalOnProperty(
-    prefix = "lukos.commands.control",
-    name = ["pref"],
-    havingValue = "true",
-    matchIfMissing = true
-)
 class PrefCommand(
     private val registry: StateRegistry,
     private val states: StateService,
@@ -130,26 +121,40 @@ class PrefCommand(
         ScopeType.GLOBAL -> "全局"
     }
 
-    private fun renderList(): String {
-        val sb = StringBuilder("可用的配置项：\n")
+    private fun renderList() = buildString {
+        appendLine("可用的配置项：")
+
         val defs = registry.all().sortedBy { it.name() }
+
         if (defs.isEmpty()) {
-            sb.append("暂无可用配置项。")
-            return sb.toString()
+            append("暂无可用配置项。")
+            return@buildString
         }
 
-        for (d in defs) {
-            val dName = d.name()
-            val dDesc = d.description()
-            val scopes = d.allowedScopes().map { displayScope(it) }.sorted().joinToString("/")
-            val order = d.resolveOrder().joinToString(" -> ") { displayScope(it) }
-            sb.append("- ${dName}：${dDesc}；可用范围：${scopes}；生效优先级：${order}")
-            val sv = d.suggestValues()
-            if (sv != null && sv.isNotEmpty()) sb.append("；可选值：" + sv.joinToString("、"))
-            sb.append('\n')
+        defs.forEach { d ->
+            val scopes = d.allowedScopes()
+                    .map(::displayScope)
+                    .sorted()
+                    .joinToString("/")
+
+            val order = d.resolveOrder().joinToString(
+                " -> ",
+                transform = ::displayScope
+            )
+
+            append("- ${d.name()}：${d.description()}；可用范围：$scopes；生效优先级：$order")
+
+            d.suggestValues()
+                    ?.takeIf {
+                        it.isNotEmpty()
+                    }
+                    ?.let { values ->
+                        append("；可选值：${values.joinToString("、")}")
+                    }
+
+            appendLine()
         }
-        return sb.toString().trimEnd()
-    }
+    }.trimEnd()
 
     @Suppress("UNCHECKED_CAST")
     private fun getResolved(src: CommandSource, stateName: String) {

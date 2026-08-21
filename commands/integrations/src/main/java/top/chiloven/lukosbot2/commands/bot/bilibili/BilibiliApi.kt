@@ -22,7 +22,6 @@ import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.Constants
 import top.chiloven.lukosbot2.commands.bot.bilibili.schema.BilibiliViewDataDto
 import top.chiloven.lukosbot2.commands.bot.bilibili.schema.VideoId
@@ -31,7 +30,6 @@ import top.chiloven.lukosbot2.http.toHttpStatusException
 import top.chiloven.lukosbot2.util.JsonUtils
 import top.chiloven.lukosbot2.util.StringUtils.firstNonBlank
 
-@Service
 class BilibiliApi(
     private val http: HttpClient
 ) {

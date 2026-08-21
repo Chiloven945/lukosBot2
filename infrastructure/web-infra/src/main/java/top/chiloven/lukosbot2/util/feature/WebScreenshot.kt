@@ -29,25 +29,30 @@ import top.chiloven.lukosbot2.core.model.ContentData
 import top.chiloven.lukosbot2.util.ImageUtils
 import top.chiloven.lukosbot2.util.JsoupHttp
 import top.chiloven.lukosbot2.util.PathUtils.sanitizeFileName
-import top.chiloven.lukosbot2.util.spring.SpringBeans
 import java.io.File
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.nio.file.Paths
 import java.time.Duration
 
-object WebScreenshot {
+class WebScreenshot(
+    private val proxyConfig: ProxyConfigProp,
+) {
 
-    private val log = LogManager.getLogger(WebScreenshot::class.java)
+    private companion object {
 
-    private val USER_AGENT = "Mozilla/5.0 (compatible; ${Constants.UA})"
-    private val PAGE_LOAD_TIMEOUT: Duration = Duration.ofSeconds(20)
+        private val log = LogManager.getLogger(WebScreenshot::class.java)
 
-    private const val FULLPAGE_WIDTH = 1080
-    private const val FULLPAGE_MAX_HEIGHT = 8000
+        private val USER_AGENT = "Mozilla/5.0 (compatible; ${Constants.UA})"
+        private val PAGE_LOAD_TIMEOUT: Duration = Duration.ofSeconds(20)
 
-    private const val INTRO_WIDTH = 1380
-    private const val INTRO_FALLBACK_HEIGHT = 1200
+        private const val FULLPAGE_WIDTH = 1080
+        private const val FULLPAGE_MAX_HEIGHT = 8000
+
+        private const val INTRO_WIDTH = 1380
+        private const val INTRO_FALLBACK_HEIGHT = 1200
+
+    }
 
     /**
      * Take a full-page screenshot of the given URL.
@@ -57,7 +62,6 @@ object WebScreenshot {
      * @throws Exception if an error occurs
      */
     @Throws(Exception::class)
-    @JvmStatic
     fun screenshotFullPage(url: String): ByteArray {
         log.info("Starting full-page screenshot: {}", url)
 
@@ -82,7 +86,6 @@ object WebScreenshot {
      * Wikipedia intro screenshot (delegates to MediaWiki core).
      */
     @Throws(Exception::class)
-    @JvmStatic
     fun screenshotWikipedia(url: String): ContentData =
         screenshotMediaWiki(url, defaultFileBase = "wikipedia")
 
@@ -90,7 +93,6 @@ object WebScreenshot {
      * Minecraft Wiki intro screenshot (delegates to MediaWiki core).
      */
     @Throws(Exception::class)
-    @JvmStatic
     fun screenshotMcWiki(url: String): ContentData =
         screenshotMediaWiki(url, defaultFileBase = "mcwiki")
 
@@ -155,7 +157,7 @@ object WebScreenshot {
     }
 
     private fun createDriver(): WebDriver {
-        val proxy: ProxyConfigProp = SpringBeans.getBean(ProxyConfigProp::class.java)
+        val proxy: ProxyConfigProp = proxyConfig
 
         normalizeProxySystemProps()
 
@@ -172,8 +174,8 @@ object WebScreenshot {
                 )
 
                 SeleniumProxyFactory.chromiumProxyArg(proxy)
-                    ?.takeIf { it.isNotBlank() }
-                    ?.let { addArguments(it) }
+                        ?.takeIf { it.isNotBlank() }
+                        ?.let { addArguments(it) }
 
                 setBinary(chromeBin)
             }
@@ -190,8 +192,8 @@ object WebScreenshot {
                 )
 
                 SeleniumProxyFactory.toSeleniumProxy(proxy)
-                    ?.takeIf { isValidSeleniumProxy(it) }
-                    ?.let { setProxy(it) }
+                        ?.takeIf { isValidSeleniumProxy(it) }
+                        ?.let { setProxy(it) }
             }
             EdgeDriver(eo)
         }
@@ -206,14 +208,44 @@ object WebScreenshot {
 
         val candidates = mutableListOf<String>()
 
-        addCandidate(candidates, System.getenv("ProgramFiles"), "Google", "Chrome", "Application", "chrome.exe")
-        addCandidate(candidates, System.getenv("ProgramFiles(x86)"), "Google", "Chrome", "Application", "chrome.exe")
-        addCandidate(candidates, System.getenv("LOCALAPPDATA"), "Google", "Chrome", "Application", "chrome.exe")
+        addCandidate(
+            candidates,
+            System.getenv("ProgramFiles"),
+            "Google",
+            "Chrome",
+            "Application",
+            "chrome.exe"
+        )
+        addCandidate(
+            candidates,
+            System.getenv("ProgramFiles(x86)"),
+            "Google",
+            "Chrome",
+            "Application",
+            "chrome.exe"
+        )
+        addCandidate(
+            candidates,
+            System.getenv("LOCALAPPDATA"),
+            "Google",
+            "Chrome",
+            "Application",
+            "chrome.exe"
+        )
 
         val home = System.getProperty("user.home")
         if (!home.isNullOrBlank()) {
             addCandidate(candidates, home, ".cache", "selenium", "chrome", "win64", "chrome.exe")
-            addCandidate(candidates, home, "AppData", "Local", "ms-playwright", "chrome", "chrome-win", "chrome.exe")
+            addCandidate(
+                candidates,
+                home,
+                "AppData",
+                "Local",
+                "ms-playwright",
+                "chrome",
+                "chrome-win",
+                "chrome.exe"
+            )
         }
 
         candidates.firstOrNull { File(it).isFile }?.let {
@@ -280,9 +312,9 @@ object WebScreenshot {
             )
 
             doc.selectFirst("h1#firstHeading")
-                ?.text()
-                ?.trim()
-                ?.takeIf { it.isNotBlank() }
+                    ?.text()
+                    ?.trim()
+                    ?.takeIf { it.isNotBlank() }
                 ?: fallback
         } catch (_: IOException) {
             fallback

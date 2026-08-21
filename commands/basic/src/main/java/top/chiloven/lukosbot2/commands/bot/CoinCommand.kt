@@ -17,8 +17,6 @@
  */
 package top.chiloven.lukosbot2.commands.bot
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.core.command.definition.ArgType
 import top.chiloven.lukosbot2.core.command.definition.ValueValidator
@@ -27,13 +25,6 @@ import top.chiloven.lukosbot2.core.command.definition.dsl.botCommand
 import top.chiloven.lukosbot2.core.command.definition.dsl.opt
 import top.chiloven.lukosbot2.util.MathUtils
 
-@Service
-@ConditionalOnProperty(
-    prefix = "lukos.commands.control",
-    name = ["coin"],
-    havingValue = "true",
-    matchIfMissing = true
-)
 class CoinCommand : IBotCommand {
 
     private val commandDefinition = botCommand("coin") {

@@ -17,8 +17,6 @@
  */
 package top.chiloven.lukosbot2.commands.bot
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.core.auth.AuthorizationService
 import top.chiloven.lukosbot2.core.command.bot.CommandSource
@@ -26,13 +24,6 @@ import top.chiloven.lukosbot2.core.command.definition.ArgType
 import top.chiloven.lukosbot2.core.command.definition.dsl.botCommand
 import top.chiloven.lukosbot2.core.service.ServiceManager
 
-@Service
-@ConditionalOnProperty(
-    prefix = "lukos.commands.control",
-    name = ["service"],
-    havingValue = "true",
-    matchIfMissing = true
-)
 class ServiceCommand(
     private val services: ServiceManager,
     private val authz: AuthorizationService
@@ -113,13 +104,13 @@ class ServiceCommand(
     private fun renderChatList(src: CommandSource): String {
         val st = services.snapshotStates(src.addr())
         return services.registry.all()
-            .filter { services.isAllowed(it.name()) }
-            .sortedBy { it.name() }
-            .joinToString("\n", "当前聊天的服务：\n") { s ->
-                val ss = st[s.name()]
-                val enabled = ss != null && ss.isEnabled
-                "- ${s.name()} [${if (enabled) "已启用" else "已停用"}]（${s.description() ?: ""}）"
-            }
+                .filter { services.isAllowed(it.name()) }
+                .sortedBy { it.name() }
+                .joinToString("\n", "当前聊天的服务：\n") { s ->
+                    val ss = st[s.name()]
+                    val enabled = ss != null && ss.isEnabled
+                    "- ${s.name()} [${if (enabled) "已启用" else "已停用"}]（${s.description() ?: ""}）"
+                }
     }
 
     private fun listGlobal(src: CommandSource) {
@@ -127,13 +118,13 @@ class ServiceCommand(
 
         val st = services.snapshotDefaultStates()
         val text = services.registry.all()
-            .filter { services.isAllowed(it.name()) }
-            .sortedBy { it.name() }
-            .joinToString("\n", "全局默认服务：\n") { s ->
-                val ss = st[s.name()]
-                val enabled = ss != null && ss.isEnabled
-                "- ${s.name()} [${if (enabled) "已启用" else "已停用"}]（${s.description() ?: ""}）"
-            }
+                .filter { services.isAllowed(it.name()) }
+                .sortedBy { it.name() }
+                .joinToString("\n", "全局默认服务：\n") { s ->
+                    val ss = st[s.name()]
+                    val enabled = ss != null && ss.isEnabled
+                    "- ${s.name()} [${if (enabled) "已启用" else "已停用"}]（${s.description() ?: ""}）"
+                }
         src.reply(text)
     }
 
@@ -166,7 +157,7 @@ class ServiceCommand(
         }
 
         val st = services.stateOf(src.addr(), svc)
-        if (st == null || st.config == null) {
+        if (st?.config == null) {
             src.reply("当前聊天没有为服务\"$svc\"设置配置。")
             return
         }
@@ -226,7 +217,7 @@ class ServiceCommand(
         }
 
         val st = services.defaultStateOf(svc)
-        if (st == null || st.config == null) {
+        if (st?.config == null) {
             src.reply("服务\"$svc\"没有全局默认配置。")
             return
         }

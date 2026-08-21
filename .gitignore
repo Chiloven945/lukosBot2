@@ -2,6 +2,7 @@ target/
 bin/
 config/
 /data/
+/app/data/
 logs/
 .idea/
 .gradle/

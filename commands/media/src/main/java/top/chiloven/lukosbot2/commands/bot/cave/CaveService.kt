@@ -18,7 +18,6 @@
 package top.chiloven.lukosbot2.commands.bot.cave
 
 import org.apache.logging.log4j.LogManager
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.config.AppProperties
 import top.chiloven.lukosbot2.core.MediaRefLoader
 import top.chiloven.lukosbot2.core.command.bot.CommandSource
@@ -40,7 +39,6 @@ import java.util.*
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
-@Service
 class CaveService(
     private val store: IStateStore,
     private val mediaRefLoader: MediaRefLoader,

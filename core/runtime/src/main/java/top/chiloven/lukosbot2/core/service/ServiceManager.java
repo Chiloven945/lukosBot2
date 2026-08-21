@@ -17,9 +17,6 @@
  */
 package top.chiloven.lukosbot2.core.service;
 
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
-import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.config.ServiceConfigProp;
 import top.chiloven.lukosbot2.core.BotCoroutineRuntime;
 import top.chiloven.lukosbot2.core.ICancellableTask;
@@ -44,7 +41,6 @@ import lombok.extern.log4j.Log4j2;
 
 import static top.chiloven.lukosbot2.util.JsonUtils.MAPPER;
 
-@Service
 @Log4j2
 public class ServiceManager {
 
@@ -75,8 +71,7 @@ public class ServiceManager {
         this.runtime = runtime;
     }
 
-    @PostConstruct
-    void init() {
+    public void init() {
         loadFromStore();
 
         var changed = ensureDefaultsEverywhere();
@@ -653,7 +648,6 @@ public class ServiceManager {
         persistDefault(serviceName, st);
     }
 
-    @PreDestroy
     public void destroy() {
         schedules.values().stream()
                 .filter(Objects::nonNull)

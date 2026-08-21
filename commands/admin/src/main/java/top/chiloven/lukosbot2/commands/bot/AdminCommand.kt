@@ -17,8 +17,6 @@
  */
 package top.chiloven.lukosbot2.commands.bot
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.core.auth.AuthContext
 import top.chiloven.lukosbot2.core.auth.AuthorizationService
@@ -29,13 +27,6 @@ import top.chiloven.lukosbot2.core.command.definition.dsl.arg
 import top.chiloven.lukosbot2.core.command.definition.dsl.botCommand
 import top.chiloven.lukosbot2.platform.ChatPlatform
 
-@Service
-@ConditionalOnProperty(
-    prefix = "lukos.commands.control",
-    name = ["admin"],
-    havingValue = "true",
-    matchIfMissing = true
-)
 class AdminCommand(
     private val botAdmins: BotAdminService,
     private val authz: AuthorizationService
@@ -141,10 +132,14 @@ class AdminCommand(
     private fun list(src: CommandSource) {
         if (!authz.ensureBotAdmin(src, "查看机器人管理员列表")) return
         val admins: Map<ChatPlatform, Set<Long>> = botAdmins.listEffectiveAdmins()
-        val text =
-            admins.entries.sortedBy { it.key.name }.joinToString("\n", "当前有效的机器人管理员：\n") { (platform, ids) ->
-                "- ${platform.name}: ${if (ids.isEmpty()) "无" else ids.sorted().joinToString(", ")}"
-            }
+        val text = admins.entries.sortedBy {
+            it.key.name
+        }.joinToString("\n", "当前有效的机器人管理员：\n") { (platform, ids) ->
+            "- ${platform.name}: ${
+                if (ids.isEmpty()) "无" else ids.sorted()
+                        .joinToString(", ")
+            }"
+        }
         src.reply(text)
     }
 

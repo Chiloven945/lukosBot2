@@ -18,12 +18,10 @@
 package top.chiloven.lukosbot2.commands.bot.ip
 
 import org.apache.logging.log4j.LogManager
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.bot.ip.IpQueryResult.IpProviderFailure
 import top.chiloven.lukosbot2.commands.bot.ip.IpQueryResult.IpQueryException
 import top.chiloven.lukosbot2.commands.bot.ip.provider.IIpProvider
 
-@Service
 class IpQueryService(
     providers: List<IIpProvider>
 ) {

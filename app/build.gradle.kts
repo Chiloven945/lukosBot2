@@ -51,7 +51,7 @@ dependencies {
     implementation(project(":platform:api"))
     implementation(project(":infrastructure:http"))
     implementation(project(":infrastructure:jdbc"))
-    implementation(project(":infrastructure:spring"))
+    implementation(project(":infrastructure:web-infra"))
 
     implementation(project(":platform:telegram"))
     implementation(project(":platform:discord"))
@@ -66,6 +66,8 @@ dependencies {
     implementation(libs.kotlin.reflect)
     implementation(libs.snakeyaml)
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.ktor.client.core)
+    implementation(libs.spring.boot.starter.jdbc)
     implementation(libs.spring.boot.starter.log4j2)
 
     runtimeOnly(libs.h2)
@@ -74,7 +76,12 @@ dependencies {
     annotationProcessor(platform(libs.spring.boot.dependencies.bom))
     annotationProcessor(libs.lombok)
     annotationProcessor(libs.spring.boot.configuration.processor)
-    testImplementation(kotlin("test"))
+
+    testImplementation(platform(libs.spring.boot.dependencies.bom))
+    testImplementation(libs.spring.boot.starter.test)
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.kotlin.test.junit)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 kapt {

@@ -17,10 +17,8 @@
  */
 package top.chiloven.lukosbot2.commands.bot.bilibili
 
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.bot.bilibili.schema.BilibiliVideo
 
-@Service
 class BilibiliQueryService(
     private val bilibiliApi: BilibiliApi,
 ) {

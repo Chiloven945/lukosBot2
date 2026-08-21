@@ -18,21 +18,12 @@
 package top.chiloven.lukosbot2.commands.bot
 
 import org.apache.logging.log4j.LogManager
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.stereotype.Service
 import top.chiloven.lukosbot2.commands.IBotCommand
 import top.chiloven.lukosbot2.core.command.definition.dsl.botCommand
 import top.chiloven.lukosbot2.util.MathUtils
 import java.time.LocalDate
 import java.time.MonthDay
 
-@Service
-@ConditionalOnProperty(
-    prefix = "lukos.commands.control",
-    name = ["luck"],
-    havingValue = "true",
-    matchIfMissing = true
-)
 class LuckCommand : IBotCommand {
 
     private val log = LogManager.getLogger(LuckCommand::class.java)

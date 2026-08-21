@@ -23,6 +23,7 @@ import okhttp3.Request
 import okhttp3.Response
 import org.apache.logging.log4j.LogManager
 import top.chiloven.lukosbot2.Constants
+import top.chiloven.lukosbot2.config.ProxyConfigProp
 import top.chiloven.lukosbot2.util.HttpStatusException
 import top.chiloven.lukosbot2.util.OkHttpUtils
 import java.io.IOException
@@ -30,10 +31,15 @@ import java.net.URI
 import java.util.concurrent.TimeUnit
 import kotlin.math.max
 
-internal class DownloadHttp {
+internal class DownloadHttp(
+    proxyProvider: () -> ProxyConfigProp? = { null },
+) {
 
     private val log = LogManager.getLogger(DownloadHttp::class.java)
-    private val clientCache = OkHttpUtils.ProxyAwareOkHttpClientCache(connectTimeoutMs = 20_000)
+    private val clientCache = OkHttpUtils.ProxyAwareOkHttpClientCache(
+        connectTimeoutMs = 20_000,
+        proxyProvider = proxyProvider,
+    )
 
     @Volatile
     private var timeoutClientCache: TimeoutClientCache? = null

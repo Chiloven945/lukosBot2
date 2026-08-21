@@ -20,13 +20,11 @@ package top.chiloven.lukosbot2.commands.bot.ip.provider.impl
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
-import org.springframework.stereotype.Component
 import top.chiloven.lukosbot2.commands.bot.ip.IpData
 import top.chiloven.lukosbot2.commands.bot.ip.provider.IIpProvider
 import top.chiloven.lukosbot2.http.requireSuccess
 import top.chiloven.lukosbot2.util.JsonUtils
 
-@Component
 class IpQueryIoProvider(
     private val http: HttpClient
 ) : IIpProvider {

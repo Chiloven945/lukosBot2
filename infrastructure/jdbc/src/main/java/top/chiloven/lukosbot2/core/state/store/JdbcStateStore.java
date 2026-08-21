@@ -19,7 +19,6 @@ package top.chiloven.lukosbot2.core.state.store;
 
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.stereotype.Service;
 import top.chiloven.lukosbot2.core.state.Scope;
 import top.chiloven.lukosbot2.core.state.ScopeType;
 
@@ -38,7 +37,6 @@ import java.util.Optional;
  *
  * @author Chiloven945
  */
-@Service
 public class JdbcStateStore implements IStateStore {
 
     private final NamedParameterJdbcTemplate jdbc;
@@ -131,7 +129,7 @@ public class JdbcStateStore implements IStateStore {
                         : Timestamp.from(expiresAtOrNull)
         );
 
-        int updated = jdbc.update(
+        var updated = jdbc.update(
                 """
                         UPDATE bot_state
                            SET v_json=:v,
@@ -228,9 +226,9 @@ public class JdbcStateStore implements IStateStore {
                 rs -> {
                     Map<String, Map<String, String>> out = new LinkedHashMap<>();
                     while (rs.next()) {
-                        String sid = rs.getString("scope_id");
-                        String k = rs.getString("k");
-                        String v = rs.getString("v_json");
+                        var sid = rs.getString("scope_id");
+                        var k = rs.getString("k");
+                        var v = rs.getString("v_json");
                         out.computeIfAbsent(sid, _ -> new LinkedHashMap<>()).put(k, v);
                     }
                     return out;
