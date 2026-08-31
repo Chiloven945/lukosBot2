@@ -23,7 +23,7 @@ ktor = "3.5.2"
 
 flexmark = "0.64.8"
 selenium = "4.47.0"
-jsoup = "1.23.1"
+jsoup = "1.23.2"
 webdrivermanager = "6.3.4"
 
 [libraries]
