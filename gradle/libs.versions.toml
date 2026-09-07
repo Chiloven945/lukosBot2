@@ -11,7 +11,7 @@ telegrambots = "10.2.1"
 jda = "6.5.0"
 
 commons-net = "3.13.0"
-lombok = "1.18.46"
+lombok = "1.18.48"
 snakeyaml = "2.7"
 okhttp = "5.5.0"
 zip4j = "2.11.6"
