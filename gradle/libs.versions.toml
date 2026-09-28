@@ -24,7 +24,7 @@ ktor = "3.6.0"
 flexmark = "0.64.8"
 selenium = "4.49.0"
 jsoup = "1.23.2"
-webdrivermanager = "6.3.4"
+webdrivermanager = "6.4.0"
 
 [libraries]
 jda = { module = "net.dv8tion:JDA", version.ref = "jda" }
