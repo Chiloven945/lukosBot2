@@ -22,7 +22,7 @@ jackson = "3.3.0"
 ktor = "3.6.1"
 
 flexmark = "0.64.8"
-selenium = "4.52.0"
+selenium = "4.53.0"
 jsoup = "1.24.1"
 webdrivermanager = "6.4.0"
 
